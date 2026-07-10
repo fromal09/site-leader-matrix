@@ -35,7 +35,7 @@ async function main() {
     const siteRows = await sql`
       INSERT INTO sites (site_name, site_topic, leader_name, sort_order)
       VALUES (${row.site_name}, ${row.site_topic}, ${row.leader_name}, ${order})
-      ON CONFLICT DO NOTHING
+      ON CONFLICT (site_name) DO NOTHING
       RETURNING id
     `;
     let siteId = (siteRows as any[])[0]?.id;

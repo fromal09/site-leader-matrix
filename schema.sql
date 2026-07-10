@@ -2,7 +2,7 @@
 
 CREATE TABLE IF NOT EXISTS sites (
   id SERIAL PRIMARY KEY,
-  site_name TEXT NOT NULL,
+  site_name TEXT NOT NULL UNIQUE,
   site_topic TEXT NOT NULL,
   leader_name TEXT NOT NULL,
   sort_order INT NOT NULL DEFAULT 0,
