@@ -21,11 +21,11 @@ export function ScoreEditor({
 }) {
   const { requireAuth } = useAuth();
   const [editing, setEditing] = useState(false);
-  const [score, setScore] = useState(row?.score ?? 5);
+  const [score, setScore] = useState(Number(row?.score ?? 5));
   const [note, setNote] = useState(row?.note ?? "");
   const [saving, setSaving] = useState(false);
 
-  const currentScore = row?.score ?? 0;
+  const currentScore = Number(row?.score ?? 0);
   const band = gradeBand(currentScore);
   const color = BAND_COLORS[band];
 

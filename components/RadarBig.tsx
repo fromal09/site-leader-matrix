@@ -32,7 +32,7 @@ export function RadarBig({ site, color }: { site: Site; color: string }) {
   const data = CATEGORIES.map((c) => {
     const row = site.scores.find((s) => s.category === c.key);
     return {
-      subject: c.short,
+      subject: c.label,
       full: c.label,
       score: row?.score ?? 0,
       note: row?.note ?? "",

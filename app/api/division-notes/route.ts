@@ -3,6 +3,10 @@ import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 
 export async function GET() {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+  }
   try {
     const rows = await sql`SELECT content, updated_at, updated_by FROM division_notes WHERE id = 1`;
     return NextResponse.json({ note: (rows as any[])[0] ?? { content: "" } });

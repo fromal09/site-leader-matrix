@@ -3,6 +3,7 @@ import { Oswald, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import { LoginModal } from "@/components/LoginModal";
+import { Gate } from "@/components/Gate";
 import { Header } from "@/components/Header";
 
 const oswald = Oswald({
@@ -40,8 +41,10 @@ export default function RootLayout({
     >
       <body className="min-h-full">
         <AuthProvider>
-          <Header />
-          {children}
+          <Gate>
+            <Header />
+            {children}
+          </Gate>
           <LoginModal />
         </AuthProvider>
       </body>

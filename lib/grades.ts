@@ -30,5 +30,5 @@ export const BAND_COLORS: Record<"good" | "mid" | "low", string> = {
 
 export function average(scores: number[]): number {
   if (scores.length === 0) return 0;
-  return scores.reduce((a, b) => a + b, 0) / scores.length;
+  return scores.reduce((a, b) => a + Number(b), 0) / scores.length;
 }

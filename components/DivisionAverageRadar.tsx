@@ -16,7 +16,7 @@ export function DivisionAverageRadar({ sites }: { sites: Site[] }) {
     const vals = sites
       .map((s) => s.scores.find((sc) => sc.category === c.key)?.score)
       .filter((v): v is number => v !== undefined);
-    const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+    const avg = vals.length ? vals.reduce((a, b) => a + Number(b), 0) / vals.length : 0;
     return { subject: c.label, score: Number(avg.toFixed(2)) };
   });
 
