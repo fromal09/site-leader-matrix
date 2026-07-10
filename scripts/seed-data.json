@@ -1,0 +1,290 @@
+[
+  {
+    "site_name": "Arrowhead Addict",
+    "site_topic": "Kansas City Chiefs",
+    "leader_name": "Matt Conner",
+    "fan_authority": 10,
+    "editorial_instincts": 9,
+    "ownership": 10,
+    "leadership": 9
+  },
+  {
+    "site_name": "GMEN HQ",
+    "site_topic": "New York Giants",
+    "leader_name": "Matt Sidney",
+    "fan_authority": 10,
+    "editorial_instincts": 10,
+    "ownership": 10,
+    "leadership": 9
+  },
+  {
+    "site_name": "Musket Fire",
+    "site_topic": "New England Patriots",
+    "leader_name": "Sara Marshall",
+    "fan_authority": 10,
+    "editorial_instincts": 9,
+    "ownership": 10,
+    "leadership": 7
+  },
+  {
+    "site_name": "Riggo's Rag",
+    "site_topic": "Washington Commanders",
+    "leader_name": "Dean Jones",
+    "fan_authority": 10,
+    "editorial_instincts": 10,
+    "ownership": 9,
+    "leadership": 8
+  },
+  {
+    "site_name": "Still Curtain",
+    "site_topic": "Pittsburgh Steelers",
+    "leader_name": "Tommy Jaggi",
+    "fan_authority": 10,
+    "editorial_instincts": 8,
+    "ownership": 10,
+    "leadership": 9
+  },
+  {
+    "site_name": "Titan Sized",
+    "site_topic": "Tennessee Titans",
+    "leader_name": "Justin Melo",
+    "fan_authority": 10,
+    "editorial_instincts": 7,
+    "ownership": 7,
+    "leadership": 5
+  },
+  {
+    "site_name": "Just Blog Baby",
+    "site_topic": "Las Vegas Raiders",
+    "leader_name": "Levi Dombro",
+    "fan_authority": 9,
+    "editorial_instincts": 9,
+    "ownership": 9,
+    "leadership": 8
+  },
+  {
+    "site_name": "Predominantly Orange",
+    "site_topic": "Denver Broncos",
+    "leader_name": "Sayre Bedinger and Lou Scataglia",
+    "fan_authority": 9,
+    "editorial_instincts": 6,
+    "ownership": 6,
+    "leadership": 5
+  },
+  {
+    "site_name": "Stripe Hype",
+    "site_topic": "Cincinnati Bengals",
+    "leader_name": "Matt Fitzgerald",
+    "fan_authority": 9,
+    "editorial_instincts": 7,
+    "ownership": 7,
+    "leadership": 7
+  },
+  {
+    "site_name": "The Landry Hat",
+    "site_topic": "Dallas Cowboys",
+    "leader_name": "Jerry Trotta",
+    "fan_authority": 9,
+    "editorial_instincts": 9,
+    "ownership": 9,
+    "leadership": 9
+  },
+  {
+    "site_name": "Dawg Pound Daily",
+    "site_topic": "Cleveland Browns",
+    "leader_name": "Ryan O'Leary",
+    "fan_authority": 8,
+    "editorial_instincts": 8,
+    "ownership": 9,
+    "leadership": 8
+  },
+  {
+    "site_name": "Inside the Iggles",
+    "site_topic": "Philadelphia Eagles",
+    "leader_name": "Anthony Miller",
+    "fan_authority": 8,
+    "editorial_instincts": 7,
+    "ownership": 7,
+    "leadership": 7
+  },
+  {
+    "site_name": "Lombardi Ave",
+    "site_topic": "Green Bay Packers",
+    "leader_name": "Freddie Boston",
+    "fan_authority": 8,
+    "editorial_instincts": 10,
+    "ownership": 9,
+    "leadership": 9
+  },
+  {
+    "site_name": "Niner Noise",
+    "site_topic": "San Francisco 49ers",
+    "leader_name": "Peter Panacy",
+    "fan_authority": 8,
+    "editorial_instincts": 6,
+    "ownership": 5,
+    "leadership": 6
+  },
+  {
+    "site_name": "The Viking Age",
+    "site_topic": "Minnesota Vikings",
+    "leader_name": "Adam Patrick",
+    "fan_authority": 8,
+    "editorial_instincts": 9,
+    "ownership": 7,
+    "leadership": 8
+  },
+  {
+    "site_name": "Toro Times",
+    "site_topic": "Houston Texans",
+    "leader_name": "Clayton Anderson",
+    "fan_authority": 8,
+    "editorial_instincts": 5,
+    "ownership": 4,
+    "leadership": 4
+  },
+  {
+    "site_name": "Who Dat Dish",
+    "site_topic": "New Orleans Saints",
+    "leader_name": "Darrion Gray",
+    "fan_authority": 8,
+    "editorial_instincts": 5,
+    "ownership": 4,
+    "leadership": 4
+  },
+  {
+    "site_name": "Bear Goggles On",
+    "site_topic": "Chicago Bears",
+    "leader_name": "Anthony Miller",
+    "fan_authority": 7,
+    "editorial_instincts": 7,
+    "ownership": 7,
+    "leadership": 7
+  },
+  {
+    "site_name": "Blogging Dirty",
+    "site_topic": "Atlanta Falcons",
+    "leader_name": "Jason Kandel",
+    "fan_authority": 7,
+    "editorial_instincts": 7,
+    "ownership": 6,
+    "leadership": 5
+  },
+  {
+    "site_name": "Cat Crave",
+    "site_topic": "Carolina Panthers",
+    "leader_name": "Dean Jones",
+    "fan_authority": 7,
+    "editorial_instincts": 10,
+    "ownership": 9,
+    "leadership": 9
+  },
+  {
+    "site_name": "Raising Zona",
+    "site_topic": "Arizona Cardinals",
+    "leader_name": "Reese Kunz",
+    "fan_authority": 7,
+    "editorial_instincts": 8,
+    "ownership": 7,
+    "leadership": 6
+  },
+  {
+    "site_name": "SideLion Report",
+    "site_topic": "Detroit Lions",
+    "leader_name": "Candace Pedraza",
+    "fan_authority": 7,
+    "editorial_instincts": 7,
+    "ownership": 8,
+    "leadership": 6
+  },
+  {
+    "site_name": "The Jet Press",
+    "site_topic": "New York Jets",
+    "leader_name": "Charlie Baduini",
+    "fan_authority": 7,
+    "editorial_instincts": 7,
+    "ownership": 5,
+    "leadership": 4
+  },
+  {
+    "site_name": "12th Man Rising",
+    "site_topic": "Seattle Seahawks",
+    "leader_name": "Lee Vowell",
+    "fan_authority": 6,
+    "editorial_instincts": 8,
+    "ownership": 7,
+    "leadership": 5
+  },
+  {
+    "site_name": "Black and Teal",
+    "site_topic": "Jacksonville Jaguars",
+    "leader_name": "Carlos Sanchez",
+    "fan_authority": 6,
+    "editorial_instincts": 6,
+    "ownership": 5,
+    "leadership": 4
+  },
+  {
+    "site_name": "Bolt Beat",
+    "site_topic": "Los Angeles Chargers",
+    "leader_name": "Grant Bellchamber",
+    "fan_authority": 5,
+    "editorial_instincts": 6,
+    "ownership": 6,
+    "leadership": 5
+  },
+  {
+    "site_name": "BuffaLowDown",
+    "site_topic": "Buffalo Bills",
+    "leader_name": "Brandon Ray",
+    "fan_authority": 5,
+    "editorial_instincts": 6,
+    "ownership": 5,
+    "leadership": 5
+  },
+  {
+    "site_name": "Horseshoe Heroes",
+    "site_topic": "Indianapolis Colts",
+    "leader_name": "Lee Vowell",
+    "fan_authority": 5,
+    "editorial_instincts": 7,
+    "ownership": 6,
+    "leadership": 5
+  },
+  {
+    "site_name": "The Pewter Plank",
+    "site_topic": "Tampa Bay Buccaneers",
+    "leader_name": "Josh Crysler",
+    "fan_authority": 5,
+    "editorial_instincts": 6,
+    "ownership": 6,
+    "leadership": 5
+  },
+  {
+    "site_name": "Ebony Bird",
+    "site_topic": "Baltimore Ravens",
+    "leader_name": "Connor Burke",
+    "fan_authority": 4,
+    "editorial_instincts": 5,
+    "ownership": 4,
+    "leadership": 4
+  },
+  {
+    "site_name": "Phin Phanatic",
+    "site_topic": "Miami Dolphins",
+    "leader_name": "Shayne Kubas",
+    "fan_authority": 4,
+    "editorial_instincts": 6,
+    "ownership": 5,
+    "leadership": 4
+  },
+  {
+    "site_name": "Ramblin' Fan",
+    "site_topic": "Los Angeles Rams",
+    "leader_name": "John Sbisa",
+    "fan_authority": 4,
+    "editorial_instincts": 7,
+    "ownership": 8,
+    "leadership": 5
+  }
+]

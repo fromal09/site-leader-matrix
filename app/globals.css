@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f2f2ee;
+  --paper-raised: #fbfbf9;
+  --ink: #14181f;
+  --ink-soft: #4a5261;
+  --navy: #1b2a4a;
+  --navy-soft: #2c3e63;
+  --grade-good: #1f7a4c;
+  --grade-mid: #c68a1e;
+  --grade-low: #b23a2e;
+  --grease-red: #a63d2f;
+  --rule: #d8d8d0;
+  --rule-strong: #b7b7ac;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-navy: var(--navy);
+  --color-navy-soft: var(--navy-soft);
+  --color-grade-good: var(--grade-good);
+  --color-grade-mid: var(--grade-mid);
+  --color-grade-low: var(--grade-low);
+  --color-grease-red: var(--grease-red);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --font-display: var(--font-oswald);
+  --font-body: var(--font-plex-sans);
+  --font-data: var(--font-plex-mono);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  background-image: linear-gradient(var(--rule) 1px, transparent 1px);
+  background-size: 100% 32px;
+  background-attachment: local;
+}
+
+.font-display {
+  font-family: var(--font-display), ui-sans-serif, sans-serif;
+}
+
+.font-data {
+  font-family: var(--font-data), ui-monospace, monospace;
+}
+
+.card {
+  background: var(--paper-raised);
+  border: 1px solid var(--rule-strong);
+  box-shadow: 2px 2px 0 rgba(20, 24, 31, 0.06);
+}
+
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid currentColor;
+  border-radius: 6px;
+  transform: rotate(-6deg);
+  font-family: var(--font-display), sans-serif;
+  letter-spacing: 0.05em;
+  opacity: 0.92;
+}
+
+::selection {
+  background: var(--grease-red);
+  color: white;
+}
+
+button {
+  cursor: pointer;
+}
+
+.scroll-thin::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: var(--rule-strong);
+  border-radius: 4px;
+}
