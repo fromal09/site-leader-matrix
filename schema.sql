@@ -39,6 +39,15 @@ CREATE TABLE IF NOT EXISTS division_notes (
   updated_by TEXT
 );
 
+CREATE TABLE IF NOT EXISTS leader_changes (
+  id SERIAL PRIMARY KEY,
+  site_id INT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  old_leader TEXT NOT NULL,
+  new_leader TEXT NOT NULL,
+  changed_by TEXT,
+  changed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- seed exactly one division_notes row
 INSERT INTO division_notes (id, content) VALUES (1, '')
 ON CONFLICT (id) DO NOTHING;

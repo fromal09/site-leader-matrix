@@ -8,6 +8,7 @@ import { ScoreEditor } from "@/components/ScoreEditor";
 import { GradeStamp } from "@/components/GradeStamp";
 import { CanonizeButton } from "@/components/CanonizeButton";
 import { HistoryLog } from "@/components/HistoryLog";
+import { ChangeLeaderForm } from "@/components/ChangeLeaderForm";
 import { CATEGORIES } from "@/lib/categories";
 import { average, gradeBand, BAND_COLORS } from "@/lib/grades";
 import type { Site } from "@/lib/types";
@@ -107,6 +108,14 @@ export default function LeaderPage() {
         <div className="mt-2">
           <HistoryLog siteId={site.id} refreshKey={refreshKey} />
         </div>
+      </div>
+
+      <div className="mt-6">
+        <ChangeLeaderForm
+          siteId={site.id}
+          currentLeader={site.leader_name}
+          onChanged={load}
+        />
       </div>
     </main>
   );
