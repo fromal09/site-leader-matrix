@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useAuth } from "./AuthProvider";
-import type { DepthChartRole, DepthChartWriter } from "@/lib/depthCharts";
+import { SECTIONS, sectionColor } from "@/lib/depthCharts";
+import type { DepthChartRole, DepthChartWriter, SectionKey } from "@/lib/depthCharts";
 
 const ADD_NEW = "__add_new__";
 
@@ -19,6 +20,7 @@ function RoleSelect({
 }) {
   const [addingNew, setAddingNew] = useState(false);
   const [newLabel, setNewLabel] = useState("");
+  const [newSection, setNewSection] = useState<SectionKey>("contributors");
   const [busy, setBusy] = useState(false);
 
   async function submitNewRole() {
@@ -27,7 +29,7 @@ function RoleSelect({
     const res = await fetch("/api/depth-chart-roles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label: newLabel.trim() }),
+      body: JSON.stringify({ label: newLabel.trim(), section: newSection }),
     });
     setBusy(false);
     if (res.ok) {
@@ -41,10 +43,10 @@ function RoleSelect({
 
   if (addingNew) {
     return (
-      <div className="flex gap-2">
+      <div className="space-y-2 rounded border border-dashed border-rule-strong p-2">
         <input
           autoFocus
-          className="flex-1 rounded border border-rule-strong bg-white px-2 py-1.5 text-sm outline-none focus:border-navy"
+          className="w-full rounded border border-rule-strong bg-white px-2 py-1.5 text-sm outline-none focus:border-navy"
           placeholder="New role name"
           value={newLabel}
           onChange={(e) => setNewLabel(e.target.value)}
@@ -55,21 +57,34 @@ function RoleSelect({
             }
           }}
         />
-        <button
-          type="button"
-          onClick={submitNewRole}
-          disabled={busy}
-          className="rounded bg-navy px-2 py-1 text-xs font-medium text-white hover:bg-navy-soft disabled:opacity-60"
+        <select
+          className="w-full rounded border border-rule-strong bg-white px-2 py-1.5 text-sm outline-none focus:border-navy"
+          value={newSection}
+          onChange={(e) => setNewSection(e.target.value as SectionKey)}
         >
-          {busy ? "Adding…" : "Add"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setAddingNew(false)}
-          className="px-2 py-1 text-xs text-ink-soft hover:text-ink"
-        >
-          Cancel
-        </button>
+          {SECTIONS.map((s) => (
+            <option key={s.key} value={s.key}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setAddingNew(false)}
+            className="px-2 py-1 text-xs text-ink-soft hover:text-ink"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={submitNewRole}
+            disabled={busy}
+            className="rounded bg-navy px-3 py-1 text-xs font-medium text-white hover:bg-navy-soft disabled:opacity-60"
+          >
+            {busy ? "Adding…" : "Add role"}
+          </button>
+        </div>
       </div>
     );
   }
@@ -124,6 +139,9 @@ export function WriterCard({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const roleObj = roles.find((r) => r.label === (writer?.role ?? role));
+  const color = sectionColor(roleObj?.section ?? "contributors");
 
   function startEdit() {
     if (!requireAuth()) return;
@@ -183,13 +201,19 @@ export function WriterCard({
 
   if (!editing && writer) {
     return (
-      <div className="card rounded-md p-4">
+      <div
+        className="card rounded-md border-l-4 p-4"
+        style={{ borderLeftColor: color }}
+      >
         <div className="flex items-start justify-between gap-2">
           <div>
             <div className="font-display text-lg font-semibold text-navy">
               {writer.name}
             </div>
-            <span className="mt-1 inline-block rounded-full bg-navy/10 px-2 py-0.5 font-data text-[11px] uppercase tracking-wide text-navy">
+            <span
+              className="mt-1 inline-block rounded-full px-2 py-0.5 font-data text-[11px] uppercase tracking-wide"
+              style={{ backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`, color }}
+            >
               {writer.role}
             </span>
           </div>
@@ -208,7 +232,7 @@ export function WriterCard({
   }
 
   return (
-    <div className="card rounded-md p-4">
+    <div className="card rounded-md border-l-4 p-4" style={{ borderLeftColor: color }}>
       <div className="space-y-2">
         <div>
           <label className="text-xs font-medium text-ink-soft uppercase tracking-wide">

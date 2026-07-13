@@ -64,6 +64,7 @@ ON CONFLICT (id) DO NOTHING;
 CREATE TABLE IF NOT EXISTS depth_chart_roles (
   id SERIAL PRIMARY KEY,
   label TEXT NOT NULL UNIQUE,
+  section TEXT NOT NULL DEFAULT 'contributors',
   sort_order INT NOT NULL DEFAULT 0,
   created_by TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -92,4 +93,11 @@ INSERT INTO depth_chart_roles (label, sort_order) VALUES
   ('Site No. 2', 6),
   ('Rover', 7)
 ON CONFLICT (label) DO NOTHING;
+
+ALTER TABLE depth_chart_roles ADD COLUMN IF NOT EXISTS section TEXT NOT NULL DEFAULT 'contributors';
+
+UPDATE depth_chart_roles SET section = 'site_leaders' WHERE label IN ('Site Editor', 'Site Expert', 'Site No. 2');
+UPDATE depth_chart_roles SET section = 'specialists' WHERE label = 'Copy Specialist';
+UPDATE depth_chart_roles SET section = 'contributors' WHERE label = 'Contributor';
+UPDATE depth_chart_roles SET section = 'division_resources' WHERE label IN ('Staff Writer', 'Rover');
 `;

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { WriterCard } from "@/components/WriterCard";
 import { useAuth } from "@/components/AuthProvider";
 import { DC_BASE } from "@/lib/routes";
+import { SECTIONS } from "@/lib/depthCharts";
 import type { DepthChartRole, DepthChartWriter } from "@/lib/depthCharts";
 import type { Site } from "@/lib/types";
 
@@ -61,6 +62,12 @@ export default function DepthChartSitePage() {
     );
   }
 
+  const roleToSection = new Map(roles.map((r) => [r.label, r.section]));
+  const sectioned = SECTIONS.map((s) => ({
+    section: s,
+    writers: writers.filter((w) => (roleToSection.get(w.role) ?? "contributors") === s.key),
+  }));
+
   return (
     <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
       <Link href={DC_BASE} className="text-xs font-medium text-ink-soft hover:text-navy">
@@ -85,8 +92,8 @@ export default function DepthChartSitePage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {addingNew && (
+      {addingNew && (
+        <div className="mb-6">
           <WriterCard
             siteId={site.id}
             writer={null}
@@ -98,25 +105,44 @@ export default function DepthChartSitePage() {
             }}
             onDiscardNew={() => setAddingNew(false)}
           />
-        )}
-        {writers.map((w) => (
-          <WriterCard
-            key={w.id}
-            siteId={site.id}
-            writer={w}
-            roles={roles}
-            onRoleCreated={(r) => setRoles((prev) => [...prev, r])}
-            onSaved={load}
-            onDiscardNew={() => {}}
-          />
+        </div>
+      )}
+
+      <div className="space-y-8">
+        {sectioned.map(({ section, writers: sectionWriters }) => (
+          <div key={section.key}>
+            <div className="mb-3 flex items-center gap-2">
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: section.color }}
+              />
+              <h2 className="font-display text-lg font-semibold text-navy">
+                {section.label}
+              </h2>
+              <span className="font-data text-xs text-ink-soft">
+                {sectionWriters.length}
+              </span>
+            </div>
+            {sectionWriters.length === 0 ? (
+              <p className="text-sm italic text-ink-soft">Nobody in this section yet.</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {sectionWriters.map((w) => (
+                  <WriterCard
+                    key={w.id}
+                    siteId={site.id}
+                    writer={w}
+                    roles={roles}
+                    onRoleCreated={(r) => setRoles((prev) => [...prev, r])}
+                    onSaved={load}
+                    onDiscardNew={() => {}}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         ))}
       </div>
-
-      {writers.length === 0 && !addingNew && (
-        <p className="mt-4 text-sm italic text-ink-soft">
-          No writers on this roster yet — add the first one above.
-        </p>
-      )}
     </main>
   );
 }
