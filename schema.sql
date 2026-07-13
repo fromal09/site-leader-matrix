@@ -51,3 +51,37 @@ CREATE TABLE IF NOT EXISTS leader_changes (
 -- seed exactly one division_notes row
 INSERT INTO division_notes (id, content) VALUES (1, '')
 ON CONFLICT (id) DO NOTHING;
+
+-- Site Depth Charts (shares the `sites` table above with Site Leader Matrix)
+
+CREATE TABLE IF NOT EXISTS depth_chart_roles (
+  id SERIAL PRIMARY KEY,
+  label TEXT NOT NULL UNIQUE,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS depth_chart_writers (
+  id SERIAL PRIMARY KEY,
+  site_id INT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL,
+  traffic_dashboard_name TEXT NOT NULL DEFAULT '',
+  sort_order INT NOT NULL DEFAULT 0,
+  archived BOOLEAN NOT NULL DEFAULT FALSE,
+  created_by TEXT,
+  updated_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO depth_chart_roles (label, sort_order) VALUES
+  ('Site Editor', 1),
+  ('Site Expert', 2),
+  ('Staff Writer', 3),
+  ('Contributor', 4),
+  ('Copy Specialist', 5),
+  ('Site No. 2', 6),
+  ('Rover', 7)
+ON CONFLICT (label) DO NOTHING;

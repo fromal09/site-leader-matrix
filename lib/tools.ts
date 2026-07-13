@@ -22,10 +22,10 @@ export const TOOLS: Tool[] = [
   {
     slug: "site-depth-charts",
     name: "Site Depth Charts",
-    tagline: "Coming soon",
+    tagline: "NFL Division",
     description:
-      "Bench strength and succession planning for every site — who's ready to step up next, and where the gaps are.",
+      "Roster cards for every site — writer, role, and (soon) traffic performance at a glance.",
     href: "/site-depth-charts",
-    status: "coming-soon",
+    status: "available",
   },
 ];

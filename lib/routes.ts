@@ -7,3 +7,9 @@ export function slmLeaderHref(id: number | string) {
 export function slmRubricHref(anchor?: string) {
   return `${SLM_BASE}/rubric${anchor ? `#${anchor}` : ""}`;
 }
+
+export const DC_BASE = "/site-depth-charts";
+
+export function dcSiteHref(id: number | string) {
+  return `${DC_BASE}/${id}`;
+}
