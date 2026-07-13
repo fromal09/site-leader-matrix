@@ -4,8 +4,7 @@
 
 import { neon } from "@neondatabase/serverless";
 import data from "./seed-data.json";
-import fs from "node:fs";
-import path from "node:path";
+import { SCHEMA_SQL } from "../lib/schema";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -16,9 +15,8 @@ if (!DATABASE_URL) {
 const sql = neon(DATABASE_URL);
 
 async function main() {
-  const schema = fs.readFileSync(path.join(__dirname, "../schema.sql"), "utf-8");
-  // naive split on semicolons is fine here since schema.sql has no semicolons inside strings
-  const statements = schema
+  // naive split on semicolons is fine here since the schema has no semicolons inside strings
+  const statements = SCHEMA_SQL
     .split(";")
     .map((s) => s.trim())
     .filter(Boolean);

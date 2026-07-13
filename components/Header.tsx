@@ -20,6 +20,12 @@ export function Header() {
               <span className="font-data text-xs text-ink-soft">
                 Signed in as <strong className="text-ink">{session.name}</strong>
               </span>
+              <Link
+                href="/admin"
+                className="text-xs font-medium text-ink-soft hover:text-navy"
+              >
+                Admin
+              </Link>
               <button
                 onClick={logout}
                 className="text-xs font-medium text-ink-soft hover:text-grease-red"

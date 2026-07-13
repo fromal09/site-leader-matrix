@@ -1,3 +1,10 @@
+// Canonical schema definition — single source of truth.
+// Used by scripts/seed.ts (local) AND app/api/admin/migrate (in-app, runs
+// against whatever DATABASE_URL Vercel already has configured server-side —
+// no need to pull secrets locally just to apply a schema change).
+// schema.sql is kept as a human-readable mirror of this file.
+
+export const SCHEMA_SQL = `
 -- Site Leader Matrix schema (Neon / Postgres)
 
 CREATE TABLE IF NOT EXISTS sites (
@@ -85,3 +92,4 @@ INSERT INTO depth_chart_roles (label, sort_order) VALUES
   ('Site No. 2', 6),
   ('Rover', 7)
 ON CONFLICT (label) DO NOTHING;
+`;
