@@ -19,3 +19,7 @@ export const TRAFFIC_BASE = "/site-depth-charts/traffic";
 export function trafficImportHref(id: number | string) {
   return `${TRAFFIC_BASE}/${id}`;
 }
+
+export function writerTrafficHref(cardId: number | string) {
+  return `/site-depth-charts/writer/${cardId}/traffic`;
+}

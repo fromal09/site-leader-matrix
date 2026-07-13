@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { formatDuration, formatPercent } from "@/lib/trafficFormat";
+import Link from "next/link";
+import { formatDuration, formatPercent, scrollDepthColor } from "@/lib/trafficFormat";
+import { writerTrafficHref } from "@/lib/routes";
 import type { TrafficArticleRow, WriterTrafficSummary } from "@/lib/traffic";
 
 function ArticleTitle({ article }: { article: TrafficArticleRow }) {
@@ -17,18 +19,59 @@ function ArticleTitle({ article }: { article: TrafficArticleRow }) {
       </a>
     );
   }
-  return <span className="truncate">{article.article_title}</span>;
+  return <span className="truncate text-ink">{article.article_title}</span>;
 }
 
-function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded border border-rule-strong bg-white px-2 py-1.5">
+    <div className="rounded border border-rule-strong bg-white px-2.5 py-2">
       <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
         {label}
       </div>
-      <div className="font-data text-sm font-semibold text-ink">{value}</div>
+      <div className="font-data text-base font-semibold text-ink">{value}</div>
       {sub && <div className="text-[10px] text-ink-soft">{sub}</div>}
     </div>
+  );
+}
+
+function SectionHeading({ color, children }: { color: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-1.5 flex items-center gap-1.5">
+      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
+      <p className="font-data text-[11px] uppercase tracking-wide text-ink-soft">{children}</p>
+    </div>
+  );
+}
+
+function RankedArticleRow({
+  rank,
+  article,
+  maxPageviews,
+}: {
+  rank: number;
+  article: TrafficArticleRow;
+  maxPageviews: number;
+}) {
+  const barPct = maxPageviews > 0 ? Math.max(4, (article.pageviews / maxPageviews) * 100) : 0;
+  const color = scrollDepthColor(article.scroll_depth);
+  return (
+    <li className="relative overflow-hidden rounded border border-rule bg-white px-2 py-1.5">
+      <div
+        className="absolute inset-y-0 left-0 opacity-[0.08]"
+        style={{ width: `${barPct}%`, backgroundColor: "var(--navy)" }}
+      />
+      <div className="relative flex items-start gap-2">
+        <span className="font-data text-[11px] font-semibold text-ink-soft">{rank}</span>
+        <div className="min-w-0 flex-1">
+          <ArticleTitle article={article} />
+          <div className="mt-0.5 flex items-center gap-2 font-data text-[11px] text-ink-soft">
+            <span>{article.pageviews.toLocaleString()} views</span>
+            <span style={{ color }}>{formatPercent(article.scroll_depth)} scroll</span>
+            <span>{formatDuration(article.avg_time_on_page)} avg</span>
+          </div>
+        </div>
+      </div>
+    </li>
   );
 }
 
@@ -36,7 +79,6 @@ export function WriterTrafficPanel({ writerId }: { writerId: number }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<WriterTrafficSummary | null>(null);
-  const [showAllPublished, setShowAllPublished] = useState(false);
 
   async function toggle() {
     if (!open && !data) {
@@ -50,74 +92,77 @@ export function WriterTrafficPanel({ writerId }: { writerId: number }) {
   }
 
   const s = data?.stats;
-  const publishedVisible = showAllPublished
-    ? data?.publishedThisPeriod ?? []
-    : (data?.publishedThisPeriod ?? []).slice(0, 8);
+  const topFive = data?.topPerforming?.slice(0, 5) ?? [];
+  const maxTopPageviews = Math.max(1, ...topFive.map((a) => a.pageviews));
+  const publishedPreview = data?.publishedThisPeriod?.slice(0, 3) ?? [];
 
   return (
     <div className="mt-3 border-t border-rule pt-2">
       <button
         type="button"
         onClick={toggle}
-        className="text-xs font-medium text-ink-soft hover:text-navy"
+        className="font-data text-xs font-medium uppercase tracking-wide text-ink-soft hover:text-navy"
       >
         {open ? "Hide traffic ▲" : "View traffic ▾"}
       </button>
       {open && (
-        <div className="mt-2 text-xs">
+        <div className="mt-3">
           {loading ? (
-            <p className="text-ink-soft">Loading…</p>
+            <p className="text-xs text-ink-soft">Loading…</p>
           ) : !data?.matched ? (
-            <p className="italic text-ink-soft">
+            <p className="text-xs italic text-ink-soft">
               No traffic data matched{data?.matchName ? ` for "${data.matchName}"` : ""} yet.
               If this doesn&apos;t look right, check the traffic dashboard name on this card.
             </p>
           ) : (
             <div className="space-y-4">
-              <p className="font-data text-ink-soft">{data.latestPeriodLabel}</p>
+              <div className="flex items-baseline justify-between">
+                <p className="font-display text-sm font-semibold text-navy">
+                  {data.latestPeriodLabel}
+                </p>
+                <Link
+                  href={writerTrafficHref(writerId)}
+                  className="text-[11px] font-medium text-navy hover:underline"
+                >
+                  Full article history →
+                </Link>
+              </div>
 
               {s && (
                 <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-                  <StatCard
-                    label="Published"
-                    value={s.articlesPublishedCount.toLocaleString()}
-                  />
-                  <StatCard label="Total PVs" value={s.totalPageviews.toLocaleString()} />
-                  <StatCard
+                  <StatTile label="Published" value={s.articlesPublishedCount.toLocaleString()} />
+                  <StatTile label="Total PVs" value={s.totalPageviews.toLocaleString()} />
+                  <StatTile
                     label="Evergreen PVs"
                     value={s.evergreenPageviews.toLocaleString()}
-                    sub="from older content"
+                    sub="older content"
                   />
-                  <StatCard
-                    label="Avg Scroll Depth"
+                  <StatTile
+                    label="Scroll Depth"
                     value={formatPercent(s.weightedAvgScrollDepth)}
-                    sub="pageview-weighted"
+                    sub="pv-weighted"
                   />
-                  <StatCard
-                    label="Avg Time on Page"
+                  <StatTile
+                    label="Time on Page"
                     value={formatDuration(s.weightedAvgTimeOnPage)}
-                    sub="pageview-weighted"
+                    sub="pv-weighted"
                   />
                 </div>
               )}
 
-              {data.topPerforming && data.topPerforming.length > 0 && (
+              {topFive.length > 0 && (
                 <div>
-                  <p className="font-data uppercase tracking-wide text-ink-soft">
-                    Top Performing{" "}
-                    <span className="normal-case text-ink-soft">
-                      (blend of traffic &amp; engagement)
-                    </span>
-                  </p>
-                  <ul className="mt-1 space-y-1.5">
-                    {data.topPerforming.map((a, i) => (
-                      <li key={i}>
-                        <ArticleTitle article={a} />
-                        <div className="font-data text-[11px] text-ink-soft">
-                          {a.pageviews.toLocaleString()} views · {formatPercent(a.scroll_depth)}{" "}
-                          scroll · {formatDuration(a.avg_time_on_page)} avg
-                        </div>
-                      </li>
+                  <SectionHeading color="var(--navy)">
+                    Top Performing — blend of traffic &amp; engagement
+                  </SectionHeading>
+                  <ul className="space-y-1">
+                    {topFive.map((a, i) => (
+                      <RankedArticleRow
+                        key={i}
+                        rank={i + 1}
+                        article={a}
+                        maxPageviews={maxTopPageviews}
+                      />
                     ))}
                   </ul>
                 </div>
@@ -125,14 +170,12 @@ export function WriterTrafficPanel({ writerId }: { writerId: number }) {
 
               {data.recentArticles && data.recentArticles.length > 0 && (
                 <div>
-                  <p className="font-data uppercase tracking-wide text-ink-soft">
-                    Recent Articles
-                  </p>
-                  <ul className="mt-1 space-y-1">
+                  <SectionHeading color="var(--grade-good)">Recent Articles</SectionHeading>
+                  <ul className="space-y-1">
                     {data.recentArticles.map((a, i) => (
-                      <li key={i} className="flex justify-between gap-2">
+                      <li key={i} className="flex items-baseline justify-between gap-2 text-xs">
                         <ArticleTitle article={a} />
-                        <span className="shrink-0 text-ink-soft">
+                        <span className="shrink-0 font-data text-[11px] text-ink-soft">
                           {a.first_published_date
                             ? new Date(a.first_published_date).toLocaleDateString()
                             : "—"}
@@ -143,58 +186,37 @@ export function WriterTrafficPanel({ writerId }: { writerId: number }) {
                 </div>
               )}
 
-              {data.publishedThisPeriod && data.publishedThisPeriod.length > 0 && (
+              {publishedPreview.length > 0 && (
                 <div>
-                  <p className="font-data uppercase tracking-wide text-ink-soft">
-                    All Content Published in {data.latestPeriodLabel}
-                  </p>
-                  <div className="mt-1 overflow-x-auto">
-                    <table className="w-full text-left">
-                      <thead>
-                        <tr className="text-[10px] uppercase tracking-wide text-ink-soft">
-                          <th className="pb-1 pr-2 font-data">Article</th>
-                          <th className="pb-1 pr-2 text-right font-data">PVs</th>
-                          <th className="pb-1 pr-2 text-right font-data">Scroll</th>
-                          <th className="pb-1 text-right font-data">Avg Time</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {publishedVisible.map((a, i) => (
-                          <tr key={i} className="border-t border-rule">
-                            <td className="max-w-[220px] py-1 pr-2">
-                              <ArticleTitle article={a} />
-                            </td>
-                            <td className="py-1 pr-2 text-right font-data">
-                              {a.pageviews.toLocaleString()}
-                            </td>
-                            <td className="py-1 pr-2 text-right font-data">
-                              {formatPercent(a.scroll_depth)}
-                            </td>
-                            <td className="py-1 text-right font-data">
-                              {formatDuration(a.avg_time_on_page)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {!showAllPublished && (data.publishedThisPeriod?.length ?? 0) > 8 && (
-                    <button
-                      onClick={() => setShowAllPublished(true)}
-                      className="mt-1 text-[11px] font-medium text-navy hover:underline"
+                  <SectionHeading color="var(--grade-mid)">
+                    Published in {data.latestPeriodLabel}
+                  </SectionHeading>
+                  <ul className="space-y-1">
+                    {publishedPreview.map((a, i) => (
+                      <li key={i} className="flex items-baseline justify-between gap-2 text-xs">
+                        <ArticleTitle article={a} />
+                        <span className="shrink-0 font-data text-[11px] text-ink-soft">
+                          {a.pageviews.toLocaleString()} views
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {(s?.articlesPublishedCount ?? 0) > publishedPreview.length && (
+                    <Link
+                      href={writerTrafficHref(writerId)}
+                      className="mt-1 inline-block text-[11px] font-medium text-navy hover:underline"
                     >
-                      Show all {data.publishedThisPeriod.length}
-                    </button>
+                      + {(s?.articlesPublishedCount ?? 0) - publishedPreview.length} more
+                      published this period
+                    </Link>
                   )}
                 </div>
               )}
 
               {data.monthly && data.monthly.length > 1 && (
                 <div>
-                  <p className="font-data uppercase tracking-wide text-ink-soft">
-                    Monthly Trend
-                  </p>
-                  <ul className="mt-1 space-y-1">
+                  <SectionHeading color="var(--ink-soft)">Monthly Trend</SectionHeading>
+                  <ul className="space-y-1 text-xs">
                     {data.monthly.map((m) => (
                       <li key={m.period_key} className="flex justify-between">
                         <span>{m.period_label}</span>

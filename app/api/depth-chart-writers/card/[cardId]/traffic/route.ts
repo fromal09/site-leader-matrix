@@ -29,7 +29,8 @@ export async function GET(
     }
 
     const rows = await sql`
-      SELECT at.article_title, at.article_url, at.first_published_date,
+      SELECT at.article_title, at.article_url,
+        TO_CHAR(at.first_published_date, 'YYYY-MM-DD') AS first_published_date,
         at.pageviews::float8 AS pageviews,
         at.scroll_depth::float8 AS scroll_depth, at.avg_time_on_page::float8 AS avg_time_on_page,
         ti.period_key, ti.period_label
