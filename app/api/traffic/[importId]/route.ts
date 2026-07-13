@@ -24,7 +24,7 @@ export async function GET(
       return NextResponse.json({ error: "Import not found." }, { status: 404 });
     }
     const articles = await sql`
-      SELECT article_title, article_author, first_published_date, pageviews, scroll_depth, avg_time_on_page
+      SELECT article_title, article_author, article_url, first_published_date, pageviews, scroll_depth, avg_time_on_page
       FROM article_traffic
       WHERE import_id = ${Number(importId)}
       ORDER BY pageviews DESC

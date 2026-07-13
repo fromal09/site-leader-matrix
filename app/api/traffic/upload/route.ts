@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
       const chunk: ParsedTrafficRow[] = rows.slice(i, i + CHUNK_SIZE);
       const titles = chunk.map((r) => r.title);
       const authors = chunk.map((r) => r.author);
+      const urls = chunk.map((r) => r.url);
       const dates = chunk.map((r) => r.firstPublishedDate);
       const pageviews = chunk.map((r) => r.pageviews);
       const scrollDepths = chunk.map((r) => r.scrollDepth);
@@ -66,16 +67,17 @@ export async function POST(req: NextRequest) {
 
       await sql`
         INSERT INTO article_traffic
-          (import_id, site_id, article_title, article_author, first_published_date, pageviews, scroll_depth, avg_time_on_page)
-        SELECT ${importId}, ${siteIdNum}, t, a, d::date, p, sd, at
+          (import_id, site_id, article_title, article_author, article_url, first_published_date, pageviews, scroll_depth, avg_time_on_page)
+        SELECT ${importId}, ${siteIdNum}, t, a, u, d::date, p, sd, at
         FROM UNNEST(
           ${titles}::text[],
           ${authors}::text[],
+          ${urls}::text[],
           ${dates}::text[],
           ${pageviews}::int[],
           ${scrollDepths}::numeric[],
           ${avgTimes}::numeric[]
-        ) AS u(t, a, d, p, sd, at)
+        ) AS unnested(t, a, u, d, p, sd, at)
       `;
     }
 

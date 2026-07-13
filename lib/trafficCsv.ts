@@ -62,6 +62,7 @@ export function parseTrafficCsv(csvText: string): TrafficCsvResult {
   const hostnameKey = findKey(headerMap, "hostname", "domain", "site");
   const titleKey = findKey(headerMap, "articletitle", "title");
   const authorKey = findKey(headerMap, "articleauthor", "author", "writer");
+  const urlKey = findKey(headerMap, "articleurl", "pageurl", "permalink", "url", "link", "path");
   const firstPublishedKey = findKey(headerMap, "firstpublished");
   const pageviewsKey = findKey(headerMap, "pageview");
   const scrollDepthKey = findKey(headerMap, "scrolldepth");
@@ -82,9 +83,11 @@ export function parseTrafficCsv(csvText: string): TrafficCsvResult {
     }
     const hostname = hostnameKey ? record[hostnameKey]?.trim() || null : null;
     const author = authorKey ? record[authorKey]?.trim() : null;
+    const url = urlKey ? record[urlKey]?.trim() : null;
     const row: ParsedTrafficRow = {
       title,
       author: author && author.toLowerCase() !== "null" ? author : null,
+      url: url && url.toLowerCase() !== "null" ? url : null,
       firstPublishedDate: firstPublishedKey ? parseDateToISO(record[firstPublishedKey]) : null,
       pageviews: pageviewsKey ? parseNumber(record[pageviewsKey]) ?? 0 : 0,
       scrollDepth: scrollDepthKey ? parseNumber(record[scrollDepthKey]) : null,

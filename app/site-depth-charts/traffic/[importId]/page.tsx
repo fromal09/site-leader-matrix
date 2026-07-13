@@ -84,7 +84,20 @@ export default function TrafficImportDetailPage() {
           <tbody>
             {visible.map((a, i) => (
               <tr key={i} className="border-b border-rule">
-                <td className="py-2 pr-4 max-w-md">{a.article_title}</td>
+                <td className="py-2 pr-4 max-w-md">
+                  {a.article_url ? (
+                    <a
+                      href={a.article_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-navy hover:underline"
+                    >
+                      {a.article_title}
+                    </a>
+                  ) : (
+                    a.article_title
+                  )}
+                </td>
                 <td className="py-2 pr-4 text-ink-soft">{a.article_author ?? "—"}</td>
                 <td className="py-2 pr-4 text-xs text-ink-soft">
                   {a.first_published_date

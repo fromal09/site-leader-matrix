@@ -115,11 +115,14 @@ CREATE TABLE IF NOT EXISTS article_traffic (
   site_id INT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
   article_title TEXT NOT NULL,
   article_author TEXT,
+  article_url TEXT,
   first_published_date DATE,
   pageviews INT NOT NULL DEFAULT 0,
   scroll_depth NUMERIC,
   avg_time_on_page NUMERIC
 );
+
+ALTER TABLE article_traffic ADD COLUMN IF NOT EXISTS article_url TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_article_traffic_import ON article_traffic(import_id);
 CREATE INDEX IF NOT EXISTS idx_article_traffic_site_pageviews ON article_traffic(site_id, pageviews DESC);

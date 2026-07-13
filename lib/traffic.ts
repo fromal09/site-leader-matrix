@@ -14,6 +14,7 @@ export type ArticleTraffic = {
   site_id: number;
   article_title: string;
   article_author: string | null;
+  article_url: string | null;
   first_published_date: string | null;
   pageviews: number;
   scroll_depth: number | null;
@@ -23,6 +24,7 @@ export type ArticleTraffic = {
 export type ParsedTrafficRow = {
   title: string;
   author: string | null;
+  url: string | null;
   firstPublishedDate: string | null; // ISO yyyy-mm-dd, or null
   pageviews: number;
   scrollDepth: number | null;
@@ -31,19 +33,32 @@ export type ParsedTrafficRow = {
 
 export type TrafficArticleRow = {
   article_title: string;
+  article_url: string | null;
   first_published_date: string | null;
   pageviews: number;
   scroll_depth: number | null;
   avg_time_on_page: number | null;
   period_key: string;
   period_label: string;
+  engagementScore?: number;
+};
+
+export type WriterTrafficStats = {
+  articlesPublishedCount: number;
+  totalPageviews: number;
+  evergreenPageviews: number;
+  weightedAvgScrollDepth: number | null;
+  weightedAvgTimeOnPage: number | null;
 };
 
 export type WriterTrafficSummary = {
   matched: boolean;
   matchName?: string;
   latestPeriodLabel?: string;
-  topArticles?: TrafficArticleRow[];
-  recentArticles?: TrafficArticleRow[];
+  latestPeriodKey?: string;
+  stats?: WriterTrafficStats;
+  topPerforming?: TrafficArticleRow[]; // blended traffic + engagement score, latest period
+  recentArticles?: TrafficArticleRow[]; // most recently published, latest period
+  publishedThisPeriod?: TrafficArticleRow[]; // everything first published in the latest period
   monthly?: { period_key: string; period_label: string; totalPageviews: number; articleCount: number }[];
 };
