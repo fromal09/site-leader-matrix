@@ -5,6 +5,7 @@
 import { neon } from "@neondatabase/serverless";
 import data from "./seed-data.json";
 import { SCHEMA_SQL } from "../lib/schema";
+import { splitSqlStatements } from "../lib/sqlUtils";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -15,11 +16,7 @@ if (!DATABASE_URL) {
 const sql = neon(DATABASE_URL);
 
 async function main() {
-  // naive split on semicolons is fine here since the schema has no semicolons inside strings
-  const statements = SCHEMA_SQL
-    .split(";")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const statements = splitSqlStatements(SCHEMA_SQL);
   for (const stmt of statements) {
     await sql.query(stmt);
   }

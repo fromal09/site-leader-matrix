@@ -101,7 +101,7 @@ UPDATE depth_chart_roles SET section = 'specialists' WHERE label = 'Copy Special
 UPDATE depth_chart_roles SET section = 'contributors' WHERE label = 'Contributor';
 UPDATE depth_chart_roles SET section = 'division_resources' WHERE label IN ('Staff Writer', 'Rover');
 
--- Traffic data ingestion (shared across tools; currently surfaced in Site Depth Charts)
+-- Traffic data ingestion (shared across tools, currently surfaced in Site Depth Charts)
 
 ALTER TABLE sites ADD COLUMN IF NOT EXISTS hostname TEXT;
 

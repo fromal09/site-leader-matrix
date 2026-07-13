@@ -8,20 +8,25 @@ export default function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [failedStatement, setFailedStatement] = useState<string | null>(null);
 
   async function runMigrations() {
     if (!requireAuth()) return;
     setBusy(true);
     setResult(null);
     setError(null);
+    setFailedStatement(null);
     const res = await fetch("/api/admin/migrate", { method: "POST" });
     const data = await res.json();
     setBusy(false);
     if (!res.ok) {
-      setError(data.error ?? "Migration failed.");
+      setError(
+        `${data.error ?? "Migration failed."} (ran ${data.ranStatements}/${data.totalStatements} statements)`
+      );
+      setFailedStatement(data.failedStatement ?? null);
       return;
     }
-    setResult(`Ran ${data.ranStatements} schema statement(s) successfully.`);
+    setResult(`Ran ${data.ranStatements}/${data.totalStatements} schema statement(s) successfully.`);
   }
 
   return (
@@ -42,6 +47,11 @@ export default function AdminPage() {
       </button>
       {result && <p className="mt-3 text-sm text-grade-good">{result}</p>}
       {error && <p className="mt-3 text-sm text-grade-low">{error}</p>}
+      {failedStatement && (
+        <pre className="mt-2 overflow-x-auto rounded border border-rule-strong bg-white p-3 font-data text-xs text-ink">
+          {failedStatement}
+        </pre>
+      )}
     </main>
   );
 }
