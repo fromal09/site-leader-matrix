@@ -93,3 +93,33 @@ UPDATE depth_chart_roles SET section = 'site_leaders' WHERE label IN ('Site Edit
 UPDATE depth_chart_roles SET section = 'specialists' WHERE label = 'Copy Specialist';
 UPDATE depth_chart_roles SET section = 'contributors' WHERE label = 'Contributor';
 UPDATE depth_chart_roles SET section = 'division_resources' WHERE label IN ('Staff Writer', 'Rover');
+
+-- Traffic data ingestion (shared across tools; currently surfaced in Site Depth Charts)
+
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS hostname TEXT;
+
+CREATE TABLE IF NOT EXISTS traffic_imports (
+  id SERIAL PRIMARY KEY,
+  site_id INT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  period_key TEXT NOT NULL,
+  period_label TEXT NOT NULL,
+  row_count INT NOT NULL DEFAULT 0,
+  imported_by TEXT,
+  imported_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(site_id, period_key)
+);
+
+CREATE TABLE IF NOT EXISTS article_traffic (
+  id SERIAL PRIMARY KEY,
+  import_id INT NOT NULL REFERENCES traffic_imports(id) ON DELETE CASCADE,
+  site_id INT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  article_title TEXT NOT NULL,
+  article_author TEXT,
+  first_published_date DATE,
+  pageviews INT NOT NULL DEFAULT 0,
+  scroll_depth NUMERIC,
+  avg_time_on_page NUMERIC
+);
+
+CREATE INDEX IF NOT EXISTS idx_article_traffic_import ON article_traffic(import_id);
+CREATE INDEX IF NOT EXISTS idx_article_traffic_site_pageviews ON article_traffic(site_id, pageviews DESC);

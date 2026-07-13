@@ -14,7 +14,7 @@ export async function GET(
   const { id } = await params;
   try {
     const siteRows = await sql`
-      SELECT id, site_name, site_topic, leader_name, sort_order
+      SELECT id, site_name, site_topic, leader_name, sort_order, hostname
       FROM sites WHERE id = ${Number(id)}
     `;
     const site = (siteRows as any[])[0];

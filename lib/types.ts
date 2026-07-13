@@ -16,6 +16,7 @@ export type Site = {
   site_topic: string;
   leader_name: string;
   sort_order: number;
+  hostname: string | null;
   scores: ScoreRow[];
 };
 
