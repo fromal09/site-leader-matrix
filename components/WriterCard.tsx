@@ -119,6 +119,9 @@ export function WriterCard({
   const [name, setName] = useState(writer?.name ?? "");
   const [role, setRole] = useState(writer?.role ?? "");
   const [trafficName, setTrafficName] = useState(writer?.traffic_dashboard_name ?? "");
+  const [showTrafficField, setShowTrafficField] = useState(
+    Boolean(writer?.traffic_dashboard_name)
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -127,6 +130,7 @@ export function WriterCard({
     setName(writer?.name ?? "");
     setRole(writer?.role ?? "");
     setTrafficName(writer?.traffic_dashboard_name ?? "");
+    setShowTrafficField(Boolean(writer?.traffic_dashboard_name));
     setError(null);
     setEditing(true);
   }
@@ -232,18 +236,31 @@ export function WriterCard({
           </div>
         </div>
         <div>
-          <label className="text-xs font-medium text-ink-soft uppercase tracking-wide">
-            Traffic dashboard name{" "}
-            <span className="normal-case text-ink-soft">
-              (internal — not shown on the card)
-            </span>
-          </label>
-          <input
-            className="mt-1 w-full rounded border border-rule-strong bg-white px-2 py-1.5 text-sm outline-none focus:border-navy"
-            value={trafficName}
-            onChange={(e) => setTrafficName(e.target.value)}
-            placeholder="Name as it appears in the traffic dashboard"
-          />
+          {showTrafficField ? (
+            <>
+              <label className="text-xs font-medium text-ink-soft uppercase tracking-wide">
+                Traffic dashboard name{" "}
+                <span className="normal-case text-ink-soft">
+                  (internal — not shown on the card)
+                </span>
+              </label>
+              <input
+                autoFocus={trafficName === ""}
+                className="mt-1 w-full rounded border border-rule-strong bg-white px-2 py-1.5 text-sm outline-none focus:border-navy"
+                value={trafficName}
+                onChange={(e) => setTrafficName(e.target.value)}
+                placeholder="Name as it appears in the traffic dashboard"
+              />
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowTrafficField(true)}
+              className="text-xs font-medium text-ink-soft underline decoration-dotted hover:text-navy"
+            >
+              + Add traffic dashboard name (optional)
+            </button>
+          )}
         </div>
         {error && <p className="text-sm text-grade-low">{error}</p>}
         <div className="flex items-center justify-between pt-1">
