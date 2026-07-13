@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { parseTrafficCsv } from "@/lib/trafficCsv";
+import type { TrafficCsvGroup } from "@/lib/trafficCsv";
 import { trafficImportHref } from "@/lib/routes";
 import type { Site } from "@/lib/types";
 
@@ -19,8 +20,16 @@ type ImportRow = {
   imported_at: string;
 };
 
+type GroupStatus = "idle" | "uploading" | "done" | "error";
+
+type GroupState = {
+  group: TrafficCsvGroup;
+  siteId: string;
+  status: GroupStatus;
+  error: string | null;
+};
+
 function monthKeyToLabel(monthKey: string): string {
-  // monthKey is "YYYY-MM" from <input type="month">
   const [y, m] = monthKey.split("-").map(Number);
   if (!y || !m) return monthKey;
   const d = new Date(y, m - 1, 1);
@@ -34,12 +43,12 @@ export default function TrafficPage() {
   const [loadingList, setLoadingList] = useState(true);
 
   const [fileName, setFileName] = useState<string | null>(null);
-  const [parsed, setParsed] = useState<ReturnType<typeof parseTrafficCsv> | null>(null);
-  const [siteId, setSiteId] = useState<string>("");
+  const [groupStates, setGroupStates] = useState<GroupState[]>([]);
+  const [skippedRows, setSkippedRows] = useState(0);
+  const [missingColumns, setMissingColumns] = useState<string[]>([]);
   const [monthKey, setMonthKey] = useState<string>("");
   const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   async function loadAll() {
     setLoadingList(true);
@@ -56,62 +65,84 @@ export default function TrafficPage() {
     loadAll();
   }, []);
 
-  const matchedSite = useMemo(() => {
-    if (!parsed?.hostname) return null;
-    return sites.find((s) => s.hostname === parsed.hostname) ?? null;
-  }, [parsed, sites]);
-
-  useEffect(() => {
-    if (matchedSite) setSiteId(String(matchedSite.id));
-  }, [matchedSite]);
-
   async function handleFile(file: File) {
-    setUploadError(null);
-    setUploadSuccess(null);
+    setFormError(null);
     setFileName(file.name);
     const text = await file.text();
     const result = parseTrafficCsv(text);
-    setParsed(result);
+    setSkippedRows(result.skippedRows);
+    setMissingColumns(result.missingColumns);
+    setGroupStates(
+      result.groups.map((group) => {
+        const matched = group.hostname
+          ? sites.find((s) => s.hostname === group.hostname)
+          : undefined;
+        return {
+          group,
+          siteId: matched ? String(matched.id) : "",
+          status: "idle" as GroupStatus,
+          error: null,
+        };
+      })
+    );
   }
 
-  async function handleUpload() {
+  function updateGroupSite(index: number, siteId: string) {
+    setGroupStates((prev) =>
+      prev.map((g, i) => (i === index ? { ...g, siteId } : g))
+    );
+  }
+
+  const allSitesChosen = useMemo(
+    () => groupStates.length > 0 && groupStates.every((g) => g.siteId),
+    [groupStates]
+  );
+
+  async function handleUploadAll() {
     if (!requireAuth()) return;
-    if (!parsed || parsed.rows.length === 0) {
-      setUploadError("Nothing to upload — choose a CSV first.");
-      return;
-    }
-    if (!siteId) {
-      setUploadError("Choose which site this data belongs to.");
-      return;
-    }
     if (!monthKey) {
-      setUploadError("Choose which month this data covers.");
+      setFormError("Choose which month this data covers.");
+      return;
+    }
+    if (!allSitesChosen) {
+      setFormError("Choose a site for every group below.");
       return;
     }
 
+    setFormError(null);
     setUploading(true);
-    setUploadError(null);
-    setUploadSuccess(null);
-    const res = await fetch("/api/traffic/upload", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        siteId: Number(siteId),
-        hostname: parsed.hostname,
-        periodKey: monthKey,
-        periodLabel: monthKeyToLabel(monthKey),
-        rows: parsed.rows,
-      }),
-    });
-    setUploading(false);
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      setUploadError(d.error ?? "Upload failed.");
-      return;
+
+    for (let i = 0; i < groupStates.length; i++) {
+      setGroupStates((prev) =>
+        prev.map((g, idx) => (idx === i ? { ...g, status: "uploading", error: null } : g))
+      );
+      const g = groupStates[i];
+      const res = await fetch("/api/traffic/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          siteId: Number(g.siteId),
+          hostname: g.group.hostname,
+          periodKey: monthKey,
+          periodLabel: monthKeyToLabel(monthKey),
+          rows: g.group.rows,
+        }),
+      });
+      if (res.ok) {
+        setGroupStates((prev) =>
+          prev.map((gs, idx) => (idx === i ? { ...gs, status: "done" } : gs))
+        );
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setGroupStates((prev) =>
+          prev.map((gs, idx) =>
+            idx === i ? { ...gs, status: "error", error: d.error ?? "Upload failed." } : gs
+          )
+        );
+      }
     }
-    setUploadSuccess(`Imported ${parsed.rows.length.toLocaleString()} rows.`);
-    setParsed(null);
-    setFileName(null);
+
+    setUploading(false);
     loadAll();
   }
 
@@ -122,6 +153,8 @@ export default function TrafficPage() {
     loadAll();
   }
 
+  const totalRows = groupStates.reduce((sum, g) => sum + g.group.rows.length, 0);
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
       <div className="mb-6">
@@ -130,9 +163,9 @@ export default function TrafficPage() {
         </p>
         <h1 className="font-display text-3xl font-bold text-navy">Traffic Data</h1>
         <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-          Upload a monthly article-performance export. Re-uploading the same site and month
-          replaces what's there — safe for a partial-month upload followed by a fuller one
-          later.
+          Upload a monthly article-performance export — single-site or multi-site in one
+          file. Re-uploading the same site and month replaces what's there, so a
+          partial-month upload followed by a fuller one later just works.
         </p>
       </div>
 
@@ -151,79 +184,100 @@ export default function TrafficPage() {
           />
         </div>
 
-        {parsed && (
+        {groupStates.length > 0 && (
           <div className="mt-4 space-y-3">
             <div className="rounded border border-rule-strong bg-white p-3 text-sm">
               <p>
-                <strong>{fileName}</strong> — {parsed.rows.length.toLocaleString()} article
-                row{parsed.rows.length === 1 ? "" : "s"} parsed
-                {parsed.skippedRows > 0 && (
-                  <span className="text-ink-soft">
-                    {" "}
-                    ({parsed.skippedRows} skipped — no title)
-                  </span>
+                <strong>{fileName}</strong> — {totalRows.toLocaleString()} article row
+                {totalRows === 1 ? "" : "s"} across {groupStates.length} site
+                {groupStates.length === 1 ? "" : "s"}
+                {skippedRows > 0 && (
+                  <span className="text-ink-soft"> ({skippedRows} skipped — no title)</span>
                 )}
               </p>
-              {parsed.hostname && (
-                <p className="mt-1 font-data text-xs text-ink-soft">
-                  Detected hostname: {parsed.hostname}
-                  {matchedSite && ` → matched to ${matchedSite.site_name}`}
-                </p>
-              )}
-              {parsed.missingColumns.length > 0 && (
+              {missingColumns.length > 0 && (
                 <p className="mt-1 text-xs text-grade-low">
-                  Couldn&apos;t find columns for: {parsed.missingColumns.join(", ")}
+                  Couldn&apos;t find columns for: {missingColumns.join(", ")}
                 </p>
               )}
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="text-xs font-medium text-ink-soft uppercase tracking-wide">
-                  Site {matchedSite && <span className="text-grade-good">(auto-detected)</span>}
-                </label>
-                <select
-                  className="mt-1 w-full rounded border border-rule-strong bg-white px-2 py-1.5 text-sm outline-none focus:border-navy"
-                  value={siteId}
-                  onChange={(e) => setSiteId(e.target.value)}
-                >
-                  <option value="" disabled>
-                    Choose a site…
-                  </option>
-                  {sites.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.site_name} ({s.site_topic})
-                    </option>
-                  ))}
-                </select>
-                {parsed.hostname && !matchedSite && (
-                  <p className="mt-1 text-xs text-ink-soft">
-                    New hostname — we&apos;ll remember this mapping after you upload.
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="text-xs font-medium text-ink-soft uppercase tracking-wide">
-                  Month this data covers
-                </label>
-                <input
-                  type="month"
-                  className="mt-1 w-full rounded border border-rule-strong bg-white px-2 py-1.5 text-sm outline-none focus:border-navy"
-                  value={monthKey}
-                  onChange={(e) => setMonthKey(e.target.value)}
-                />
-              </div>
+            <div>
+              <label className="text-xs font-medium text-ink-soft uppercase tracking-wide">
+                Month this data covers
+              </label>
+              <input
+                type="month"
+                className="mt-1 w-full max-w-xs rounded border border-rule-strong bg-white px-2 py-1.5 text-sm outline-none focus:border-navy"
+                value={monthKey}
+                onChange={(e) => setMonthKey(e.target.value)}
+              />
             </div>
 
-            {uploadError && <p className="text-sm text-grade-low">{uploadError}</p>}
-            {uploadSuccess && <p className="text-sm text-grade-good">{uploadSuccess}</p>}
+            <div className="space-y-2">
+              {groupStates.map((g, i) => {
+                const matched = g.group.hostname
+                  ? sites.find((s) => s.hostname === g.group.hostname)
+                  : undefined;
+                return (
+                  <div
+                    key={i}
+                    className="flex flex-col gap-2 rounded border border-rule-strong bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="text-sm">
+                      <div className="font-data text-xs text-ink-soft">
+                        {g.group.hostname ?? "No hostname column detected"}
+                      </div>
+                      <div>{g.group.rows.length.toLocaleString()} rows</div>
+                      {g.group.hostname && !matched && (
+                        <div className="text-xs text-ink-soft">
+                          New hostname — we&apos;ll remember this mapping after upload.
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="rounded border border-rule-strong bg-white px-2 py-1.5 text-sm outline-none focus:border-navy"
+                        value={g.siteId}
+                        onChange={(e) => updateGroupSite(i, e.target.value)}
+                        disabled={g.status === "uploading" || g.status === "done"}
+                      >
+                        <option value="" disabled>
+                          Choose a site…
+                        </option>
+                        {sites.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.site_name} ({s.site_topic})
+                          </option>
+                        ))}
+                      </select>
+                      {g.status === "uploading" && (
+                        <span className="text-xs text-ink-soft">Uploading…</span>
+                      )}
+                      {g.status === "done" && (
+                        <span className="text-xs text-grade-good">Done</span>
+                      )}
+                      {g.status === "error" && (
+                        <span className="text-xs text-grade-low">{g.error}</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {formError && <p className="text-sm text-grade-low">{formError}</p>}
 
             <button
-              onClick={handleUpload}
+              onClick={handleUploadAll}
               disabled={uploading}
               className="rounded bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-soft disabled:opacity-60"
             >
-              {uploading ? "Uploading…" : "Upload"}
+              {uploading
+                ? "Uploading…"
+                : groupStates.length > 1
+                ? `Upload All (${groupStates.length} sites)`
+                : "Upload"}
             </button>
           </div>
         )}

@@ -31,14 +31,24 @@ function parseNumber(value: string | undefined | null): number | null {
   return isNaN(n) ? null : n;
 }
 
-export type TrafficCsvResult = {
-  hostname: string | null;
+export type TrafficCsvGroup = {
+  hostname: string | null; // null only when the file has no hostname column at all
   rows: ParsedTrafficRow[];
+};
+
+export type TrafficCsvResult = {
+  groups: TrafficCsvGroup[];
   totalRows: number;
   skippedRows: number;
   missingColumns: string[];
 };
 
+/**
+ * Parses a traffic export. If the file contains multiple distinct hostnames
+ * (a multi-site export), rows are split into one group per hostname so each
+ * can be mapped to its own site and uploaded independently. A single-site
+ * file just produces one group, same as before.
+ */
 export function parseTrafficCsv(csvText: string): TrafficCsvResult {
   const parsed = Papa.parse<Record<string, string>>(csvText, {
     header: true,
@@ -61,8 +71,7 @@ export function parseTrafficCsv(csvText: string): TrafficCsvResult {
   if (!titleKey) missingColumns.push("Article Title");
   if (!pageviewsKey) missingColumns.push("PageViews");
 
-  const rows: ParsedTrafficRow[] = [];
-  let hostname: string | null = null;
+  const rowsByHostname = new Map<string | null, ParsedTrafficRow[]>();
   let skippedRows = 0;
 
   for (const record of parsed.data) {
@@ -71,24 +80,26 @@ export function parseTrafficCsv(csvText: string): TrafficCsvResult {
       skippedRows++;
       continue;
     }
-    if (!hostname && hostnameKey) {
-      const h = record[hostnameKey]?.trim();
-      if (h) hostname = h;
-    }
+    const hostname = hostnameKey ? record[hostnameKey]?.trim() || null : null;
     const author = authorKey ? record[authorKey]?.trim() : null;
-    rows.push({
+    const row: ParsedTrafficRow = {
       title,
       author: author && author.toLowerCase() !== "null" ? author : null,
       firstPublishedDate: firstPublishedKey ? parseDateToISO(record[firstPublishedKey]) : null,
       pageviews: pageviewsKey ? parseNumber(record[pageviewsKey]) ?? 0 : 0,
       scrollDepth: scrollDepthKey ? parseNumber(record[scrollDepthKey]) : null,
       avgTimeOnPage: avgTimeKey ? parseNumber(record[avgTimeKey]) : null,
-    });
+    };
+    if (!rowsByHostname.has(hostname)) rowsByHostname.set(hostname, []);
+    rowsByHostname.get(hostname)!.push(row);
   }
 
+  const groups: TrafficCsvGroup[] = Array.from(rowsByHostname.entries()).map(
+    ([hostname, rows]) => ({ hostname, rows })
+  );
+
   return {
-    hostname,
-    rows,
+    groups,
     totalRows: parsed.data.length,
     skippedRows,
     missingColumns,
