@@ -4,21 +4,10 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { TRAFFIC_BASE } from "@/lib/routes";
+import { formatDuration, formatPercent } from "@/lib/trafficFormat";
 import type { ArticleTraffic, TrafficImport } from "@/lib/traffic";
 
 const PAGE_SIZE = 200;
-
-function formatDuration(seconds: number | null): string {
-  if (seconds === null) return "—";
-  const m = Math.floor(seconds / 60);
-  const s = Math.round(seconds % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
-function formatPercent(fraction: number | null): string {
-  if (fraction === null) return "—";
-  return `${(fraction * 100).toFixed(1)}%`;
-}
 
 export default function TrafficImportDetailPage() {
   const params = useParams();

@@ -28,3 +28,22 @@ export type ParsedTrafficRow = {
   scrollDepth: number | null;
   avgTimeOnPage: number | null;
 };
+
+export type TrafficArticleRow = {
+  article_title: string;
+  first_published_date: string | null;
+  pageviews: number;
+  scroll_depth: number | null;
+  avg_time_on_page: number | null;
+  period_key: string;
+  period_label: string;
+};
+
+export type WriterTrafficSummary = {
+  matched: boolean;
+  matchName?: string;
+  latestPeriodLabel?: string;
+  topArticles?: TrafficArticleRow[];
+  recentArticles?: TrafficArticleRow[];
+  monthly?: { period_key: string; period_label: string; totalPageviews: number; articleCount: number }[];
+};

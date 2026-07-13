@@ -130,4 +130,5 @@ CREATE TABLE IF NOT EXISTS article_traffic (
 
 CREATE INDEX IF NOT EXISTS idx_article_traffic_import ON article_traffic(import_id);
 CREATE INDEX IF NOT EXISTS idx_article_traffic_site_pageviews ON article_traffic(site_id, pageviews DESC);
+CREATE INDEX IF NOT EXISTS idx_article_traffic_site_author ON article_traffic(site_id, article_author);
 `;

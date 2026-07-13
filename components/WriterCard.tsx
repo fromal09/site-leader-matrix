@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { useAuth } from "./AuthProvider";
 import { SECTIONS, sectionColor } from "@/lib/depthCharts";
+import { formatDuration } from "@/lib/trafficFormat";
 import type { DepthChartRole, DepthChartWriter, SectionKey } from "@/lib/depthCharts";
+import type { WriterTrafficSummary } from "@/lib/traffic";
 
 const ADD_NEW = "__add_new__";
 
@@ -111,6 +113,107 @@ function RoleSelect({
       ))}
       <option value={ADD_NEW}>+ Add new role…</option>
     </select>
+  );
+}
+
+function WriterTrafficPanel({ writerId }: { writerId: number }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<WriterTrafficSummary | null>(null);
+
+  async function toggle() {
+    if (!open && !data) {
+      setLoading(true);
+      const res = await fetch(`/api/depth-chart-writers/card/${writerId}/traffic`);
+      const d = await res.json();
+      setData(d);
+      setLoading(false);
+    }
+    setOpen((o) => !o);
+  }
+
+  return (
+    <div className="mt-3 border-t border-rule pt-2">
+      <button
+        type="button"
+        onClick={toggle}
+        className="text-xs font-medium text-ink-soft hover:text-navy"
+      >
+        {open ? "Hide traffic ▲" : "View traffic ▾"}
+      </button>
+      {open && (
+        <div className="mt-2 text-xs">
+          {loading ? (
+            <p className="text-ink-soft">Loading…</p>
+          ) : !data?.matched ? (
+            <p className="italic text-ink-soft">
+              No traffic data matched{data?.matchName ? ` for "${data.matchName}"` : ""} yet.
+              If this doesn&apos;t look right, check the traffic dashboard name on this card.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <p className="font-data text-ink-soft">{data.latestPeriodLabel}</p>
+
+              {data.topArticles && data.topArticles.length > 0 && (
+                <div>
+                  <p className="font-data uppercase tracking-wide text-ink-soft">
+                    Top articles
+                  </p>
+                  <ul className="mt-1 space-y-1.5">
+                    {data.topArticles.map((a, i) => (
+                      <li key={i}>
+                        <div className="truncate">{a.article_title}</div>
+                        <div className="font-data text-[11px] text-ink-soft">
+                          {a.pageviews.toLocaleString()} views · {formatDuration(a.avg_time_on_page)} avg
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {data.recentArticles && data.recentArticles.length > 0 && (
+                <div>
+                  <p className="font-data uppercase tracking-wide text-ink-soft">
+                    Recent articles
+                  </p>
+                  <ul className="mt-1 space-y-1">
+                    {data.recentArticles.map((a, i) => (
+                      <li key={i} className="flex justify-between gap-2">
+                        <span className="truncate">{a.article_title}</span>
+                        <span className="shrink-0 text-ink-soft">
+                          {a.first_published_date
+                            ? new Date(a.first_published_date).toLocaleDateString()
+                            : "—"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {data.monthly && data.monthly.length > 1 && (
+                <div>
+                  <p className="font-data uppercase tracking-wide text-ink-soft">
+                    Monthly trend
+                  </p>
+                  <ul className="mt-1 space-y-1">
+                    {data.monthly.map((m) => (
+                      <li key={m.period_key} className="flex justify-between">
+                        <span>{m.period_label}</span>
+                        <span className="font-data text-ink-soft">
+                          {m.totalPageviews.toLocaleString()} views
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -224,9 +327,7 @@ export function WriterCard({
             Edit
           </button>
         </div>
-        <p className="mt-3 text-xs italic text-ink-soft">
-          Traffic performance coming soon.
-        </p>
+        <WriterTrafficPanel writerId={writer.id} />
       </div>
     );
   }
