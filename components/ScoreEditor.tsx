@@ -52,15 +52,23 @@ export function ScoreEditor({
 
   return (
     <div className="card rounded-md p-4">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-1 flex items-center justify-between">
         <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-navy">
           {label}
         </h3>
-        {!row?.is_canonized && (
-          <span className="rounded-full bg-grease-red/10 px-2 py-0.5 text-[10px] font-medium text-grease-red">
-            placeholder
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          <a
+            href={`/rubric#${category}`}
+            className="text-[10px] font-medium text-ink-soft underline decoration-dotted hover:text-navy"
+          >
+            what does this mean?
+          </a>
+          {!row?.is_canonized && (
+            <span className="rounded-full bg-grease-red/10 px-2 py-0.5 text-[10px] font-medium text-grease-red">
+              placeholder
+            </span>
+          )}
+        </div>
       </div>
 
       {editing ? (

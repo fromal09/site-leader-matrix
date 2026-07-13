@@ -17,7 +17,13 @@ export function Header() {
             NFL Division
           </span>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
+          <Link
+            href="/rubric"
+            className="text-xs font-medium text-ink-soft hover:text-navy"
+          >
+            Grading Rubric
+          </Link>
           {session ? (
             <>
               <span className="font-data text-xs text-ink-soft">
