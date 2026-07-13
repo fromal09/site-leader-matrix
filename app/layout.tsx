@@ -25,8 +25,8 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Site Leader Matrix | NFL Division",
-  description: "Scouting grades for FanSided NFL site leaders across four quadrants.",
+  title: "Sports Directors Reference Guide",
+  description: "Internal tools for evaluating and developing site leadership.",
 };
 
 export default function RootLayout({

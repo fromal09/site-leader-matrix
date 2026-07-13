@@ -11,6 +11,7 @@ import {
 import { CATEGORIES } from "@/lib/categories";
 import { average, gradeBand, BAND_COLORS } from "@/lib/grades";
 import { GradeStamp } from "./GradeStamp";
+import { slmLeaderHref } from "@/lib/routes";
 import type { Site } from "@/lib/types";
 
 export function RadarCard({ site }: { site: Site }) {
@@ -25,7 +26,7 @@ export function RadarCard({ site }: { site: Site }) {
 
   return (
     <Link
-      href={`/leader/${site.id}`}
+      href={slmLeaderHref(site.id)}
       className="card group relative flex flex-col rounded-md p-3 transition hover:-translate-y-0.5 hover:shadow-md"
     >
       {anyPlaceholder && (

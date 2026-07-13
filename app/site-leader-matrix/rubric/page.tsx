@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { SLM_BASE } from "@/lib/routes";
 import { CATEGORIES } from "@/lib/categories";
 import { RUBRIC } from "@/lib/rubric";
 
 export default function RubricPage() {
   return (
     <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
-      <Link href="/" className="text-xs font-medium text-ink-soft hover:text-navy">
+      <Link href={SLM_BASE} className="text-xs font-medium text-ink-soft hover:text-navy">
         ← All sites
       </Link>
 

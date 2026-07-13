@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { gradeBand, BAND_COLORS } from "@/lib/grades";
 import { useAuth } from "./AuthProvider";
+import { slmRubricHref } from "@/lib/routes";
 import type { ScoreRow } from "@/lib/types";
 import type { CategoryKey } from "@/lib/categories";
 
@@ -58,7 +59,7 @@ export function ScoreEditor({
         </h3>
         <div className="flex items-center gap-2">
           <a
-            href={`/rubric#${category}`}
+            href={slmRubricHref(category)}
             className="text-[10px] font-medium text-ink-soft underline decoration-dotted hover:text-navy"
           >
             what does this mean?

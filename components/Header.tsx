@@ -10,20 +10,11 @@ export function Header() {
     <header className="border-b-2 border-navy bg-paper-raised">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
         <Link href="/" className="flex items-baseline gap-2">
-          <span className="font-display text-xl font-bold tracking-tight text-navy">
-            SITE LEADER MATRIX
-          </span>
-          <span className="font-data text-xs uppercase tracking-widest text-ink-soft">
-            NFL Division
+          <span className="font-display text-base font-bold tracking-tight text-navy sm:text-xl">
+            SPORTS DIRECTORS REFERENCE GUIDE
           </span>
         </Link>
-        <div className="flex items-center gap-4">
-          <Link
-            href="/rubric"
-            className="text-xs font-medium text-ink-soft hover:text-navy"
-          >
-            Grading Rubric
-          </Link>
+        <div className="flex items-center gap-3">
           {session ? (
             <>
               <span className="font-data text-xs text-ink-soft">

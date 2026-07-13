@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { computeDivisionStats } from "@/lib/stats";
 import { categoryLabel } from "@/lib/categories";
+import { slmLeaderHref } from "@/lib/routes";
 import type { Site } from "@/lib/types";
 import { useAuth } from "./AuthProvider";
 
@@ -80,7 +81,7 @@ export function TrendsPanel({ sites }: { sites: Site[] }) {
           <ul className="mt-1 space-y-1 text-sm">
             {stats.biggestGaps.map((g) => (
               <li key={g.site.id}>
-                <Link href={`/leader/${g.site.id}`} className="hover:text-navy hover:underline">
+                <Link href={slmLeaderHref(g.site.id)} className="hover:text-navy hover:underline">
                   {g.site.site_name}
                 </Link>{" "}
                 — {g.gap.toFixed(0)} pt gap ({categoryLabel(g.high)} vs {categoryLabel(g.low)})
@@ -96,7 +97,7 @@ export function TrendsPanel({ sites }: { sites: Site[] }) {
           <ul className="mt-1 space-y-1 text-sm">
             {stats.needsAttention.map((n) => (
               <li key={n.site.id} className="flex justify-between">
-                <Link href={`/leader/${n.site.id}`} className="hover:text-navy hover:underline">
+                <Link href={slmLeaderHref(n.site.id)} className="hover:text-navy hover:underline">
                   {n.site.site_name}
                 </Link>
                 <span className="font-data text-grade-low">{n.avg.toFixed(2)}</span>
@@ -110,7 +111,7 @@ export function TrendsPanel({ sites }: { sites: Site[] }) {
           <ul className="mt-1 space-y-1 text-sm">
             {stats.topPerformers.map((n) => (
               <li key={n.site.id} className="flex justify-between">
-                <Link href={`/leader/${n.site.id}`} className="hover:text-navy hover:underline">
+                <Link href={slmLeaderHref(n.site.id)} className="hover:text-navy hover:underline">
                   {n.site.site_name}
                 </Link>
                 <span className="font-data text-grade-good">{n.avg.toFixed(2)}</span>

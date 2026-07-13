@@ -1,108 +1,67 @@
-"use client";
+import Link from "next/link";
+import { TOOLS } from "@/lib/tools";
 
-import { useEffect, useMemo, useState } from "react";
-import { RadarCard } from "@/components/RadarCard";
-import { DivisionAverageRadar } from "@/components/DivisionAverageRadar";
-import { TrendsPanel } from "@/components/TrendsPanel";
-import { CanonizeButton } from "@/components/CanonizeButton";
-import { CATEGORIES } from "@/lib/categories";
-import { average } from "@/lib/grades";
-import type { Site } from "@/lib/types";
-
-type SortKey = "overall" | (typeof CATEGORIES)[number]["key"];
-
-export default function HomePage() {
-  const [sites, setSites] = useState<Site[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [sortKey, setSortKey] = useState<SortKey>("overall");
-
-  async function load() {
-    setLoading(true);
-    const res = await fetch("/api/sites");
-    const data = await res.json();
-    setSites(data.sites ?? []);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const placeholderCount = useMemo(
-    () => sites.reduce((n, s) => n + s.scores.filter((sc) => !sc.is_canonized).length, 0),
-    [sites]
-  );
-
-  const sortedSites = useMemo(() => {
-    const copy = [...sites];
-    copy.sort((a, b) => {
-      const va =
-        sortKey === "overall"
-          ? average(a.scores.map((s) => s.score))
-          : a.scores.find((s) => s.category === sortKey)?.score ?? 0;
-      const vb =
-        sortKey === "overall"
-          ? average(b.scores.map((s) => s.score))
-          : b.scores.find((s) => s.category === sortKey)?.score ?? 0;
-      return vb - va;
-    });
-    return copy;
-  }, [sites, sortKey]);
-
+export default function HubPage() {
   return (
-    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="font-data text-xs uppercase tracking-widest text-ink-soft">
-            Division Overview
-          </p>
-          <h1 className="font-display text-3xl font-bold text-navy">
-            NFL Site Leader Grades
-          </h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <CanonizeButton count={placeholderCount} onDone={load} />
-        </div>
+    <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+      <div className="mb-8">
+        <p className="font-data text-xs uppercase tracking-widest text-ink-soft">
+          Internal Tools
+        </p>
+        <h1 className="font-display text-3xl font-bold text-navy sm:text-4xl">
+          Sports Directors Reference Guide
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm text-ink-soft">
+          A field guide and toolset for evaluating and developing the people who run our
+          sites — grading, planning, and tracking, all in one place.
+        </p>
       </div>
 
-      {loading ? (
-        <p className="text-sm text-ink-soft">Loading the grade book…</p>
-      ) : (
-        <>
-          <div className="mb-6">
-            <DivisionAverageRadar sites={sites} />
-          </div>
-
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold text-navy">All Sites</h2>
-            <label className="flex items-center gap-2 text-xs">
-              <span className="text-ink-soft uppercase tracking-wide">Sort by</span>
-              <select
-                value={sortKey}
-                onChange={(e) => setSortKey(e.target.value as SortKey)}
-                className="rounded border border-rule-strong bg-white px-2 py-1 font-data text-xs"
-              >
-                <option value="overall">Overall average</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c.key} value={c.key}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {sortedSites.map((site) => (
-              <RadarCard key={site.id} site={site} />
-            ))}
-          </div>
-
-          <div className="mt-8">
-            <TrendsPanel sites={sites} />
-          </div>
-        </>
-      )}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {TOOLS.map((tool) =>
+          tool.status === "available" ? (
+            <Link
+              key={tool.slug}
+              href={tool.href}
+              className="card group flex flex-col rounded-md p-5 transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div className="mb-2 flex items-start justify-between gap-2">
+                <h2 className="font-display text-xl font-semibold text-navy">
+                  {tool.name}
+                </h2>
+                <span className="stamp h-9 w-9 shrink-0 text-[10px] text-grade-good">
+                  GO
+                </span>
+              </div>
+              <p className="font-data text-xs uppercase tracking-wide text-ink-soft">
+                {tool.tagline}
+              </p>
+              <p className="mt-2 text-sm text-ink">{tool.description}</p>
+              <span className="mt-4 text-xs font-medium text-navy group-hover:underline">
+                Open →
+              </span>
+            </Link>
+          ) : (
+            <div
+              key={tool.slug}
+              className="card relative flex flex-col rounded-md p-5 opacity-60"
+            >
+              <div className="mb-2 flex items-start justify-between gap-2">
+                <h2 className="font-display text-xl font-semibold text-ink-soft">
+                  {tool.name}
+                </h2>
+                <span className="stamp h-9 w-9 shrink-0 text-[9px] text-ink-soft">
+                  SOON
+                </span>
+              </div>
+              <p className="font-data text-xs uppercase tracking-wide text-ink-soft">
+                {tool.tagline}
+              </p>
+              <p className="mt-2 text-sm text-ink-soft">{tool.description}</p>
+            </div>
+          )
+        )}
+      </div>
     </main>
   );
 }
