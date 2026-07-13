@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useAuth } from "./AuthProvider";
 import { SECTIONS, sectionColor } from "@/lib/depthCharts";
 import { WriterTrafficPanel } from "./WriterTrafficPanel";
+import { formatCompactNumber, formatPercent, scrollDepthColor } from "@/lib/trafficFormat";
 import type { DepthChartRole, DepthChartWriter, SectionKey } from "@/lib/depthCharts";
+import type { WriterQuickStats } from "@/lib/traffic";
 
 const ADD_NEW = "__add_new__";
 
@@ -115,10 +117,25 @@ function RoleSelect({
   );
 }
 
+function QuickStatBadge({ label, color }: { label: string; color?: string }) {
+  return (
+    <span
+      className="whitespace-nowrap rounded-full border px-2 py-0.5 font-data text-[11px]"
+      style={{
+        borderColor: color ?? "var(--rule-strong)",
+        color: color ?? "var(--ink-soft)",
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
 export function WriterCard({
   siteId,
   writer,
   roles,
+  quickStats,
   onRoleCreated,
   onSaved,
   onDiscardNew,
@@ -126,6 +143,7 @@ export function WriterCard({
   siteId: number;
   writer: DepthChartWriter | null; // null = new, unsaved card
   roles: DepthChartRole[];
+  quickStats?: WriterQuickStats;
   onRoleCreated: (role: DepthChartRole) => void;
   onSaved: () => void;
   onDiscardNew: () => void;
@@ -206,7 +224,7 @@ export function WriterCard({
         className="card rounded-md border-l-4 p-4"
         style={{ borderLeftColor: color }}
       >
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="font-display text-lg font-semibold text-navy">
               {writer.name}
@@ -218,12 +236,26 @@ export function WriterCard({
               {writer.role}
             </span>
           </div>
-          <button
-            onClick={startEdit}
-            className="text-xs font-medium text-ink-soft hover:text-navy"
-          >
-            Edit
-          </button>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {quickStats && (
+              <>
+                <QuickStatBadge label={`${quickStats.articlesPublished} published`} />
+                <QuickStatBadge
+                  label={`${formatCompactNumber(quickStats.totalPageviews)} PVs`}
+                />
+                <QuickStatBadge
+                  label={`${formatPercent(quickStats.weightedAvgScrollDepth)} scroll`}
+                  color={scrollDepthColor(quickStats.weightedAvgScrollDepth)}
+                />
+              </>
+            )}
+            <button
+              onClick={startEdit}
+              className="text-xs font-medium text-ink-soft hover:text-navy"
+            >
+              Edit
+            </button>
+          </div>
         </div>
         <WriterTrafficPanel writerId={writer.id} />
       </div>
@@ -232,7 +264,7 @@ export function WriterCard({
 
   return (
     <div className="card rounded-md border-l-4 p-4" style={{ borderLeftColor: color }}>
-      <div className="space-y-2">
+      <div className="max-w-xl space-y-2">
         <div>
           <label className="text-xs font-medium text-ink-soft uppercase tracking-wide">
             Name

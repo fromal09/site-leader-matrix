@@ -13,13 +13,13 @@ function ArticleTitle({ article }: { article: TrafficArticleRow }) {
         href={article.article_url}
         target="_blank"
         rel="noopener noreferrer"
-        className="truncate text-navy hover:underline"
+        className="text-navy hover:underline"
       >
         {article.article_title}
       </a>
     );
   }
-  return <span className="truncate text-ink">{article.article_title}</span>;
+  return <span className="text-ink">{article.article_title}</span>;
 }
 
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
@@ -129,7 +129,7 @@ export function WriterTrafficPanel({ writerId }: { writerId: number }) {
               </div>
 
               {s && (
-                <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
                   <StatTile label="Published" value={s.articlesPublishedCount.toLocaleString()} />
                   <StatTile label="Total PVs" value={s.totalPageviews.toLocaleString()} />
                   <StatTile

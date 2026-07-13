@@ -43,6 +43,19 @@ export type TrafficArticleRow = {
   engagementScore?: number;
 };
 
+export type WriterQuickStats = {
+  articlesPublished: number;
+  totalPageviews: number;
+  weightedAvgScrollDepth: number | null;
+  weightedAvgTimeOnPage: number | null;
+};
+
+export type SiteTrafficSummary = {
+  periodKey: string | null;
+  periodLabel: string | null;
+  writers: Record<number, WriterQuickStats>;
+};
+
 export type WriterTrafficStats = {
   articlesPublishedCount: number;
   totalPageviews: number;

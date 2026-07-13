@@ -1,3 +1,9 @@
+export function formatCompactNumber(n: number): string {
+  return new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(
+    n
+  );
+}
+
 export function formatDuration(seconds: number | null): string {
   if (seconds === null) return "—";
   const m = Math.floor(seconds / 60);
