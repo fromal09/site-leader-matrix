@@ -14,6 +14,7 @@ import type { SiteTrafficTotals, WriterQuickStats, HomepageTraffic } from "@/lib
 import { formatCompactNumber, formatDuration, formatPercent } from "@/lib/trafficFormat";
 import { StatTile } from "@/components/StatTile";
 import { teamColor } from "@/lib/nflTeamColors";
+import { rankTier, rankTierColors } from "@/lib/rankColor";
 
 type AllSiteSummary = {
   articlesPublished: number;
@@ -45,6 +46,11 @@ function rankLabel(r: { rank: number; total: number } | null): string | undefine
   return `#${r.rank} of ${r.total}`;
 }
 
+function rankTint(r: { rank: number; total: number } | null) {
+  if (!r) return null;
+  return rankTierColors(rankTier(r.rank, r.total));
+}
+
 export default function DepthChartSitePage() {
   const params = useParams();
   const id = Number(params.id);
@@ -61,6 +67,7 @@ export default function DepthChartSitePage() {
   const [loading, setLoading] = useState(true);
   const [addingNew, setAddingNew] = useState(false);
   const [viewMode, setViewMode] = useState<"full" | "condensed">("condensed");
+  const [homepageExpanded, setHomepageExpanded] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -175,26 +182,31 @@ export default function DepthChartSitePage() {
               label="Published"
               value={siteTotals.articlesPublished.toLocaleString()}
               sub={rankLabel(rankOf(site.id, "articlesPublished", allSummaries))}
+              tint={rankTint(rankOf(site.id, "articlesPublished", allSummaries))}
             />
             <StatTile
               label="Total PVs"
               value={formatCompactNumber(siteTotals.totalPageviews)}
               sub={rankLabel(rankOf(site.id, "totalPageviews", allSummaries))}
+              tint={rankTint(rankOf(site.id, "totalPageviews", allSummaries))}
             />
             <StatTile
               label="Evergreen PVs"
               value={formatCompactNumber(siteTotals.evergreenPageviews)}
               sub={rankLabel(rankOf(site.id, "evergreenPageviews", allSummaries))}
+              tint={rankTint(rankOf(site.id, "evergreenPageviews", allSummaries))}
             />
             <StatTile
               label="Scroll Depth"
               value={formatPercent(siteTotals.weightedAvgScrollDepth)}
               sub={rankLabel(rankOf(site.id, "weightedAvgScrollDepth", allSummaries))}
+              tint={rankTint(rankOf(site.id, "weightedAvgScrollDepth", allSummaries))}
             />
             <StatTile
               label="Time on Page"
               value={formatDuration(siteTotals.weightedAvgTimeOnPage)}
               sub={rankLabel(rankOf(site.id, "weightedAvgTimeOnPage", allSummaries))}
+              tint={rankTint(rankOf(site.id, "weightedAvgTimeOnPage", allSummaries))}
             />
             <StatTile
               label="PVs / New Article"
@@ -204,6 +216,7 @@ export default function DepthChartSitePage() {
                   : "—"
               }
               sub={rankLabel(rankOf(site.id, "pvPerPublishedArticle", allSummaries))}
+              tint={rankTint(rankOf(site.id, "pvPerPublishedArticle", allSummaries))}
             />
           </div>
         </div>
@@ -215,42 +228,48 @@ export default function DepthChartSitePage() {
             <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-navy">
               Homepage &amp; Site Pages
             </h2>
-            <span className="font-data text-[11px] text-ink-soft">
+            <button
+              onClick={() => setHomepageExpanded((v) => !v)}
+              className="font-data text-[11px] font-medium text-navy hover:underline"
+            >
               {formatCompactNumber(homepageTraffic.totalPageviews)} PVs across{" "}
-              {homepageTraffic.pageCount} page{homepageTraffic.pageCount === 1 ? "" : "s"}
-            </span>
+              {homepageTraffic.pageCount} page{homepageTraffic.pageCount === 1 ? "" : "s"}{" "}
+              {homepageExpanded ? "▲" : "▾"}
+            </button>
           </div>
           <p className="mb-2 text-xs text-ink-soft">
             Pages with no author byline — homepage, tag/category pages, schedules, and similar.
           </p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-rule-strong font-data text-[10px] uppercase tracking-wide text-ink-soft">
-                  <th className="py-1 pr-4">Page</th>
-                  <th className="py-1 pr-4 text-right">Pageviews</th>
-                  <th className="py-1 pr-4 text-right">Scroll</th>
-                  <th className="py-1 text-right">Avg Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {homepageTraffic.pages.map((p, i) => (
-                  <tr key={i} className="border-t border-rule">
-                    <td className="max-w-md py-1.5 pr-4 text-ink">{p.article_title}</td>
-                    <td className="py-1.5 pr-4 text-right font-data">
-                      {p.pageviews.toLocaleString()}
-                    </td>
-                    <td className="py-1.5 pr-4 text-right font-data">
-                      {formatPercent(p.scroll_depth)}
-                    </td>
-                    <td className="py-1.5 text-right font-data">
-                      {formatDuration(p.avg_time_on_page)}
-                    </td>
+          {homepageExpanded && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-rule-strong font-data text-[10px] uppercase tracking-wide text-ink-soft">
+                    <th className="py-1 pr-4">Page</th>
+                    <th className="py-1 pr-4 text-right">Pageviews</th>
+                    <th className="py-1 pr-4 text-right">Scroll</th>
+                    <th className="py-1 text-right">Avg Time</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {homepageTraffic.pages.map((p, i) => (
+                    <tr key={i} className="border-t border-rule">
+                      <td className="max-w-md py-1.5 pr-4 text-ink">{p.article_title}</td>
+                      <td className="py-1.5 pr-4 text-right font-data">
+                        {p.pageviews.toLocaleString()}
+                      </td>
+                      <td className="py-1.5 pr-4 text-right font-data">
+                        {formatPercent(p.scroll_depth)}
+                      </td>
+                      <td className="py-1.5 text-right font-data">
+                        {formatDuration(p.avg_time_on_page)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

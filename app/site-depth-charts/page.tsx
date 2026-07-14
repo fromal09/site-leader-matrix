@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { dcSiteHref } from "@/lib/routes";
-import { formatCompactNumber, formatPercent } from "@/lib/trafficFormat";
+import { formatCompactNumber, formatDuration, formatPercent } from "@/lib/trafficFormat";
 import { teamColor } from "@/lib/nflTeamColors";
 import { WriterLeaderboard } from "@/components/WriterLeaderboard";
+import { StatTile } from "@/components/StatTile";
 import type { Site } from "@/lib/types";
 
 type SiteSummary = {
@@ -16,7 +17,21 @@ type SiteSummary = {
   evergreenPageviews: number;
   weightedAvgScrollDepth: number | null;
   weightedAvgTimeOnPage: number | null;
+  pvPerPublishedArticle: number | null;
 };
+
+type DivisionTotals = {
+  periodLabel: string;
+  siteCount: number;
+  articlesPublished: number;
+  totalPageviews: number;
+  evergreenPageviews: number;
+  weightedAvgScrollDepth: number | null;
+  weightedAvgTimeOnPage: number | null;
+  pvPerPublishedArticle: number | null;
+};
+
+type Period = { key: string; label: string };
 
 type SortKey = "name" | "articlesPublished" | "authorsPublished" | "totalPageviews" | "evergreenPageviews" | "weightedAvgScrollDepth";
 
@@ -32,20 +47,33 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 export default function DepthChartsHomePage() {
   const [sites, setSites] = useState<Site[]>([]);
   const [summaries, setSummaries] = useState<Record<number, SiteSummary>>({});
+  const [divisionTotals, setDivisionTotals] = useState<DivisionTotals | null>(null);
+  const [periods, setPeriods] = useState<Period[]>([]);
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>("name");
 
+  async function loadSummary(periodKey?: string) {
+    const url = periodKey
+      ? `/api/depth-chart-writers/all-sites-summary?period=${encodeURIComponent(periodKey)}`
+      : "/api/depth-chart-writers/all-sites-summary";
+    const res = await fetch(url).then((r) => r.json());
+    setSummaries(res.sites ?? {});
+    setDivisionTotals(res.divisionTotals ?? null);
+    setPeriods(res.availablePeriods ?? []);
+    if (res.selectedPeriod) setSelectedPeriod(res.selectedPeriod.key);
+  }
+
   useEffect(() => {
-    Promise.all([
-      fetch("/api/sites").then((r) => r.json()),
-      fetch("/api/depth-chart-writers/all-sites-summary").then((r) => r.json()),
-    ])
-      .then(([sitesRes, summaryRes]) => {
-        setSites(sitesRes.sites ?? []);
-        setSummaries(summaryRes.sites ?? {});
-      })
+    Promise.all([fetch("/api/sites").then((r) => r.json()), loadSummary()])
+      .then(([sitesRes]) => setSites(sitesRes.sites ?? []))
       .finally(() => setLoading(false));
   }, []);
+
+  function handlePeriodChange(key: string) {
+    setSelectedPeriod(key);
+    loadSummary(key);
+  }
 
   const sortedSites = useMemo(() => {
     const copy = [...sites];
@@ -74,96 +102,168 @@ export default function DepthChartsHomePage() {
             Click into any site to build out its writer roster.
           </p>
         </div>
-        <label className="flex items-center gap-2 text-xs">
-          <span className="text-ink-soft uppercase tracking-wide">Sort by</span>
-          <select
-            value={sortKey}
-            onChange={(e) => setSortKey(e.target.value as SortKey)}
-            className="rounded border border-rule-strong bg-white px-2 py-1 font-data text-xs"
-          >
-            {SORT_OPTIONS.map((o) => (
-              <option key={o.key} value={o.key}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex flex-wrap items-center gap-3">
+          {periods.length > 0 && (
+            <label className="flex items-center gap-2 text-xs">
+              <span className="text-ink-soft uppercase tracking-wide">Month</span>
+              <select
+                value={selectedPeriod}
+                onChange={(e) => handlePeriodChange(e.target.value)}
+                className="rounded border border-rule-strong bg-white px-2 py-1 font-data text-xs"
+              >
+                {periods.map((p) => (
+                  <option key={p.key} value={p.key}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label className="flex items-center gap-2 text-xs">
+            <span className="text-ink-soft uppercase tracking-wide">Sort by</span>
+            <select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as SortKey)}
+              className="rounded border border-rule-strong bg-white px-2 py-1 font-data text-xs"
+            >
+              {SORT_OPTIONS.map((o) => (
+                <option key={o.key} value={o.key}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       {loading ? (
         <p className="text-sm text-ink-soft">Loading sites…</p>
       ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {sortedSites.map((site) => {
-              const s = summaries[site.id];
-              const colors = teamColor(site.site_topic);
-              return (
-                <Link
-                  key={site.id}
-                  href={dcSiteHref(site.id)}
-                  className="card group flex flex-col rounded-md border-l-4 p-3 transition hover:-translate-y-0.5 hover:shadow-md"
-                  style={{ borderLeftColor: colors.primary }}
-                >
-                  <div className="font-display text-sm font-semibold text-navy">
-                    {site.site_name}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-ink-soft">
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ backgroundColor: colors.primary }}
-                    />
-                    {site.site_topic}
-                  </div>
-                  <div className="mt-1 font-data text-[11px] text-ink-soft">
-                    {site.leader_name}
-                  </div>
+        <>
+          {divisionTotals && (
+            <div className="card mb-6 rounded-md p-4">
+              <div className="mb-2 flex items-baseline justify-between">
+                <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-navy">
+                  Division Snapshot — {divisionTotals.periodLabel}
+                </h2>
+                <span className="font-data text-[11px] text-ink-soft">
+                  {divisionTotals.siteCount} site{divisionTotals.siteCount === 1 ? "" : "s"} reporting
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-6">
+                <StatTile
+                  label="Published"
+                  value={divisionTotals.articlesPublished.toLocaleString()}
+                />
+                <StatTile
+                  label="Total PVs"
+                  value={formatCompactNumber(divisionTotals.totalPageviews)}
+                />
+                <StatTile
+                  label="Evergreen PVs"
+                  value={formatCompactNumber(divisionTotals.evergreenPageviews)}
+                />
+                <StatTile
+                  label="Scroll Depth"
+                  value={formatPercent(divisionTotals.weightedAvgScrollDepth)}
+                />
+                <StatTile
+                  label="Time on Page"
+                  value={formatDuration(divisionTotals.weightedAvgTimeOnPage)}
+                />
+                <StatTile
+                  label="PVs / New Article"
+                  value={
+                    divisionTotals.pvPerPublishedArticle !== null
+                      ? formatCompactNumber(divisionTotals.pvPerPublishedArticle)
+                      : "—"
+                  }
+                />
+              </div>
+            </div>
+          )}
 
-                  {s ? (
-                    <div className="mt-2 grid grid-cols-2 gap-1 border-t border-rule pt-2">
-                      <div className="font-data text-[10px] text-ink-soft">
-                        <span className="font-semibold text-ink">
-                          {s.articlesPublished}
-                        </span>{" "}
-                        published
-                      </div>
-                      <div className="font-data text-[10px] text-ink-soft">
-                        <span className="font-semibold text-ink">
-                          {s.authorsPublished}
-                        </span>{" "}
-                        authors
-                      </div>
-                      <div className="font-data text-[10px] text-ink-soft">
-                        <span className="font-semibold text-ink">
-                          {formatCompactNumber(s.totalPageviews)}
-                        </span>{" "}
-                        PVs
-                      </div>
-                      <div className="font-data text-[10px] text-ink-soft">
-                        <span className="font-semibold text-ink">
-                          {formatPercent(s.weightedAvgScrollDepth)}
-                        </span>{" "}
-                        scroll
-                      </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {sortedSites.map((site) => {
+                const s = summaries[site.id];
+                const colors = teamColor(site.site_topic);
+                return (
+                  <Link
+                    key={site.id}
+                    href={dcSiteHref(site.id)}
+                    className="card group flex flex-col rounded-md border-l-4 p-3 transition hover:-translate-y-0.5 hover:shadow-md"
+                    style={{ borderLeftColor: colors.primary }}
+                  >
+                    <div className="font-display text-sm font-semibold text-navy">
+                      {site.site_name}
                     </div>
-                  ) : (
-                    <div className="mt-2 border-t border-rule pt-2 text-[10px] italic text-ink-soft">
-                      No traffic data yet
+                    <div className="flex items-center gap-1.5 text-xs text-ink-soft">
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: colors.primary }}
+                      />
+                      {site.site_topic}
                     </div>
-                  )}
+                    <div className="mt-1 font-data text-[11px] text-ink-soft">
+                      {site.leader_name}
+                    </div>
 
-                  <span className="mt-2 text-xs font-medium text-navy group-hover:underline">
-                    View roster →
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
+                    {s ? (
+                      <div className="mt-2 grid grid-cols-2 gap-1 border-t border-rule pt-2">
+                        <div className="font-data text-[10px] text-ink-soft">
+                          <span className="font-semibold text-ink">
+                            {s.articlesPublished}
+                          </span>{" "}
+                          published
+                        </div>
+                        <div className="font-data text-[10px] text-ink-soft">
+                          <span className="font-semibold text-ink">
+                            {s.authorsPublished}
+                          </span>{" "}
+                          authors
+                        </div>
+                        <div className="font-data text-[10px] text-ink-soft">
+                          <span className="font-semibold text-ink">
+                            {formatCompactNumber(s.totalPageviews)}
+                          </span>{" "}
+                          PVs
+                        </div>
+                        {sortKey === "evergreenPageviews" ? (
+                          <div className="font-data text-[10px] text-ink-soft">
+                            <span className="font-semibold text-ink">
+                              {formatCompactNumber(s.evergreenPageviews)}
+                            </span>{" "}
+                            evergreen
+                          </div>
+                        ) : (
+                          <div className="font-data text-[10px] text-ink-soft">
+                            <span className="font-semibold text-ink">
+                              {formatPercent(s.weightedAvgScrollDepth)}
+                            </span>{" "}
+                            scroll
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-2 border-t border-rule pt-2 text-[10px] italic text-ink-soft">
+                        No traffic data yet
+                      </div>
+                    )}
 
-          <div>
-            <WriterLeaderboard />
+                    <span className="mt-2 text-xs font-medium text-navy group-hover:underline">
+                      View roster →
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div>
+              <WriterLeaderboard />
+            </div>
           </div>
-        </div>
+        </>
       )}
     </main>
   );

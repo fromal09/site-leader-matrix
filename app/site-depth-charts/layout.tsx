@@ -19,12 +19,20 @@ export default function SiteDepthChartsLayout({
               Site Depth Charts
             </Link>
           </div>
-          <Link
-            href={TRAFFIC_BASE}
-            className="text-xs font-medium text-ink-soft hover:text-navy"
-          >
-            Traffic Data
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              href={`${DC_BASE}/division-resources`}
+              className="text-xs font-medium text-ink-soft hover:text-navy"
+            >
+              Division Resources
+            </Link>
+            <Link
+              href={TRAFFIC_BASE}
+              className="text-xs font-medium text-ink-soft hover:text-navy"
+            >
+              Traffic Data
+            </Link>
+          </div>
         </div>
       </div>
       {children}
