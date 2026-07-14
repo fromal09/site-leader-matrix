@@ -9,7 +9,8 @@ import { DC_BASE } from "@/lib/routes";
 import { SECTIONS } from "@/lib/depthCharts";
 import type { DepthChartRole, DepthChartWriter } from "@/lib/depthCharts";
 import type { Site } from "@/lib/types";
-import type { WriterQuickStats } from "@/lib/traffic";
+import type { SiteTrafficTotals, WriterQuickStats } from "@/lib/traffic";
+import { formatCompactNumber, formatDuration, formatPercent } from "@/lib/trafficFormat";
 
 export default function DepthChartSitePage() {
   const params = useParams();
@@ -20,6 +21,7 @@ export default function DepthChartSitePage() {
   const [writers, setWriters] = useState<DepthChartWriter[]>([]);
   const [roles, setRoles] = useState<DepthChartRole[]>([]);
   const [quickStats, setQuickStats] = useState<Record<number, WriterQuickStats>>({});
+  const [siteTotals, setSiteTotals] = useState<SiteTrafficTotals | null>(null);
   const [statsPeriodLabel, setStatsPeriodLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [addingNew, setAddingNew] = useState(false);
@@ -36,6 +38,7 @@ export default function DepthChartSitePage() {
     setWriters(writersRes.writers ?? []);
     setRoles(rolesRes.roles ?? []);
     setQuickStats(statsRes.writers ?? {});
+    setSiteTotals(statsRes.siteTotals ?? null);
     setStatsPeriodLabel(statsRes.periodLabel ?? null);
     setLoading(false);
   }, [id]);
@@ -108,6 +111,69 @@ export default function DepthChartSitePage() {
         )}
       </div>
 
+      {siteTotals && (
+        <div className="card mb-6 rounded-md p-4">
+          <div className="mb-2 flex items-baseline justify-between">
+            <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-navy">
+              Site Snapshot — {statsPeriodLabel}
+            </h2>
+            <span className="font-data text-[11px] text-ink-soft">all authors</span>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-6">
+            <div className="rounded border border-rule-strong bg-white px-2.5 py-2">
+              <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
+                Published
+              </div>
+              <div className="font-data text-base font-semibold text-ink">
+                {siteTotals.articlesPublished.toLocaleString()}
+              </div>
+            </div>
+            <div className="rounded border border-rule-strong bg-white px-2.5 py-2">
+              <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
+                Total PVs
+              </div>
+              <div className="font-data text-base font-semibold text-ink">
+                {formatCompactNumber(siteTotals.totalPageviews)}
+              </div>
+            </div>
+            <div className="rounded border border-rule-strong bg-white px-2.5 py-2">
+              <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
+                Evergreen PVs
+              </div>
+              <div className="font-data text-base font-semibold text-ink">
+                {formatCompactNumber(siteTotals.evergreenPageviews)}
+              </div>
+            </div>
+            <div className="rounded border border-rule-strong bg-white px-2.5 py-2">
+              <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
+                Scroll Depth
+              </div>
+              <div className="font-data text-base font-semibold text-ink">
+                {formatPercent(siteTotals.weightedAvgScrollDepth)}
+              </div>
+            </div>
+            <div className="rounded border border-rule-strong bg-white px-2.5 py-2">
+              <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
+                Time on Page
+              </div>
+              <div className="font-data text-base font-semibold text-ink">
+                {formatDuration(siteTotals.weightedAvgTimeOnPage)}
+              </div>
+            </div>
+            <div className="rounded border border-rule-strong bg-white px-2.5 py-2">
+              <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
+                PVs / New Article
+              </div>
+              <div className="font-data text-base font-semibold text-ink">
+                {siteTotals.pvPerPublishedArticle !== null
+                  ? formatCompactNumber(siteTotals.pvPerPublishedArticle)
+                  : "—"}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {addingNew && (
         <div className="mb-6">
           <WriterCard
@@ -150,6 +216,7 @@ export default function DepthChartSitePage() {
                     writer={w}
                     roles={roles}
                     quickStats={quickStats[w.id]}
+                    siteTotals={siteTotals}
                     onRoleCreated={(r) => setRoles((prev) => [...prev, r])}
                     onSaved={load}
                     onDiscardNew={() => {}}

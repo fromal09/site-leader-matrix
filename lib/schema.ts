@@ -134,4 +134,14 @@ ALTER TABLE article_traffic ADD COLUMN IF NOT EXISTS article_url TEXT;
 CREATE INDEX IF NOT EXISTS idx_article_traffic_import ON article_traffic(import_id);
 CREATE INDEX IF NOT EXISTS idx_article_traffic_site_pageviews ON article_traffic(site_id, pageviews DESC);
 CREATE INDEX IF NOT EXISTS idx_article_traffic_site_author ON article_traffic(site_id, article_author);
+
+CREATE TABLE IF NOT EXISTS writer_notes (
+  id SERIAL PRIMARY KEY,
+  writer_id INT NOT NULL REFERENCES depth_chart_writers(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  created_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_writer_notes_writer ON writer_notes(writer_id);
 `;

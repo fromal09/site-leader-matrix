@@ -40,3 +40,10 @@ export type DepthChartWriter = {
   created_at: string;
   updated_at: string;
 };
+
+export type WriterNote = {
+  id: number;
+  content: string;
+  created_by: string | null;
+  created_at: string;
+};

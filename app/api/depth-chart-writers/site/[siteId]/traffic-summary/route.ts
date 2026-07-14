@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { pageviewWeightedAverage } from "@/lib/trafficStats";
 
 export async function GET(
   _req: NextRequest,
@@ -20,7 +21,12 @@ export async function GET(
     `;
     const latestPeriodKey = (latestRows as any[])[0]?.period_key;
     if (!latestPeriodKey) {
-      return NextResponse.json({ periodKey: null, periodLabel: null, writers: {} });
+      return NextResponse.json({
+        periodKey: null,
+        periodLabel: null,
+        writers: {},
+        siteTotals: null,
+      });
     }
 
     const periodLabelRows = await sql`
@@ -45,8 +51,30 @@ export async function GET(
         AND at.article_author IS NOT NULL
     `;
 
+    const rowsArr = articleRows as any[];
+
+    // Site-wide totals across every author who touched this site this period,
+    // not just those with a roster card yet.
+    const publishedRows = rowsArr.filter((r) => r.published_month === latestPeriodKey);
+    const totalPageviews = rowsArr.reduce((sum, r) => sum + r.pageviews, 0);
+    const publishedPageviews = publishedRows.reduce((sum, r) => sum + r.pageviews, 0);
+    const evergreenPageviews = totalPageviews - publishedPageviews;
+    const siteTotals = {
+      articlesPublished: publishedRows.length,
+      totalPageviews,
+      evergreenPageviews,
+      weightedAvgScrollDepth: pageviewWeightedAverage(
+        rowsArr.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews }))
+      ),
+      weightedAvgTimeOnPage: pageviewWeightedAverage(
+        rowsArr.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews }))
+      ),
+      pvPerPublishedArticle:
+        publishedRows.length > 0 ? publishedPageviews / publishedRows.length : null,
+    };
+
     const byAuthor = new Map<string, any[]>();
-    for (const r of articleRows as any[]) {
+    for (const r of rowsArr) {
       const key = String(r.article_author).trim().toLowerCase();
       if (!key) continue;
       if (!byAuthor.has(key)) byAuthor.set(key, []);
@@ -58,6 +86,8 @@ export async function GET(
       {
         articlesPublished: number;
         totalPageviews: number;
+        publishedPageviews: number;
+        pvPerPublishedArticle: number | null;
         weightedAvgScrollDepth: number | null;
         weightedAvgTimeOnPage: number | null;
       }
@@ -69,31 +99,32 @@ export async function GET(
       if (rows.length === 0) continue;
 
       const articlesPublished = rows.filter((r) => r.published_month === latestPeriodKey).length;
-      const totalPageviews = rows.reduce((sum, r) => sum + r.pageviews, 0);
+      const writerTotalPageviews = rows.reduce((sum, r) => sum + r.pageviews, 0);
 
-      const scrollRows = rows.filter((r) => r.scroll_depth !== null);
-      const scrollDenom = scrollRows.reduce((sum, r) => sum + r.pageviews, 0);
-      const weightedAvgScrollDepth =
-        scrollRows.length > 0 && scrollDenom > 0
-          ? scrollRows.reduce((sum, r) => sum + r.scroll_depth * r.pageviews, 0) / scrollDenom
-          : null;
-
-      const timeRows = rows.filter((r) => r.avg_time_on_page !== null);
-      const timeDenom = timeRows.reduce((sum, r) => sum + r.pageviews, 0);
-      const weightedAvgTimeOnPage =
-        timeRows.length > 0 && timeDenom > 0
-          ? timeRows.reduce((sum, r) => sum + r.avg_time_on_page * r.pageviews, 0) / timeDenom
-          : null;
+      const writerPublishedRows = rows.filter((r) => r.published_month === latestPeriodKey);
+      const publishedPageviews = writerPublishedRows.reduce((sum, r) => sum + r.pageviews, 0);
 
       result[w.id] = {
         articlesPublished,
-        totalPageviews,
-        weightedAvgScrollDepth,
-        weightedAvgTimeOnPage,
+        totalPageviews: writerTotalPageviews,
+        publishedPageviews,
+        pvPerPublishedArticle:
+          articlesPublished > 0 ? publishedPageviews / articlesPublished : null,
+        weightedAvgScrollDepth: pageviewWeightedAverage(
+          rows.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews }))
+        ),
+        weightedAvgTimeOnPage: pageviewWeightedAverage(
+          rows.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews }))
+        ),
       };
     }
 
-    return NextResponse.json({ periodKey: latestPeriodKey, periodLabel, writers: result });
+    return NextResponse.json({
+      periodKey: latestPeriodKey,
+      periodLabel,
+      writers: result,
+      siteTotals,
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

@@ -46,14 +46,26 @@ export type TrafficArticleRow = {
 export type WriterQuickStats = {
   articlesPublished: number;
   totalPageviews: number;
+  publishedPageviews: number;
+  pvPerPublishedArticle: number | null;
   weightedAvgScrollDepth: number | null;
   weightedAvgTimeOnPage: number | null;
+};
+
+export type SiteTrafficTotals = {
+  articlesPublished: number;
+  totalPageviews: number;
+  evergreenPageviews: number;
+  weightedAvgScrollDepth: number | null;
+  weightedAvgTimeOnPage: number | null;
+  pvPerPublishedArticle: number | null;
 };
 
 export type SiteTrafficSummary = {
   periodKey: string | null;
   periodLabel: string | null;
   writers: Record<number, WriterQuickStats>;
+  siteTotals: SiteTrafficTotals | null;
 };
 
 export type WriterTrafficStats = {

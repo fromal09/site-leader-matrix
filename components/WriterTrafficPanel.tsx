@@ -4,7 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { formatDuration, formatPercent, scrollDepthColor } from "@/lib/trafficFormat";
 import { writerTrafficHref } from "@/lib/routes";
-import type { TrafficArticleRow, WriterTrafficSummary } from "@/lib/traffic";
+import {
+  computeWriterObservations,
+  observationBaseColor,
+} from "@/lib/observations";
+import type { TrafficArticleRow, WriterTrafficSummary, SiteTrafficTotals } from "@/lib/traffic";
 
 function ArticleTitle({ article }: { article: TrafficArticleRow }) {
   if (article.article_url) {
@@ -75,7 +79,13 @@ function RankedArticleRow({
   );
 }
 
-export function WriterTrafficPanel({ writerId }: { writerId: number }) {
+export function WriterTrafficPanel({
+  writerId,
+  siteTotals,
+}: {
+  writerId: number;
+  siteTotals: SiteTrafficTotals | null;
+}) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<WriterTrafficSummary | null>(null);
@@ -92,6 +102,23 @@ export function WriterTrafficPanel({ writerId }: { writerId: number }) {
   }
 
   const s = data?.stats;
+  const writerPvPerPublishedArticle =
+    s && s.articlesPublishedCount > 0
+      ? (s.totalPageviews - s.evergreenPageviews) / s.articlesPublishedCount
+      : null;
+  const observations =
+    s && siteTotals
+      ? computeWriterObservations(
+          {
+            weightedAvgScrollDepth: s.weightedAvgScrollDepth,
+            pvPerPublishedArticle: writerPvPerPublishedArticle,
+          },
+          {
+            weightedAvgScrollDepth: siteTotals.weightedAvgScrollDepth,
+            pvPerPublishedArticle: siteTotals.pvPerPublishedArticle,
+          }
+        )
+      : [];
   const topFive = data?.topPerforming?.slice(0, 5) ?? [];
   const maxTopPageviews = Math.max(1, ...topFive.map((a) => a.pageviews));
   const publishedPreview = data?.publishedThisPeriod?.slice(0, 3) ?? [];
@@ -127,6 +154,23 @@ export function WriterTrafficPanel({ writerId }: { writerId: number }) {
                   Full article history →
                 </Link>
               </div>
+
+              {observations.length > 0 && (
+                <ul className="space-y-1">
+                  {observations.map((o) => (
+                    <li
+                      key={o.key}
+                      className="rounded border px-2 py-1 text-[11px]"
+                      style={{
+                        borderColor: observationBaseColor(o.direction),
+                        color: observationBaseColor(o.direction),
+                      }}
+                    >
+                      {o.direction === "above" ? "▲" : "▼"} {o.detail}
+                    </li>
+                  ))}
+                </ul>
+              )}
 
               {s && (
                 <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">

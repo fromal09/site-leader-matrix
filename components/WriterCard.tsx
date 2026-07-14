@@ -4,9 +4,15 @@ import { useState } from "react";
 import { useAuth } from "./AuthProvider";
 import { SECTIONS, sectionColor } from "@/lib/depthCharts";
 import { WriterTrafficPanel } from "./WriterTrafficPanel";
+import { WriterNotesPanel } from "./WriterNotesPanel";
 import { formatCompactNumber, formatPercent, scrollDepthColor } from "@/lib/trafficFormat";
+import {
+  computeWriterObservations,
+  observationBaseColor,
+  observationBgOpacity,
+} from "@/lib/observations";
 import type { DepthChartRole, DepthChartWriter, SectionKey } from "@/lib/depthCharts";
-import type { WriterQuickStats } from "@/lib/traffic";
+import type { SiteTrafficTotals, WriterQuickStats } from "@/lib/traffic";
 
 const ADD_NEW = "__add_new__";
 
@@ -131,11 +137,36 @@ function QuickStatBadge({ label, color }: { label: string; color?: string }) {
   );
 }
 
+function ObservationBadge({
+  direction,
+  tier,
+  label,
+}: {
+  direction: "above" | "below";
+  tier: "mild" | "moderate" | "strong";
+  label: string;
+}) {
+  const color = observationBaseColor(direction);
+  const bgOpacity = observationBgOpacity(tier);
+  return (
+    <span
+      className="whitespace-nowrap rounded-full px-2 py-0.5 font-data text-[11px] font-medium"
+      style={{
+        color,
+        backgroundColor: `color-mix(in srgb, ${color} ${bgOpacity}%, transparent)`,
+      }}
+    >
+      {direction === "above" ? "▲" : "▼"} {label}
+    </span>
+  );
+}
+
 export function WriterCard({
   siteId,
   writer,
   roles,
   quickStats,
+  siteTotals,
   onRoleCreated,
   onSaved,
   onDiscardNew,
@@ -144,6 +175,7 @@ export function WriterCard({
   writer: DepthChartWriter | null; // null = new, unsaved card
   roles: DepthChartRole[];
   quickStats?: WriterQuickStats;
+  siteTotals?: SiteTrafficTotals | null;
   onRoleCreated: (role: DepthChartRole) => void;
   onSaved: () => void;
   onDiscardNew: () => void;
@@ -161,6 +193,20 @@ export function WriterCard({
 
   const roleObj = roles.find((r) => r.label === (writer?.role ?? role));
   const color = sectionColor(roleObj?.section ?? "contributors");
+
+  const observations =
+    quickStats && siteTotals
+      ? computeWriterObservations(
+          {
+            weightedAvgScrollDepth: quickStats.weightedAvgScrollDepth,
+            pvPerPublishedArticle: quickStats.pvPerPublishedArticle,
+          },
+          {
+            weightedAvgScrollDepth: siteTotals.weightedAvgScrollDepth,
+            pvPerPublishedArticle: siteTotals.pvPerPublishedArticle,
+          }
+        )
+      : [];
 
   function startEdit() {
     if (!requireAuth()) return;
@@ -257,7 +303,15 @@ export function WriterCard({
             </button>
           </div>
         </div>
-        <WriterTrafficPanel writerId={writer.id} />
+        {observations.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {observations.map((o) => (
+              <ObservationBadge key={o.key} direction={o.direction} tier={o.tier} label={o.label} />
+            ))}
+          </div>
+        )}
+        <WriterTrafficPanel writerId={writer.id} siteTotals={siteTotals ?? null} />
+        <WriterNotesPanel writerId={writer.id} />
       </div>
     );
   }
