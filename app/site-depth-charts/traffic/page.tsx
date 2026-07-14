@@ -6,7 +6,9 @@ import { useAuth } from "@/components/AuthProvider";
 import { parseTrafficCsv } from "@/lib/trafficCsv";
 import type { TrafficCsvGroup } from "@/lib/trafficCsv";
 import { trafficImportHref } from "@/lib/routes";
+import { NewAuthorsReview } from "@/components/NewAuthorsReview";
 import type { Site } from "@/lib/types";
+import type { DepthChartRole } from "@/lib/depthCharts";
 
 type ImportRow = {
   id: number;
@@ -41,6 +43,7 @@ function monthKeyToLabel(monthKey: string): string {
 export default function TrafficPage() {
   const { requireAuth } = useAuth();
   const [sites, setSites] = useState<Site[]>([]);
+  const [roles, setRoles] = useState<DepthChartRole[]>([]);
   const [imports, setImports] = useState<ImportRow[]>([]);
   const [loadingList, setLoadingList] = useState(true);
 
@@ -54,12 +57,14 @@ export default function TrafficPage() {
 
   async function loadAll() {
     setLoadingList(true);
-    const [sitesRes, importsRes] = await Promise.all([
+    const [sitesRes, importsRes, rolesRes] = await Promise.all([
       fetch("/api/sites").then((r) => r.json()),
       fetch("/api/traffic").then((r) => r.json()),
+      fetch("/api/depth-chart-roles").then((r) => r.json()),
     ]);
     setSites(sitesRes.sites ?? []);
     setImports(importsRes.imports ?? []);
+    setRoles(rolesRes.roles ?? []);
     setLoadingList(false);
   }
 
@@ -294,6 +299,33 @@ export default function TrafficPage() {
           </div>
         )}
       </div>
+
+      {!uploading && groupStates.some((g) => g.status === "done") && (
+        <div className="mb-8 space-y-4">
+          {groupStates
+            .filter((g) => g.status === "done")
+            .map((g, i) => {
+              const site = sites.find((s) => String(s.id) === g.siteId);
+              if (!site) return null;
+              const csvAuthors = Array.from(
+                new Set(
+                  g.group.rows
+                    .map((r) => r.author)
+                    .filter((a): a is string => Boolean(a && a.trim()))
+                )
+              );
+              return (
+                <NewAuthorsReview
+                  key={`${g.siteId}-${i}`}
+                  siteId={site.id}
+                  siteName={site.site_name}
+                  csvAuthors={csvAuthors}
+                  roles={roles}
+                />
+              );
+            })}
+        </div>
+      )}
 
       <h2 className="mb-3 font-display text-lg font-semibold text-navy">Past Imports</h2>
       {loadingList ? (

@@ -137,3 +137,12 @@ CREATE TABLE IF NOT EXISTS writer_notes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_writer_notes_writer ON writer_notes(writer_id);
+
+CREATE TABLE IF NOT EXISTS ignored_traffic_authors (
+  id SERIAL PRIMARY KEY,
+  site_id INT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  author_name TEXT NOT NULL,
+  created_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(site_id, author_name)
+);
