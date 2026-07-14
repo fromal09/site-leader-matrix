@@ -117,8 +117,8 @@ export function NewAuthorsReview({
         New Authors in {siteName}
       </h3>
       <p className="mt-0.5 text-xs text-ink-soft">
-        These bylines showed up in the upload but don&apos;t have a roster card yet. Add them
-        with a role, or decline to stop seeing them here.
+        These bylines published a new article this month but don&apos;t have a roster card
+        yet. Add them with a role, or decline to stop seeing them here.
       </p>
 
       {stillPending.length > 0 && (

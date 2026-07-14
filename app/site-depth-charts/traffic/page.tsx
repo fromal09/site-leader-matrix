@@ -310,6 +310,7 @@ export default function TrafficPage() {
               const csvAuthors = Array.from(
                 new Set(
                   g.group.rows
+                    .filter((r) => r.firstPublishedDate?.slice(0, 7) === monthKey)
                     .map((r) => r.author)
                     .filter((a): a is string => Boolean(a && a.trim()))
                 )
