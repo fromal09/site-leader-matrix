@@ -66,6 +66,19 @@ export type WriterQuickStats = {
   weightedAvgTimeOnPage: number | null;
 };
 
+export type HomepageTrafficPage = {
+  article_title: string;
+  pageviews: number;
+  scroll_depth: number | null;
+  avg_time_on_page: number | null;
+};
+
+export type HomepageTraffic = {
+  pages: HomepageTrafficPage[];
+  totalPageviews: number;
+  pageCount: number;
+};
+
 export type SiteTrafficTotals = {
   articlesPublished: number;
   totalPageviews: number;

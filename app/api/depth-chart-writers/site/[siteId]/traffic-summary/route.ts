@@ -26,6 +26,7 @@ export async function GET(
         periodLabel: null,
         writers: {},
         siteTotals: null,
+        homepageTraffic: null,
       });
     }
 
@@ -52,6 +53,30 @@ export async function GET(
     `;
 
     const rowsArr = articleRows as any[];
+
+    const homepageRows = await sql`
+      SELECT at.article_title, at.pageviews::float8 AS pageviews,
+        at.scroll_depth::float8 AS scroll_depth, at.avg_time_on_page::float8 AS avg_time_on_page
+      FROM article_traffic at
+      JOIN traffic_imports ti ON ti.id = at.import_id
+      WHERE at.site_id = ${siteIdNum} AND ti.period_key = ${latestPeriodKey}
+        AND at.article_author IS NULL
+      ORDER BY at.pageviews DESC
+      LIMIT 10
+    `;
+    const homepageAllRows = await sql`
+      SELECT COALESCE(SUM(at.pageviews), 0)::float8 AS total_pageviews, COUNT(*) AS page_count
+      FROM article_traffic at
+      JOIN traffic_imports ti ON ti.id = at.import_id
+      WHERE at.site_id = ${siteIdNum} AND ti.period_key = ${latestPeriodKey}
+        AND at.article_author IS NULL
+    `;
+    const homepageTotals = (homepageAllRows as any[])[0];
+    const homepageTraffic = {
+      pages: homepageRows as any[],
+      totalPageviews: Number(homepageTotals?.total_pageviews ?? 0),
+      pageCount: Number(homepageTotals?.page_count ?? 0),
+    };
 
     // Site-wide totals across every author who touched this site this period,
     // not just those with a roster card yet.
@@ -124,6 +149,7 @@ export async function GET(
       periodLabel,
       writers: result,
       siteTotals,
+      homepageTraffic,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

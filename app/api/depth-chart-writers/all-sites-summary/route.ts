@@ -42,7 +42,12 @@ export async function GET() {
           AS time_weight_denom,
         COUNT(DISTINCT at.article_author) FILTER (
           WHERE TO_CHAR(at.first_published_date, 'YYYY-MM') = li.period_key
-        ) AS authors_published
+        ) AS authors_published,
+        COALESCE(SUM(at.pageviews) FILTER (
+          WHERE TO_CHAR(at.first_published_date, 'YYYY-MM') = li.period_key
+        ), 0)::float8 / NULLIF(COUNT(*) FILTER (
+          WHERE TO_CHAR(at.first_published_date, 'YYYY-MM') = li.period_key
+        ), 0) AS pv_per_published_article
       FROM article_traffic at
       JOIN latest_import li ON li.id = at.import_id
       WHERE at.article_author IS NOT NULL
@@ -59,6 +64,7 @@ export async function GET() {
         evergreenPageviews: number;
         weightedAvgScrollDepth: number | null;
         weightedAvgTimeOnPage: number | null;
+        pvPerPublishedArticle: number | null;
       }
     > = {};
 
@@ -75,6 +81,7 @@ export async function GET() {
         evergreenPageviews: totalPageviews - publishedPageviews,
         weightedAvgScrollDepth: scrollDenom > 0 ? Number(r.scroll_weighted_sum) / scrollDenom : null,
         weightedAvgTimeOnPage: timeDenom > 0 ? Number(r.time_weighted_sum) / timeDenom : null,
+        pvPerPublishedArticle: r.pv_per_published_article !== null ? Number(r.pv_per_published_article) : null,
       };
     }
 

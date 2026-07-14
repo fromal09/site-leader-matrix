@@ -10,10 +10,40 @@ import { DC_BASE } from "@/lib/routes";
 import { SECTIONS } from "@/lib/depthCharts";
 import type { DepthChartRole, DepthChartWriter } from "@/lib/depthCharts";
 import type { Site } from "@/lib/types";
-import type { SiteTrafficTotals, WriterQuickStats } from "@/lib/traffic";
+import type { SiteTrafficTotals, WriterQuickStats, HomepageTraffic } from "@/lib/traffic";
 import { formatCompactNumber, formatDuration, formatPercent } from "@/lib/trafficFormat";
 import { StatTile } from "@/components/StatTile";
 import { teamColor } from "@/lib/nflTeamColors";
+
+type AllSiteSummary = {
+  articlesPublished: number;
+  authorsPublished: number;
+  totalPageviews: number;
+  evergreenPageviews: number;
+  weightedAvgScrollDepth: number | null;
+  weightedAvgTimeOnPage: number | null;
+  pvPerPublishedArticle: number | null;
+};
+
+function rankOf(
+  siteId: number,
+  metric: keyof AllSiteSummary,
+  allSummaries: Record<number, AllSiteSummary>
+): { rank: number; total: number } | null {
+  const entries = Object.entries(allSummaries)
+    .map(([id, s]) => ({ id: Number(id), value: s[metric] }))
+    .filter((e): e is { id: number; value: number } => e.value !== null && e.value !== undefined);
+  if (entries.length === 0) return null;
+  entries.sort((a, b) => b.value - a.value);
+  const idx = entries.findIndex((e) => e.id === siteId);
+  if (idx === -1) return null;
+  return { rank: idx + 1, total: entries.length };
+}
+
+function rankLabel(r: { rank: number; total: number } | null): string | undefined {
+  if (!r || r.total <= 1) return undefined;
+  return `#${r.rank} of ${r.total}`;
+}
 
 export default function DepthChartSitePage() {
   const params = useParams();
@@ -25,25 +55,30 @@ export default function DepthChartSitePage() {
   const [roles, setRoles] = useState<DepthChartRole[]>([]);
   const [quickStats, setQuickStats] = useState<Record<number, WriterQuickStats>>({});
   const [siteTotals, setSiteTotals] = useState<SiteTrafficTotals | null>(null);
+  const [homepageTraffic, setHomepageTraffic] = useState<HomepageTraffic | null>(null);
+  const [allSummaries, setAllSummaries] = useState<Record<number, AllSiteSummary>>({});
   const [statsPeriodLabel, setStatsPeriodLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [addingNew, setAddingNew] = useState(false);
-  const [viewMode, setViewMode] = useState<"full" | "condensed">("full");
+  const [viewMode, setViewMode] = useState<"full" | "condensed">("condensed");
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [siteRes, writersRes, rolesRes, statsRes] = await Promise.all([
+    const [siteRes, writersRes, rolesRes, statsRes, allSitesRes] = await Promise.all([
       fetch(`/api/sites/${id}`).then((r) => r.json()),
       fetch(`/api/depth-chart-writers/${id}`).then((r) => r.json()),
       fetch("/api/depth-chart-roles").then((r) => r.json()),
       fetch(`/api/depth-chart-writers/site/${id}/traffic-summary`).then((r) => r.json()),
+      fetch("/api/depth-chart-writers/all-sites-summary").then((r) => r.json()),
     ]);
     setSite(siteRes.site ?? null);
     setWriters(writersRes.writers ?? []);
     setRoles(rolesRes.roles ?? []);
     setQuickStats(statsRes.writers ?? {});
     setSiteTotals(statsRes.siteTotals ?? null);
+    setHomepageTraffic(statsRes.homepageTraffic ?? null);
     setStatsPeriodLabel(statsRes.periodLabel ?? null);
+    setAllSummaries(allSitesRes.sites ?? {});
     setLoading(false);
   }, [id]);
 
@@ -136,11 +171,31 @@ export default function DepthChartSitePage() {
             <span className="font-data text-[11px] text-ink-soft">all authors</span>
           </div>
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-6">
-            <StatTile label="Published" value={siteTotals.articlesPublished.toLocaleString()} />
-            <StatTile label="Total PVs" value={formatCompactNumber(siteTotals.totalPageviews)} />
-            <StatTile label="Evergreen PVs" value={formatCompactNumber(siteTotals.evergreenPageviews)} />
-            <StatTile label="Scroll Depth" value={formatPercent(siteTotals.weightedAvgScrollDepth)} />
-            <StatTile label="Time on Page" value={formatDuration(siteTotals.weightedAvgTimeOnPage)} />
+            <StatTile
+              label="Published"
+              value={siteTotals.articlesPublished.toLocaleString()}
+              sub={rankLabel(rankOf(site.id, "articlesPublished", allSummaries))}
+            />
+            <StatTile
+              label="Total PVs"
+              value={formatCompactNumber(siteTotals.totalPageviews)}
+              sub={rankLabel(rankOf(site.id, "totalPageviews", allSummaries))}
+            />
+            <StatTile
+              label="Evergreen PVs"
+              value={formatCompactNumber(siteTotals.evergreenPageviews)}
+              sub={rankLabel(rankOf(site.id, "evergreenPageviews", allSummaries))}
+            />
+            <StatTile
+              label="Scroll Depth"
+              value={formatPercent(siteTotals.weightedAvgScrollDepth)}
+              sub={rankLabel(rankOf(site.id, "weightedAvgScrollDepth", allSummaries))}
+            />
+            <StatTile
+              label="Time on Page"
+              value={formatDuration(siteTotals.weightedAvgTimeOnPage)}
+              sub={rankLabel(rankOf(site.id, "weightedAvgTimeOnPage", allSummaries))}
+            />
             <StatTile
               label="PVs / New Article"
               value={
@@ -148,7 +203,53 @@ export default function DepthChartSitePage() {
                   ? formatCompactNumber(siteTotals.pvPerPublishedArticle)
                   : "—"
               }
+              sub={rankLabel(rankOf(site.id, "pvPerPublishedArticle", allSummaries))}
             />
+          </div>
+        </div>
+      )}
+
+      {homepageTraffic && homepageTraffic.pageCount > 0 && (
+        <div className="card mb-6 rounded-md p-4">
+          <div className="mb-2 flex items-baseline justify-between">
+            <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-navy">
+              Homepage &amp; Site Pages
+            </h2>
+            <span className="font-data text-[11px] text-ink-soft">
+              {formatCompactNumber(homepageTraffic.totalPageviews)} PVs across{" "}
+              {homepageTraffic.pageCount} page{homepageTraffic.pageCount === 1 ? "" : "s"}
+            </span>
+          </div>
+          <p className="mb-2 text-xs text-ink-soft">
+            Pages with no author byline — homepage, tag/category pages, schedules, and similar.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-rule-strong font-data text-[10px] uppercase tracking-wide text-ink-soft">
+                  <th className="py-1 pr-4">Page</th>
+                  <th className="py-1 pr-4 text-right">Pageviews</th>
+                  <th className="py-1 pr-4 text-right">Scroll</th>
+                  <th className="py-1 text-right">Avg Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {homepageTraffic.pages.map((p, i) => (
+                  <tr key={i} className="border-t border-rule">
+                    <td className="max-w-md py-1.5 pr-4 text-ink">{p.article_title}</td>
+                    <td className="py-1.5 pr-4 text-right font-data">
+                      {p.pageviews.toLocaleString()}
+                    </td>
+                    <td className="py-1.5 pr-4 text-right font-data">
+                      {formatPercent(p.scroll_depth)}
+                    </td>
+                    <td className="py-1.5 text-right font-data">
+                      {formatDuration(p.avg_time_on_page)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
