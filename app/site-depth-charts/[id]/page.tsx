@@ -88,10 +88,6 @@ export default function DepthChartSitePage() {
     setAddingNew(true);
   }
 
-  function cycleViewMode() {
-    setViewMode((v) => (v === "condensed" ? "full" : v === "full" ? "historical" : "condensed"));
-  }
-
   if (loading) {
     return (
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
@@ -129,10 +125,6 @@ export default function DepthChartSitePage() {
     };
   }).filter((s) => s.writers.length > 0);
 
-  const viewModeLabel = { condensed: "Full View", full: "Historical View", historical: "Condensed View" }[
-    viewMode
-  ];
-
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <Link href={DC_BASE} className="text-xs font-medium text-ink-soft hover:text-navy">
@@ -158,12 +150,22 @@ export default function DepthChartSitePage() {
         </div>
         {!addingNew && (
           <div className="flex items-center gap-2">
-            <button
-              onClick={cycleViewMode}
-              className="rounded border border-navy px-3 py-1.5 text-xs font-medium text-navy hover:bg-navy hover:text-white"
-            >
-              {viewModeLabel}
-            </button>
+            <div className="flex overflow-hidden rounded border border-navy">
+              {(["condensed", "full", "historical"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className="px-3 py-1.5 text-xs font-medium capitalize"
+                  style={
+                    viewMode === mode
+                      ? { backgroundColor: "var(--navy)", color: "white" }
+                      : { color: "var(--navy)" }
+                  }
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
             <button
               onClick={handleAddClick}
               className="rounded bg-navy px-3 py-1.5 text-xs font-medium text-white hover:bg-navy-soft"

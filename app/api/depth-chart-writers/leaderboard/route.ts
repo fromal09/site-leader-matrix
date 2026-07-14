@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { pageviewWeightedAverage } from "@/lib/trafficStats";
+import { normalizeNameKey } from "@/lib/nameNormalize";
 
 export async function GET() {
   const session = await getSession();
@@ -51,12 +52,16 @@ export async function GET() {
     }
 
     const result = [];
+    const seenSitePerson = new Set<string>();
     for (const w of writers as any[]) {
       const matchName = (w.traffic_dashboard_name || w.name || "").trim().toLowerCase();
       if (!matchName) continue;
+      const dedupeKey = `${w.site_id}::${normalizeNameKey(w.name)}`;
+      if (seenSitePerson.has(dedupeKey)) continue;
       const key = `${w.site_id}::${matchName}`;
       const rows = byKey.get(key);
       if (!rows || rows.length === 0) continue;
+      seenSitePerson.add(dedupeKey);
 
       const latestPeriodKey = latestMap.get(w.site_id)!;
       const publishedRows = rows.filter((r) => r.published_month === latestPeriodKey);

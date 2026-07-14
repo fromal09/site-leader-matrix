@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { pageviewWeightedAverage } from "@/lib/trafficStats";
+import { normalizeNameKey, pickBestCasing } from "@/lib/nameNormalize";
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -75,7 +76,7 @@ export async function GET(req: NextRequest) {
       weightedAvgTimeOnPage: number | null;
     };
 
-    const byName = new Map<string, { name: string; sites: SiteBreakdown[] }>();
+    const byName = new Map<string, { variants: Set<string>; sites: SiteBreakdown[] }>();
 
     for (const card of cards) {
       const matchName = (card.traffic_dashboard_name || card.name || "").trim().toLowerCase();
@@ -102,12 +103,19 @@ export async function GET(req: NextRequest) {
         ),
       };
 
-      const key = card.name.trim();
-      if (!byName.has(key)) byName.set(key, { name: key, sites: [] });
-      byName.get(key)!.sites.push(breakdown);
+      const key = normalizeNameKey(card.name);
+      if (!byName.has(key)) byName.set(key, { variants: new Set(), sites: [] });
+      const group = byName.get(key)!;
+      group.variants.add(card.name.trim());
+      // If duplicate cards exist for the same person on the same site (e.g.
+      // leftover casing-variant cards), don't double-count that site.
+      if (!group.sites.some((s) => s.siteId === card.site_id)) {
+        group.sites.push(breakdown);
+      }
     }
 
-    const writers = Array.from(byName.values()).map(({ name, sites }) => {
+    const writers = Array.from(byName.values()).map(({ variants, sites }) => {
+      const name = pickBestCasing(Array.from(variants));
       const articlesPublished = sites.reduce((s, x) => s + x.articlesPublished, 0);
       const totalPageviews = sites.reduce((s, x) => s + x.totalPageviews, 0);
       const publishedPageviews = sites.reduce(
