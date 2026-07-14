@@ -7,6 +7,7 @@ import { parseTrafficCsv } from "@/lib/trafficCsv";
 import type { TrafficCsvGroup } from "@/lib/trafficCsv";
 import { trafficImportHref } from "@/lib/routes";
 import { NewAuthorsReview } from "@/components/NewAuthorsReview";
+import { dedupeNamesCaseInsensitive } from "@/lib/nameNormalize";
 import type { Site } from "@/lib/types";
 import type { DepthChartRole } from "@/lib/depthCharts";
 
@@ -307,13 +308,11 @@ export default function TrafficPage() {
             .map((g, i) => {
               const site = sites.find((s) => String(s.id) === g.siteId);
               if (!site) return null;
-              const csvAuthors = Array.from(
-                new Set(
-                  g.group.rows
-                    .filter((r) => r.firstPublishedDate?.slice(0, 7) === monthKey)
-                    .map((r) => r.author)
-                    .filter((a): a is string => Boolean(a && a.trim()))
-                )
+              const csvAuthors = dedupeNamesCaseInsensitive(
+                g.group.rows
+                  .filter((r) => r.firstPublishedDate?.slice(0, 7) === monthKey)
+                  .map((r) => r.author)
+                  .filter((a): a is string => Boolean(a && a.trim()))
               );
               return (
                 <NewAuthorsReview

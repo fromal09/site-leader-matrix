@@ -33,7 +33,7 @@ type DivisionTotals = {
 
 type Period = { key: string; label: string };
 
-type SortKey = "name" | "articlesPublished" | "authorsPublished" | "totalPageviews" | "evergreenPageviews" | "weightedAvgScrollDepth";
+type SortKey = "name" | "articlesPublished" | "authorsPublished" | "totalPageviews" | "evergreenPageviews" | "weightedAvgScrollDepth" | "weightedAvgTimeOnPage" | "pvPerPublishedArticle";
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "name", label: "Site Name" },
@@ -44,6 +44,17 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "weightedAvgScrollDepth", label: "Scroll Depth" },
 ];
 
+const TABLE_COLUMNS: { key: SortKey; label: string }[] = [
+  { key: "name", label: "Site" },
+  { key: "articlesPublished", label: "Published" },
+  { key: "authorsPublished", label: "Authors" },
+  { key: "totalPageviews", label: "Total PVs" },
+  { key: "evergreenPageviews", label: "Evergreen PVs" },
+  { key: "weightedAvgScrollDepth", label: "Scroll Depth" },
+  { key: "weightedAvgTimeOnPage", label: "Time on Page" },
+  { key: "pvPerPublishedArticle", label: "PVs / New Article" },
+];
+
 export default function DepthChartsHomePage() {
   const [sites, setSites] = useState<Site[]>([]);
   const [summaries, setSummaries] = useState<Record<number, SiteSummary>>({});
@@ -52,6 +63,8 @@ export default function DepthChartsHomePage() {
   const [selectedPeriod, setSelectedPeriod] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDesc, setSortDesc] = useState(true);
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
   async function loadSummary(periodKey?: string) {
     const url = periodKey
@@ -78,15 +91,26 @@ export default function DepthChartsHomePage() {
   const sortedSites = useMemo(() => {
     const copy = [...sites];
     copy.sort((a, b) => {
-      if (sortKey === "name") return a.site_name.localeCompare(b.site_name);
+      if (sortKey === "name") {
+        const cmp = a.site_name.localeCompare(b.site_name);
+        return sortDesc ? -cmp : cmp;
+      }
       const sa = summaries[a.id];
       const sb = summaries[b.id];
       const av = sa ? (sa[sortKey] ?? -Infinity) : -Infinity;
       const bv = sb ? (sb[sortKey] ?? -Infinity) : -Infinity;
-      return (bv as number) - (av as number);
+      return sortDesc ? (bv as number) - (av as number) : (av as number) - (bv as number);
     });
     return copy;
-  }, [sites, summaries, sortKey]);
+  }, [sites, summaries, sortKey, sortDesc]);
+
+  function handleHeaderClick(key: SortKey) {
+    if (key === sortKey) setSortDesc((d) => !d);
+    else {
+      setSortKey(key);
+      setSortDesc(key !== "name");
+    }
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
@@ -133,6 +157,30 @@ export default function DepthChartsHomePage() {
               ))}
             </select>
           </label>
+          <div className="flex overflow-hidden rounded border border-rule-strong">
+            <button
+              onClick={() => setViewMode("cards")}
+              className="px-3 py-1 text-xs font-medium"
+              style={
+                viewMode === "cards"
+                  ? { backgroundColor: "var(--ink-soft)", color: "white" }
+                  : { color: "var(--ink-soft)" }
+              }
+            >
+              Cards
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className="px-3 py-1 text-xs font-medium"
+              style={
+                viewMode === "table"
+                  ? { backgroundColor: "var(--ink-soft)", color: "white" }
+                  : { color: "var(--ink-soft)" }
+              }
+            >
+              Table
+            </button>
+          </div>
         </div>
       </div>
 
@@ -184,6 +232,69 @@ export default function DepthChartsHomePage() {
           )}
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
+            {viewMode === "table" ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-rule-strong font-data text-[10px] uppercase tracking-wide text-ink-soft">
+                      {TABLE_COLUMNS.map((c) => (
+                        <th
+                          key={c.key}
+                          className={`cursor-pointer select-none py-2 pr-4 hover:text-navy ${
+                            c.key === "name" ? "" : "text-right"
+                          }`}
+                          onClick={() => handleHeaderClick(c.key)}
+                        >
+                          {c.label}
+                          {sortKey === c.key && (sortDesc ? " ▼" : " ▲")}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedSites.map((site) => {
+                      const s = summaries[site.id];
+                      return (
+                        <tr key={site.id} className="border-t border-rule">
+                          <td className="py-2 pr-4">
+                            <Link
+                              href={dcSiteHref(site.id)}
+                              className="font-medium text-navy hover:underline"
+                            >
+                              {site.site_name}
+                            </Link>
+                            <div className="text-xs text-ink-soft">{site.site_topic}</div>
+                          </td>
+                          <td className="py-2 pr-4 text-right font-data">
+                            {s ? s.articlesPublished : "—"}
+                          </td>
+                          <td className="py-2 pr-4 text-right font-data">
+                            {s ? s.authorsPublished : "—"}
+                          </td>
+                          <td className="py-2 pr-4 text-right font-data">
+                            {s ? formatCompactNumber(s.totalPageviews) : "—"}
+                          </td>
+                          <td className="py-2 pr-4 text-right font-data">
+                            {s ? formatCompactNumber(s.evergreenPageviews) : "—"}
+                          </td>
+                          <td className="py-2 pr-4 text-right font-data">
+                            {s ? formatPercent(s.weightedAvgScrollDepth) : "—"}
+                          </td>
+                          <td className="py-2 pr-4 text-right font-data">
+                            {s ? formatDuration(s.weightedAvgTimeOnPage) : "—"}
+                          </td>
+                          <td className="py-2 text-right font-data">
+                            {s && s.pvPerPublishedArticle !== null
+                              ? formatCompactNumber(s.pvPerPublishedArticle)
+                              : "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {sortedSites.map((site) => {
                 const s = summaries[site.id];
@@ -258,6 +369,7 @@ export default function DepthChartsHomePage() {
                 );
               })}
             </div>
+            )}
 
             <div>
               <WriterLeaderboard />

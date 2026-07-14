@@ -7,6 +7,7 @@ import { WriterTrafficPanel } from "./WriterTrafficPanel";
 import { WriterNotesPanel } from "./WriterNotesPanel";
 import { formatCompactNumber, formatDuration, formatPercent } from "@/lib/trafficFormat";
 import { StatTile } from "./StatTile";
+import { rankAmong, rankTier, rankTierColors } from "@/lib/rankColor";
 import {
   computeWriterObservations,
   observationBaseColor,
@@ -148,11 +149,23 @@ function ObservationBadge({
   );
 }
 
+function peerTint(
+  writerId: number,
+  metric: (s: WriterQuickStats) => number | null,
+  allQuickStats: Record<number, WriterQuickStats> | undefined
+) {
+  if (!allQuickStats) return null;
+  const r = rankAmong(writerId, metric, allQuickStats);
+  if (!r) return null;
+  return rankTierColors(rankTier(r.rank, r.total));
+}
+
 export function WriterCard({
   siteId,
   writer,
   roles,
   quickStats,
+  allQuickStats,
   siteTotals,
   onRoleCreated,
   onSaved,
@@ -162,6 +175,7 @@ export function WriterCard({
   writer: DepthChartWriter | null; // null = new, unsaved card
   roles: DepthChartRole[];
   quickStats?: WriterQuickStats;
+  allQuickStats?: Record<number, WriterQuickStats>;
   siteTotals?: SiteTrafficTotals | null;
   onRoleCreated: (role: DepthChartRole) => void;
   onSaved: () => void;
@@ -278,21 +292,36 @@ export function WriterCard({
         </div>
         {quickStats && (
           <div className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
-            <StatTile label="Published" value={quickStats.articlesPublished.toLocaleString()} />
-            <StatTile label="Total PVs" value={formatCompactNumber(quickStats.totalPageviews)} />
+            <StatTile
+              label="Published"
+              value={quickStats.articlesPublished.toLocaleString()}
+              tint={peerTint(writer.id, (s) => s.articlesPublished, allQuickStats)}
+            />
+            <StatTile
+              label="Total PVs"
+              value={formatCompactNumber(quickStats.totalPageviews)}
+              tint={peerTint(writer.id, (s) => s.totalPageviews, allQuickStats)}
+            />
             <StatTile
               label="Evergreen PVs"
               value={formatCompactNumber(
                 Math.max(0, quickStats.totalPageviews - quickStats.publishedPageviews)
               )}
+              tint={peerTint(
+                writer.id,
+                (s) => Math.max(0, s.totalPageviews - s.publishedPageviews),
+                allQuickStats
+              )}
             />
             <StatTile
               label="Scroll Depth"
               value={formatPercent(quickStats.weightedAvgScrollDepth)}
+              tint={peerTint(writer.id, (s) => s.weightedAvgScrollDepth, allQuickStats)}
             />
             <StatTile
               label="Time on Page"
               value={formatDuration(quickStats.weightedAvgTimeOnPage)}
+              tint={peerTint(writer.id, (s) => s.weightedAvgTimeOnPage, allQuickStats)}
             />
             <StatTile
               label="PVs / New Article"
@@ -301,6 +330,7 @@ export function WriterCard({
                   ? formatCompactNumber(quickStats.pvPerPublishedArticle)
                   : "—"
               }
+              tint={peerTint(writer.id, (s) => s.pvPerPublishedArticle, allQuickStats)}
             />
           </div>
         )}

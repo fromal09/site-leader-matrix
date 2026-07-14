@@ -5,6 +5,9 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { WriterCard } from "@/components/WriterCard";
 import { CondensedRoster } from "@/components/CondensedRoster";
+import { SiteHistoryChart } from "@/components/SiteHistoryChart";
+import { HomepageHistoryChart } from "@/components/HomepageHistoryChart";
+import { WriterHistoryChart } from "@/components/WriterHistoryChart";
 import { useAuth } from "@/components/AuthProvider";
 import { DC_BASE } from "@/lib/routes";
 import { SECTIONS } from "@/lib/depthCharts";
@@ -14,7 +17,7 @@ import type { SiteTrafficTotals, WriterQuickStats, HomepageTraffic } from "@/lib
 import { formatCompactNumber, formatDuration, formatPercent } from "@/lib/trafficFormat";
 import { StatTile } from "@/components/StatTile";
 import { teamColor } from "@/lib/nflTeamColors";
-import { rankTier, rankTierColors } from "@/lib/rankColor";
+import { rankTier, rankTierColors, rankAmong } from "@/lib/rankColor";
 
 type AllSiteSummary = {
   articlesPublished: number;
@@ -26,21 +29,6 @@ type AllSiteSummary = {
   pvPerPublishedArticle: number | null;
 };
 
-function rankOf(
-  siteId: number,
-  metric: keyof AllSiteSummary,
-  allSummaries: Record<number, AllSiteSummary>
-): { rank: number; total: number } | null {
-  const entries = Object.entries(allSummaries)
-    .map(([id, s]) => ({ id: Number(id), value: s[metric] }))
-    .filter((e): e is { id: number; value: number } => e.value !== null && e.value !== undefined);
-  if (entries.length === 0) return null;
-  entries.sort((a, b) => b.value - a.value);
-  const idx = entries.findIndex((e) => e.id === siteId);
-  if (idx === -1) return null;
-  return { rank: idx + 1, total: entries.length };
-}
-
 function rankLabel(r: { rank: number; total: number } | null): string | undefined {
   if (!r || r.total <= 1) return undefined;
   return `#${r.rank} of ${r.total}`;
@@ -50,6 +38,8 @@ function rankTint(r: { rank: number; total: number } | null) {
   if (!r) return null;
   return rankTierColors(rankTier(r.rank, r.total));
 }
+
+type ViewMode = "full" | "condensed" | "historical";
 
 export default function DepthChartSitePage() {
   const params = useParams();
@@ -66,7 +56,7 @@ export default function DepthChartSitePage() {
   const [statsPeriodLabel, setStatsPeriodLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [addingNew, setAddingNew] = useState(false);
-  const [viewMode, setViewMode] = useState<"full" | "condensed">("condensed");
+  const [viewMode, setViewMode] = useState<ViewMode>("condensed");
   const [homepageExpanded, setHomepageExpanded] = useState(false);
 
   const load = useCallback(async () => {
@@ -98,6 +88,10 @@ export default function DepthChartSitePage() {
     setAddingNew(true);
   }
 
+  function cycleViewMode() {
+    setViewMode((v) => (v === "condensed" ? "full" : v === "full" ? "historical" : "condensed"));
+  }
+
   if (loading) {
     return (
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
@@ -117,16 +111,27 @@ export default function DepthChartSitePage() {
     );
   }
 
+  const hasTrafficData = Object.keys(quickStats).length > 0;
   const roleToSection = new Map(roles.map((r) => [r.label, r.section]));
-  const sectioned = SECTIONS.map((s) => ({
-    section: s,
-    writers: writers
-      .filter((w) => (roleToSection.get(w.role) ?? "contributors") === s.key)
-      .sort(
-        (a, b) =>
-          (quickStats[b.id]?.totalPageviews ?? 0) - (quickStats[a.id]?.totalPageviews ?? 0)
+  const sectioned = SECTIONS.map((s) => {
+    const allInSection = writers.filter(
+      (w) => (roleToSection.get(w.role) ?? "contributors") === s.key
+    );
+    const activeInSection = hasTrafficData
+      ? allInSection.filter((w) => (quickStats[w.id]?.articlesPublished ?? 0) > 0)
+      : allInSection;
+    return {
+      section: s,
+      writers: activeInSection.sort(
+        (a, b) => (quickStats[b.id]?.totalPageviews ?? 0) - (quickStats[a.id]?.totalPageviews ?? 0)
       ),
-  }));
+      hiddenCount: allInSection.length - activeInSection.length,
+    };
+  }).filter((s) => s.writers.length > 0);
+
+  const viewModeLabel = { condensed: "Full View", full: "Historical View", historical: "Condensed View" }[
+    viewMode
+  ];
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
@@ -154,10 +159,10 @@ export default function DepthChartSitePage() {
         {!addingNew && (
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setViewMode((v) => (v === "full" ? "condensed" : "full"))}
+              onClick={cycleViewMode}
               className="rounded border border-navy px-3 py-1.5 text-xs font-medium text-navy hover:bg-navy hover:text-white"
             >
-              {viewMode === "full" ? "Condensed View" : "Full View"}
+              {viewModeLabel}
             </button>
             <button
               onClick={handleAddClick}
@@ -169,169 +174,185 @@ export default function DepthChartSitePage() {
         )}
       </div>
 
-      {siteTotals && (
-        <div className="card mb-6 rounded-md p-4">
-          <div className="mb-2 flex items-baseline justify-between">
-            <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-navy">
-              Site Snapshot — {statsPeriodLabel}
-            </h2>
-            <span className="font-data text-[11px] text-ink-soft">all authors</span>
-          </div>
-          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-6">
-            <StatTile
-              label="Published"
-              value={siteTotals.articlesPublished.toLocaleString()}
-              sub={rankLabel(rankOf(site.id, "articlesPublished", allSummaries))}
-              tint={rankTint(rankOf(site.id, "articlesPublished", allSummaries))}
-            />
-            <StatTile
-              label="Total PVs"
-              value={formatCompactNumber(siteTotals.totalPageviews)}
-              sub={rankLabel(rankOf(site.id, "totalPageviews", allSummaries))}
-              tint={rankTint(rankOf(site.id, "totalPageviews", allSummaries))}
-            />
-            <StatTile
-              label="Evergreen PVs"
-              value={formatCompactNumber(siteTotals.evergreenPageviews)}
-              sub={rankLabel(rankOf(site.id, "evergreenPageviews", allSummaries))}
-              tint={rankTint(rankOf(site.id, "evergreenPageviews", allSummaries))}
-            />
-            <StatTile
-              label="Scroll Depth"
-              value={formatPercent(siteTotals.weightedAvgScrollDepth)}
-              sub={rankLabel(rankOf(site.id, "weightedAvgScrollDepth", allSummaries))}
-              tint={rankTint(rankOf(site.id, "weightedAvgScrollDepth", allSummaries))}
-            />
-            <StatTile
-              label="Time on Page"
-              value={formatDuration(siteTotals.weightedAvgTimeOnPage)}
-              sub={rankLabel(rankOf(site.id, "weightedAvgTimeOnPage", allSummaries))}
-              tint={rankTint(rankOf(site.id, "weightedAvgTimeOnPage", allSummaries))}
-            />
-            <StatTile
-              label="PVs / New Article"
-              value={
-                siteTotals.pvPerPublishedArticle !== null
-                  ? formatCompactNumber(siteTotals.pvPerPublishedArticle)
-                  : "—"
-              }
-              sub={rankLabel(rankOf(site.id, "pvPerPublishedArticle", allSummaries))}
-              tint={rankTint(rankOf(site.id, "pvPerPublishedArticle", allSummaries))}
-            />
-          </div>
+      {viewMode === "historical" ? (
+        <div className="space-y-6">
+          <SiteHistoryChart siteId={site.id} />
+          <HomepageHistoryChart siteId={site.id} />
+          <WriterHistoryChart writers={writers} />
         </div>
-      )}
-
-      {homepageTraffic && homepageTraffic.pageCount > 0 && (
-        <div className="card mb-6 rounded-md p-4">
-          <div className="mb-2 flex items-baseline justify-between">
-            <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-navy">
-              Homepage &amp; Site Pages
-            </h2>
-            <button
-              onClick={() => setHomepageExpanded((v) => !v)}
-              className="font-data text-[11px] font-medium text-navy hover:underline"
-            >
-              {formatCompactNumber(homepageTraffic.totalPageviews)} PVs across{" "}
-              {homepageTraffic.pageCount} page{homepageTraffic.pageCount === 1 ? "" : "s"}{" "}
-              {homepageExpanded ? "▲" : "▾"}
-            </button>
-          </div>
-          <p className="mb-2 text-xs text-ink-soft">
-            Pages with no author byline — homepage, tag/category pages, schedules, and similar.
-          </p>
-          {homepageExpanded && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-rule-strong font-data text-[10px] uppercase tracking-wide text-ink-soft">
-                    <th className="py-1 pr-4">Page</th>
-                    <th className="py-1 pr-4 text-right">Pageviews</th>
-                    <th className="py-1 pr-4 text-right">Scroll</th>
-                    <th className="py-1 text-right">Avg Time</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {homepageTraffic.pages.map((p, i) => (
-                    <tr key={i} className="border-t border-rule">
-                      <td className="max-w-md py-1.5 pr-4 text-ink">{p.article_title}</td>
-                      <td className="py-1.5 pr-4 text-right font-data">
-                        {p.pageviews.toLocaleString()}
-                      </td>
-                      <td className="py-1.5 pr-4 text-right font-data">
-                        {formatPercent(p.scroll_depth)}
-                      </td>
-                      <td className="py-1.5 text-right font-data">
-                        {formatDuration(p.avg_time_on_page)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      ) : (
+        <>
+          {siteTotals && (
+            <div className="card mb-6 rounded-md p-4">
+              <div className="mb-2 flex items-baseline justify-between">
+                <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-navy">
+                  Site Snapshot — {statsPeriodLabel}
+                </h2>
+                <span className="font-data text-[11px] text-ink-soft">all authors</span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-6">
+                <StatTile
+                  label="Published"
+                  value={siteTotals.articlesPublished.toLocaleString()}
+                  sub={rankLabel(rankAmong(site.id, (s: AllSiteSummary) => s.articlesPublished, allSummaries))}
+                  tint={rankTint(rankAmong(site.id, (s: AllSiteSummary) => s.articlesPublished, allSummaries))}
+                />
+                <StatTile
+                  label="Total PVs"
+                  value={formatCompactNumber(siteTotals.totalPageviews)}
+                  sub={rankLabel(rankAmong(site.id, (s: AllSiteSummary) => s.totalPageviews, allSummaries))}
+                  tint={rankTint(rankAmong(site.id, (s: AllSiteSummary) => s.totalPageviews, allSummaries))}
+                />
+                <StatTile
+                  label="Evergreen PVs"
+                  value={formatCompactNumber(siteTotals.evergreenPageviews)}
+                  sub={rankLabel(rankAmong(site.id, (s: AllSiteSummary) => s.evergreenPageviews, allSummaries))}
+                  tint={rankTint(rankAmong(site.id, (s: AllSiteSummary) => s.evergreenPageviews, allSummaries))}
+                />
+                <StatTile
+                  label="Scroll Depth"
+                  value={formatPercent(siteTotals.weightedAvgScrollDepth)}
+                  sub={rankLabel(rankAmong(site.id, (s: AllSiteSummary) => s.weightedAvgScrollDepth, allSummaries))}
+                  tint={rankTint(rankAmong(site.id, (s: AllSiteSummary) => s.weightedAvgScrollDepth, allSummaries))}
+                />
+                <StatTile
+                  label="Time on Page"
+                  value={formatDuration(siteTotals.weightedAvgTimeOnPage)}
+                  sub={rankLabel(rankAmong(site.id, (s: AllSiteSummary) => s.weightedAvgTimeOnPage, allSummaries))}
+                  tint={rankTint(rankAmong(site.id, (s: AllSiteSummary) => s.weightedAvgTimeOnPage, allSummaries))}
+                />
+                <StatTile
+                  label="PVs / New Article"
+                  value={
+                    siteTotals.pvPerPublishedArticle !== null
+                      ? formatCompactNumber(siteTotals.pvPerPublishedArticle)
+                      : "—"
+                  }
+                  sub={rankLabel(rankAmong(site.id, (s: AllSiteSummary) => s.pvPerPublishedArticle, allSummaries))}
+                  tint={rankTint(rankAmong(site.id, (s: AllSiteSummary) => s.pvPerPublishedArticle, allSummaries))}
+                />
+              </div>
             </div>
           )}
-        </div>
-      )}
 
-      {addingNew && (
-        <div className="mb-6">
-          <WriterCard
-            siteId={site.id}
-            writer={null}
-            roles={roles}
-            onRoleCreated={(r) => setRoles((prev) => [...prev, r])}
-            onSaved={() => {
-              setAddingNew(false);
-              load();
-            }}
-            onDiscardNew={() => setAddingNew(false)}
-          />
-        </div>
-      )}
-
-      <div className="space-y-8">
-        {sectioned.map(({ section, writers: sectionWriters }) => (
-          <div key={section.key}>
-            <div className="mb-3 flex items-center gap-2">
-              <span
-                className="h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: section.color }}
-              />
-              <h2 className="font-display text-lg font-semibold text-navy">
-                {section.label}
-              </h2>
-              <span className="font-data text-xs text-ink-soft">
-                {sectionWriters.length}
-              </span>
-            </div>
-            {sectionWriters.length === 0 ? (
-              <p className="text-sm italic text-ink-soft">Nobody in this section yet.</p>
-            ) : viewMode === "condensed" ? (
-              <CondensedRoster
-                writers={sectionWriters}
-                quickStats={quickStats}
-                sectionColor={section.color}
-              />
-            ) : (
-              <div className="space-y-3">
-                {sectionWriters.map((w) => (
-                  <WriterCard
-                    key={w.id}
-                    siteId={site.id}
-                    writer={w}
-                    roles={roles}
-                    quickStats={quickStats[w.id]}
-                    siteTotals={siteTotals}
-                    onRoleCreated={(r) => setRoles((prev) => [...prev, r])}
-                    onSaved={load}
-                    onDiscardNew={() => {}}
-                  />
-                ))}
+          {homepageTraffic && homepageTraffic.pageCount > 0 && (
+            <div className="card mb-6 rounded-md p-4">
+              <div className="mb-2 flex items-baseline justify-between">
+                <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-navy">
+                  Homepage &amp; Site Pages
+                </h2>
+                <button
+                  onClick={() => setHomepageExpanded((v) => !v)}
+                  className="font-data text-[11px] font-medium text-navy hover:underline"
+                >
+                  {homepageExpanded ? "Hide pages ▲" : "View pages ▾"}
+                </button>
               </div>
-            )}
+              <p className="mb-2 text-xs text-ink-soft">
+                Pages with no author byline — homepage, tag/category pages, schedules, and similar.
+              </p>
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-6">
+                <StatTile label="Total PVs" value={formatCompactNumber(homepageTraffic.totalPageviews)} />
+                <StatTile label="Pages" value={homepageTraffic.pageCount.toLocaleString()} />
+              </div>
+              {homepageExpanded && (
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-rule-strong font-data text-[10px] uppercase tracking-wide text-ink-soft">
+                        <th className="py-1 pr-4">Page</th>
+                        <th className="py-1 pr-4 text-right">Pageviews</th>
+                        <th className="py-1 pr-4 text-right">Scroll</th>
+                        <th className="py-1 text-right">Avg Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {homepageTraffic.pages.map((p, i) => (
+                        <tr key={i} className="border-t border-rule">
+                          <td className="max-w-md py-1.5 pr-4 text-ink">{p.article_title}</td>
+                          <td className="py-1.5 pr-4 text-right font-data">
+                            {p.pageviews.toLocaleString()}
+                          </td>
+                          <td className="py-1.5 pr-4 text-right font-data">
+                            {formatPercent(p.scroll_depth)}
+                          </td>
+                          <td className="py-1.5 text-right font-data">
+                            {formatDuration(p.avg_time_on_page)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {addingNew && (
+            <div className="mb-6">
+              <WriterCard
+                siteId={site.id}
+                writer={null}
+                roles={roles}
+                onRoleCreated={(r) => setRoles((prev) => [...prev, r])}
+                onSaved={() => {
+                  setAddingNew(false);
+                  load();
+                }}
+                onDiscardNew={() => setAddingNew(false)}
+              />
+            </div>
+          )}
+
+          <div className="space-y-8">
+            {sectioned.map(({ section, writers: sectionWriters, hiddenCount }) => (
+              <div key={section.key}>
+                <div className="mb-3 flex items-center gap-2">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: section.color }}
+                  />
+                  <h2 className="font-display text-lg font-semibold text-navy">
+                    {section.label}
+                  </h2>
+                  <span className="font-data text-xs text-ink-soft">
+                    {sectionWriters.length}
+                  </span>
+                  {hiddenCount > 0 && (
+                    <span className="font-data text-[11px] text-ink-soft">
+                      ({hiddenCount} inactive this month hidden)
+                    </span>
+                  )}
+                </div>
+                {viewMode === "condensed" ? (
+                  <CondensedRoster
+                    writers={sectionWriters}
+                    quickStats={quickStats}
+                    sectionColor={section.color}
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {sectionWriters.map((w) => (
+                      <WriterCard
+                        key={w.id}
+                        siteId={site.id}
+                        writer={w}
+                        roles={roles}
+                        quickStats={quickStats[w.id]}
+                        allQuickStats={quickStats}
+                        siteTotals={siteTotals}
+                        onRoleCreated={(r) => setRoles((prev) => [...prev, r])}
+                        onSaved={load}
+                        onDiscardNew={() => {}}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
     </main>
   );
 }

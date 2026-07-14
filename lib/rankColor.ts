@@ -1,5 +1,23 @@
 export type RankTier = "strong-good" | "mild-good" | "mild-bad" | "strong-bad" | "neutral";
 
+// Generic: ranks `id` among all entries in `itemsById` by the given metric
+// accessor (descending, higher = better). Used for both site-vs-division
+// and writer-vs-site-peers comparisons.
+export function rankAmong<T>(
+  id: number,
+  metric: (item: T) => number | null,
+  itemsById: Record<number, T>
+): { rank: number; total: number } | null {
+  const entries = Object.entries(itemsById)
+    .map(([k, v]) => ({ id: Number(k), value: metric(v) }))
+    .filter((e): e is { id: number; value: number } => e.value !== null);
+  if (entries.length === 0) return null;
+  entries.sort((a, b) => b.value - a.value);
+  const idx = entries.findIndex((e) => e.id === id);
+  if (idx === -1) return null;
+  return { rank: idx + 1, total: entries.length };
+}
+
 // Quartile-based: top quarter of the division = strong green, next quarter =
 // mild green, bottom quarter = strong red, third quarter = mild red. Needs
 // at least 4 sites with data to be meaningful — below that everything is
