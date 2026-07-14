@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { pageviewWeightedAverage } from "@/lib/trafficStats";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ siteId: string }> }
 ) {
   const session = await getSession();
@@ -14,28 +14,36 @@ export async function GET(
 
   const { siteId } = await params;
   const siteIdNum = Number(siteId);
+  const requestedPeriod = req.nextUrl.searchParams.get("period");
 
   try {
-    const latestRows = await sql`
-      SELECT MAX(period_key) AS period_key FROM traffic_imports WHERE site_id = ${siteIdNum}
+    const periodRows = await sql`
+      SELECT DISTINCT period_key, period_label FROM traffic_imports
+      WHERE site_id = ${siteIdNum}
+      ORDER BY period_key DESC
     `;
-    const latestPeriodKey = (latestRows as any[])[0]?.period_key;
-    if (!latestPeriodKey) {
+    const availablePeriods = (periodRows as any[]).map((r) => ({
+      key: r.period_key,
+      label: r.period_label,
+    }));
+
+    if (availablePeriods.length === 0) {
       return NextResponse.json({
         periodKey: null,
         periodLabel: null,
+        availablePeriods: [],
         writers: {},
         siteTotals: null,
         homepageTraffic: null,
       });
     }
 
-    const periodLabelRows = await sql`
-      SELECT period_label FROM traffic_imports
-      WHERE site_id = ${siteIdNum} AND period_key = ${latestPeriodKey}
-      LIMIT 1
-    `;
-    const periodLabel = (periodLabelRows as any[])[0]?.period_label ?? latestPeriodKey;
+    const selectedPeriodKey =
+      requestedPeriod && availablePeriods.some((p) => p.key === requestedPeriod)
+        ? requestedPeriod
+        : availablePeriods[0].key; // most recent, since sorted desc
+    const periodLabel =
+      availablePeriods.find((p) => p.key === selectedPeriodKey)?.label ?? selectedPeriodKey;
 
     const writers = await sql`
       SELECT id, name, traffic_dashboard_name FROM depth_chart_writers
@@ -48,7 +56,7 @@ export async function GET(
         TO_CHAR(at.first_published_date, 'YYYY-MM') AS published_month
       FROM article_traffic at
       JOIN traffic_imports ti ON ti.id = at.import_id
-      WHERE at.site_id = ${siteIdNum} AND ti.period_key = ${latestPeriodKey}
+      WHERE at.site_id = ${siteIdNum} AND ti.period_key = ${selectedPeriodKey}
         AND at.article_author IS NOT NULL
     `;
 
@@ -59,7 +67,7 @@ export async function GET(
         at.scroll_depth::float8 AS scroll_depth, at.avg_time_on_page::float8 AS avg_time_on_page
       FROM article_traffic at
       JOIN traffic_imports ti ON ti.id = at.import_id
-      WHERE at.site_id = ${siteIdNum} AND ti.period_key = ${latestPeriodKey}
+      WHERE at.site_id = ${siteIdNum} AND ti.period_key = ${selectedPeriodKey}
         AND at.article_author IS NULL
       ORDER BY at.pageviews DESC
       LIMIT 10
@@ -68,7 +76,7 @@ export async function GET(
       SELECT COALESCE(SUM(at.pageviews), 0)::float8 AS total_pageviews, COUNT(*) AS page_count
       FROM article_traffic at
       JOIN traffic_imports ti ON ti.id = at.import_id
-      WHERE at.site_id = ${siteIdNum} AND ti.period_key = ${latestPeriodKey}
+      WHERE at.site_id = ${siteIdNum} AND ti.period_key = ${selectedPeriodKey}
         AND at.article_author IS NULL
     `;
     const homepageTotals = (homepageAllRows as any[])[0];
@@ -78,9 +86,7 @@ export async function GET(
       pageCount: Number(homepageTotals?.page_count ?? 0),
     };
 
-    // Site-wide totals across every author who touched this site this period,
-    // not just those with a roster card yet.
-    const publishedRows = rowsArr.filter((r) => r.published_month === latestPeriodKey);
+    const publishedRows = rowsArr.filter((r) => r.published_month === selectedPeriodKey);
     const totalPageviews = rowsArr.reduce((sum, r) => sum + r.pageviews, 0);
     const publishedPageviews = publishedRows.reduce((sum, r) => sum + r.pageviews, 0);
     const evergreenPageviews = totalPageviews - publishedPageviews;
@@ -123,18 +129,18 @@ export async function GET(
       const rows = matchName ? byAuthor.get(matchName) ?? [] : [];
       if (rows.length === 0) continue;
 
-      const articlesPublished = rows.filter((r) => r.published_month === latestPeriodKey).length;
+      const articlesPublished = rows.filter((r) => r.published_month === selectedPeriodKey).length;
       const writerTotalPageviews = rows.reduce((sum, r) => sum + r.pageviews, 0);
 
-      const writerPublishedRows = rows.filter((r) => r.published_month === latestPeriodKey);
-      const publishedPageviews = writerPublishedRows.reduce((sum, r) => sum + r.pageviews, 0);
+      const writerPublishedRows = rows.filter((r) => r.published_month === selectedPeriodKey);
+      const writerPublishedPageviews = writerPublishedRows.reduce((sum, r) => sum + r.pageviews, 0);
 
       result[w.id] = {
         articlesPublished,
         totalPageviews: writerTotalPageviews,
-        publishedPageviews,
+        publishedPageviews: writerPublishedPageviews,
         pvPerPublishedArticle:
-          articlesPublished > 0 ? publishedPageviews / articlesPublished : null,
+          articlesPublished > 0 ? writerPublishedPageviews / articlesPublished : null,
         weightedAvgScrollDepth: pageviewWeightedAverage(
           rows.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews }))
         ),
@@ -145,8 +151,9 @@ export async function GET(
     }
 
     return NextResponse.json({
-      periodKey: latestPeriodKey,
+      periodKey: selectedPeriodKey,
       periodLabel,
+      availablePeriods,
       writers: result,
       siteTotals,
       homepageTraffic,

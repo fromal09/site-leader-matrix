@@ -54,20 +54,30 @@ export default function DepthChartSitePage() {
   const [homepageTraffic, setHomepageTraffic] = useState<HomepageTraffic | null>(null);
   const [allSummaries, setAllSummaries] = useState<Record<number, AllSiteSummary>>({});
   const [statsPeriodLabel, setStatsPeriodLabel] = useState<string | null>(null);
+  const [statsPeriodKey, setStatsPeriodKey] = useState<string | null>(null);
+  const [sitePeriods, setSitePeriods] = useState<{ key: string; label: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingNew, setAddingNew] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("condensed");
   const [homepageExpanded, setHomepageExpanded] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (periodKey?: string) => {
     setLoading(true);
-    const [siteRes, writersRes, rolesRes, statsRes, allSitesRes] = await Promise.all([
+    const statsUrl = periodKey
+      ? `/api/depth-chart-writers/site/${id}/traffic-summary?period=${encodeURIComponent(periodKey)}`
+      : `/api/depth-chart-writers/site/${id}/traffic-summary`;
+    const [siteRes, writersRes, rolesRes, statsRes] = await Promise.all([
       fetch(`/api/sites/${id}`).then((r) => r.json()),
       fetch(`/api/depth-chart-writers/${id}`).then((r) => r.json()),
       fetch("/api/depth-chart-roles").then((r) => r.json()),
-      fetch(`/api/depth-chart-writers/site/${id}/traffic-summary`).then((r) => r.json()),
-      fetch("/api/depth-chart-writers/all-sites-summary").then((r) => r.json()),
+      fetch(statsUrl).then((r) => r.json()),
     ]);
+    const resolvedPeriodKey = statsRes.periodKey ?? null;
+    const allSitesUrl = resolvedPeriodKey
+      ? `/api/depth-chart-writers/all-sites-summary?period=${encodeURIComponent(resolvedPeriodKey)}`
+      : "/api/depth-chart-writers/all-sites-summary";
+    const allSitesRes = await fetch(allSitesUrl).then((r) => r.json());
+
     setSite(siteRes.site ?? null);
     setWriters(writersRes.writers ?? []);
     setRoles(rolesRes.roles ?? []);
@@ -75,9 +85,15 @@ export default function DepthChartSitePage() {
     setSiteTotals(statsRes.siteTotals ?? null);
     setHomepageTraffic(statsRes.homepageTraffic ?? null);
     setStatsPeriodLabel(statsRes.periodLabel ?? null);
+    setStatsPeriodKey(resolvedPeriodKey);
+    setSitePeriods(statsRes.availablePeriods ?? []);
     setAllSummaries(allSitesRes.sites ?? {});
     setLoading(false);
   }, [id]);
+
+  function handlePeriodChange(key: string) {
+    load(key);
+  }
 
   useEffect(() => {
     load();
@@ -149,7 +165,23 @@ export default function DepthChartSitePage() {
           )}
         </div>
         {!addingNew && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {sitePeriods.length > 0 && (
+              <label className="flex items-center gap-1.5 text-xs">
+                <span className="text-ink-soft uppercase tracking-wide">Month</span>
+                <select
+                  value={statsPeriodKey ?? ""}
+                  onChange={(e) => handlePeriodChange(e.target.value)}
+                  className="rounded border border-rule-strong bg-white px-2 py-1 font-data text-xs"
+                >
+                  {sitePeriods.map((p) => (
+                    <option key={p.key} value={p.key}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <div className="flex overflow-hidden rounded border border-navy">
               {(["condensed", "full", "historical"] as const).map((mode) => (
                 <button
@@ -299,7 +331,7 @@ export default function DepthChartSitePage() {
                 onRoleCreated={(r) => setRoles((prev) => [...prev, r])}
                 onSaved={() => {
                   setAddingNew(false);
-                  load();
+                  load(statsPeriodKey ?? undefined);
                 }}
                 onDiscardNew={() => setAddingNew(false)}
               />
@@ -344,7 +376,7 @@ export default function DepthChartSitePage() {
                         allQuickStats={quickStats}
                         siteTotals={siteTotals}
                         onRoleCreated={(r) => setRoles((prev) => [...prev, r])}
-                        onSaved={load}
+                        onSaved={() => load(statsPeriodKey ?? undefined)}
                         onDiscardNew={() => {}}
                       />
                     ))}
