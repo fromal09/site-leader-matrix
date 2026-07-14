@@ -43,6 +43,20 @@ export type TrafficArticleRow = {
   engagementScore?: number;
 };
 
+export type LeaderboardWriter = {
+  writerId: number;
+  name: string;
+  role: string;
+  siteId: number;
+  siteName: string;
+  periodLabel: string;
+  articlesPublished: number;
+  totalPageviews: number;
+  pvPerPublishedArticle: number | null;
+  weightedAvgScrollDepth: number | null;
+  weightedAvgTimeOnPage: number | null;
+};
+
 export type WriterQuickStats = {
   articlesPublished: number;
   totalPageviews: number;

@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { computeEngagementScore } from "@/lib/engagementScore";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ cardId: string }> }
 ) {
   const session = await getSession();
@@ -13,6 +13,7 @@ export async function GET(
   }
 
   const { cardId } = await params;
+  const requestedPeriod = req.nextUrl.searchParams.get("period");
   try {
     const writerRows = await sql`
       SELECT id, site_id, name, traffic_dashboard_name
@@ -47,14 +48,20 @@ export async function GET(
     }
 
     const latestPeriodKey = rowsArr[0].period_key;
-    const latestPeriodLabel = rowsArr[0].period_label;
-    const latestRows = rowsArr.filter((r) => r.period_key === latestPeriodKey);
+    const availablePeriodKeys = new Set(rowsArr.map((r) => r.period_key));
+    const selectedPeriodKey =
+      requestedPeriod && availablePeriodKeys.has(requestedPeriod)
+        ? requestedPeriod
+        : latestPeriodKey;
+    const latestPeriodLabel =
+      rowsArr.find((r) => r.period_key === selectedPeriodKey)?.period_label ?? rowsArr[0].period_label;
+    const latestRows = rowsArr.filter((r) => r.period_key === selectedPeriodKey);
 
     const publishedThisPeriod = latestRows.filter(
-      (r) => r.first_published_date && String(r.first_published_date).slice(0, 7) === latestPeriodKey
+      (r) => r.first_published_date && String(r.first_published_date).slice(0, 7) === selectedPeriodKey
     );
     const evergreenRows = latestRows.filter(
-      (r) => !(r.first_published_date && String(r.first_published_date).slice(0, 7) === latestPeriodKey)
+      (r) => !(r.first_published_date && String(r.first_published_date).slice(0, 7) === selectedPeriodKey)
     );
 
     const totalPageviews = latestRows.reduce((sum, r) => sum + r.pageviews, 0);
@@ -118,7 +125,7 @@ export async function GET(
       matched: true,
       matchName,
       latestPeriodLabel,
-      latestPeriodKey,
+      latestPeriodKey: selectedPeriodKey,
       stats: {
         articlesPublishedCount: publishedThisPeriod.length,
         totalPageviews,

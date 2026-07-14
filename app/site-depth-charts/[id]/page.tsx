@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { WriterCard } from "@/components/WriterCard";
+import { CondensedRoster } from "@/components/CondensedRoster";
 import { useAuth } from "@/components/AuthProvider";
 import { DC_BASE } from "@/lib/routes";
 import { SECTIONS } from "@/lib/depthCharts";
@@ -11,6 +12,8 @@ import type { DepthChartRole, DepthChartWriter } from "@/lib/depthCharts";
 import type { Site } from "@/lib/types";
 import type { SiteTrafficTotals, WriterQuickStats } from "@/lib/traffic";
 import { formatCompactNumber, formatDuration, formatPercent } from "@/lib/trafficFormat";
+import { StatTile } from "@/components/StatTile";
+import { teamColor } from "@/lib/nflTeamColors";
 
 export default function DepthChartSitePage() {
   const params = useParams();
@@ -25,6 +28,7 @@ export default function DepthChartSitePage() {
   const [statsPeriodLabel, setStatsPeriodLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [addingNew, setAddingNew] = useState(false);
+  const [viewMode, setViewMode] = useState<"full" | "condensed">("full");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -90,7 +94,11 @@ export default function DepthChartSitePage() {
 
       <div className="mt-2 mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="font-data text-xs uppercase tracking-widest text-ink-soft">
+          <p className="flex items-center gap-1.5 font-data text-xs uppercase tracking-widest text-ink-soft">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: teamColor(site.site_topic).primary }}
+            />
             {site.site_topic}
           </p>
           <h1 className="font-display text-3xl font-bold text-navy">{site.site_name}</h1>
@@ -102,12 +110,20 @@ export default function DepthChartSitePage() {
           )}
         </div>
         {!addingNew && (
-          <button
-            onClick={handleAddClick}
-            className="rounded bg-navy px-3 py-1.5 text-xs font-medium text-white hover:bg-navy-soft"
-          >
-            + Add Writer
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setViewMode((v) => (v === "full" ? "condensed" : "full"))}
+              className="rounded border border-navy px-3 py-1.5 text-xs font-medium text-navy hover:bg-navy hover:text-white"
+            >
+              {viewMode === "full" ? "Condensed View" : "Full View"}
+            </button>
+            <button
+              onClick={handleAddClick}
+              className="rounded bg-navy px-3 py-1.5 text-xs font-medium text-white hover:bg-navy-soft"
+            >
+              + Add Writer
+            </button>
+          </div>
         )}
       </div>
 
@@ -120,56 +136,19 @@ export default function DepthChartSitePage() {
             <span className="font-data text-[11px] text-ink-soft">all authors</span>
           </div>
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-6">
-            <div className="rounded border border-rule-strong bg-white px-2.5 py-2">
-              <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
-                Published
-              </div>
-              <div className="font-data text-base font-semibold text-ink">
-                {siteTotals.articlesPublished.toLocaleString()}
-              </div>
-            </div>
-            <div className="rounded border border-rule-strong bg-white px-2.5 py-2">
-              <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
-                Total PVs
-              </div>
-              <div className="font-data text-base font-semibold text-ink">
-                {formatCompactNumber(siteTotals.totalPageviews)}
-              </div>
-            </div>
-            <div className="rounded border border-rule-strong bg-white px-2.5 py-2">
-              <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
-                Evergreen PVs
-              </div>
-              <div className="font-data text-base font-semibold text-ink">
-                {formatCompactNumber(siteTotals.evergreenPageviews)}
-              </div>
-            </div>
-            <div className="rounded border border-rule-strong bg-white px-2.5 py-2">
-              <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
-                Scroll Depth
-              </div>
-              <div className="font-data text-base font-semibold text-ink">
-                {formatPercent(siteTotals.weightedAvgScrollDepth)}
-              </div>
-            </div>
-            <div className="rounded border border-rule-strong bg-white px-2.5 py-2">
-              <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
-                Time on Page
-              </div>
-              <div className="font-data text-base font-semibold text-ink">
-                {formatDuration(siteTotals.weightedAvgTimeOnPage)}
-              </div>
-            </div>
-            <div className="rounded border border-rule-strong bg-white px-2.5 py-2">
-              <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
-                PVs / New Article
-              </div>
-              <div className="font-data text-base font-semibold text-ink">
-                {siteTotals.pvPerPublishedArticle !== null
+            <StatTile label="Published" value={siteTotals.articlesPublished.toLocaleString()} />
+            <StatTile label="Total PVs" value={formatCompactNumber(siteTotals.totalPageviews)} />
+            <StatTile label="Evergreen PVs" value={formatCompactNumber(siteTotals.evergreenPageviews)} />
+            <StatTile label="Scroll Depth" value={formatPercent(siteTotals.weightedAvgScrollDepth)} />
+            <StatTile label="Time on Page" value={formatDuration(siteTotals.weightedAvgTimeOnPage)} />
+            <StatTile
+              label="PVs / New Article"
+              value={
+                siteTotals.pvPerPublishedArticle !== null
                   ? formatCompactNumber(siteTotals.pvPerPublishedArticle)
-                  : "—"}
-              </div>
-            </div>
+                  : "—"
+              }
+            />
           </div>
         </div>
       )}
@@ -207,6 +186,12 @@ export default function DepthChartSitePage() {
             </div>
             {sectionWriters.length === 0 ? (
               <p className="text-sm italic text-ink-soft">Nobody in this section yet.</p>
+            ) : viewMode === "condensed" ? (
+              <CondensedRoster
+                writers={sectionWriters}
+                quickStats={quickStats}
+                sectionColor={section.color}
+              />
             ) : (
               <div className="space-y-3">
                 {sectionWriters.map((w) => (

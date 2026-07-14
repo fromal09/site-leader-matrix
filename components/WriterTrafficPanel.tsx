@@ -9,6 +9,7 @@ import {
   observationBaseColor,
 } from "@/lib/observations";
 import type { TrafficArticleRow, WriterTrafficSummary, SiteTrafficTotals } from "@/lib/traffic";
+import { StatTile } from "./StatTile";
 
 function ArticleTitle({ article }: { article: TrafficArticleRow }) {
   if (article.article_url) {
@@ -24,18 +25,6 @@ function ArticleTitle({ article }: { article: TrafficArticleRow }) {
     );
   }
   return <span className="text-ink">{article.article_title}</span>;
-}
-
-function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="rounded border border-rule-strong bg-white px-2.5 py-2">
-      <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
-        {label}
-      </div>
-      <div className="font-data text-base font-semibold text-ink">{value}</div>
-      {sub && <div className="text-[10px] text-ink-soft">{sub}</div>}
-    </div>
-  );
 }
 
 function SectionHeading({ color, children }: { color: string; children: React.ReactNode }) {
@@ -89,6 +78,7 @@ export function WriterTrafficPanel({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<WriterTrafficSummary | null>(null);
+  const [switchingPeriod, setSwitchingPeriod] = useState(false);
 
   async function toggle() {
     if (!open && !data) {
@@ -99,6 +89,16 @@ export function WriterTrafficPanel({
       setLoading(false);
     }
     setOpen((o) => !o);
+  }
+
+  async function changePeriod(periodKey: string) {
+    setSwitchingPeriod(true);
+    const res = await fetch(
+      `/api/depth-chart-writers/card/${writerId}/traffic?period=${encodeURIComponent(periodKey)}`
+    );
+    const d = await res.json();
+    setData(d);
+    setSwitchingPeriod(false);
   }
 
   const s = data?.stats;
@@ -143,10 +143,27 @@ export function WriterTrafficPanel({
             </p>
           ) : (
             <div className="space-y-4">
-              <div className="flex items-baseline justify-between">
-                <p className="font-display text-sm font-semibold text-navy">
-                  {data.latestPeriodLabel}
-                </p>
+              <div className="flex items-baseline justify-between gap-2">
+                {data.monthly && data.monthly.length > 1 ? (
+                  <select
+                    value={data.latestPeriodKey}
+                    onChange={(e) => changePeriod(e.target.value)}
+                    disabled={switchingPeriod}
+                    className="rounded border border-rule-strong bg-white px-1.5 py-1 font-display text-sm font-semibold text-navy outline-none focus:border-navy"
+                  >
+                    {[...data.monthly]
+                      .sort((a, b) => b.period_key.localeCompare(a.period_key))
+                      .map((m) => (
+                        <option key={m.period_key} value={m.period_key}>
+                          {m.period_label}
+                        </option>
+                      ))}
+                  </select>
+                ) : (
+                  <p className="font-display text-sm font-semibold text-navy">
+                    {data.latestPeriodLabel}
+                  </p>
+                )}
                 <Link
                   href={writerTrafficHref(writerId)}
                   className="text-[11px] font-medium text-navy hover:underline"

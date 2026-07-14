@@ -20,7 +20,9 @@ type ImportRow = {
   imported_at: string;
 };
 
-type GroupStatus = "idle" | "uploading" | "done" | "error";
+type GroupStatus = "idle" | "uploading" | "done" | "error" | "skipped";
+
+const DO_NOT_INCLUDE = "__skip__";
 
 type GroupState = {
   group: TrafficCsvGroup;
@@ -113,10 +115,16 @@ export default function TrafficPage() {
     setUploading(true);
 
     for (let i = 0; i < groupStates.length; i++) {
-      setGroupStates((prev) =>
-        prev.map((g, idx) => (idx === i ? { ...g, status: "uploading", error: null } : g))
-      );
       const g = groupStates[i];
+      if (g.siteId === DO_NOT_INCLUDE) {
+        setGroupStates((prev) =>
+          prev.map((gs, idx) => (idx === i ? { ...gs, status: "skipped" } : gs))
+        );
+        continue;
+      }
+      setGroupStates((prev) =>
+        prev.map((gs, idx) => (idx === i ? { ...gs, status: "uploading", error: null } : gs))
+      );
       const res = await fetch("/api/traffic/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -240,7 +248,7 @@ export default function TrafficPage() {
                         className="rounded border border-rule-strong bg-white px-2 py-1.5 text-sm outline-none focus:border-navy"
                         value={g.siteId}
                         onChange={(e) => updateGroupSite(i, e.target.value)}
-                        disabled={g.status === "uploading" || g.status === "done"}
+                        disabled={g.status === "uploading" || g.status === "done" || g.status === "skipped"}
                       >
                         <option value="" disabled>
                           Choose a site…
@@ -250,12 +258,16 @@ export default function TrafficPage() {
                             {s.site_name} ({s.site_topic})
                           </option>
                         ))}
+                        <option value={DO_NOT_INCLUDE}>Do Not Include</option>
                       </select>
                       {g.status === "uploading" && (
                         <span className="text-xs text-ink-soft">Uploading…</span>
                       )}
                       {g.status === "done" && (
                         <span className="text-xs text-grade-good">Done</span>
+                      )}
+                      {g.status === "skipped" && (
+                        <span className="text-xs text-ink-soft">Skipped</span>
                       )}
                       {g.status === "error" && (
                         <span className="text-xs text-grade-low">{g.error}</span>

@@ -39,7 +39,10 @@ export async function GET() {
         COALESCE(SUM(at.avg_time_on_page * at.pageviews) FILTER (WHERE at.avg_time_on_page IS NOT NULL), 0)
           AS time_weighted_sum,
         COALESCE(SUM(at.pageviews) FILTER (WHERE at.avg_time_on_page IS NOT NULL), 0)
-          AS time_weight_denom
+          AS time_weight_denom,
+        COUNT(DISTINCT at.article_author) FILTER (
+          WHERE TO_CHAR(at.first_published_date, 'YYYY-MM') = li.period_key
+        ) AS authors_published
       FROM article_traffic at
       JOIN latest_import li ON li.id = at.import_id
       WHERE at.article_author IS NOT NULL
@@ -51,6 +54,7 @@ export async function GET() {
       {
         periodLabel: string;
         articlesPublished: number;
+        authorsPublished: number;
         totalPageviews: number;
         evergreenPageviews: number;
         weightedAvgScrollDepth: number | null;
@@ -66,6 +70,7 @@ export async function GET() {
       result[r.site_id] = {
         periodLabel: r.period_label,
         articlesPublished: Number(r.articles_published),
+        authorsPublished: Number(r.authors_published),
         totalPageviews,
         evergreenPageviews: totalPageviews - publishedPageviews,
         weightedAvgScrollDepth: scrollDenom > 0 ? Number(r.scroll_weighted_sum) / scrollDenom : null,

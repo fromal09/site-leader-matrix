@@ -5,7 +5,8 @@ import { useAuth } from "./AuthProvider";
 import { SECTIONS, sectionColor } from "@/lib/depthCharts";
 import { WriterTrafficPanel } from "./WriterTrafficPanel";
 import { WriterNotesPanel } from "./WriterNotesPanel";
-import { formatCompactNumber, formatPercent, scrollDepthColor } from "@/lib/trafficFormat";
+import { formatCompactNumber, formatDuration, formatPercent } from "@/lib/trafficFormat";
+import { StatTile } from "./StatTile";
 import {
   computeWriterObservations,
   observationBaseColor,
@@ -120,20 +121,6 @@ function RoleSelect({
       ))}
       <option value={ADD_NEW}>+ Add new role…</option>
     </select>
-  );
-}
-
-function QuickStatBadge({ label, color }: { label: string; color?: string }) {
-  return (
-    <span
-      className="whitespace-nowrap rounded-full border px-2 py-0.5 font-data text-[11px]"
-      style={{
-        borderColor: color ?? "var(--rule-strong)",
-        color: color ?? "var(--ink-soft)",
-      }}
-    >
-      {label}
-    </span>
   );
 }
 
@@ -282,27 +269,41 @@ export function WriterCard({
               {writer.role}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {quickStats && (
-              <>
-                <QuickStatBadge label={`${quickStats.articlesPublished} published`} />
-                <QuickStatBadge
-                  label={`${formatCompactNumber(quickStats.totalPageviews)} PVs`}
-                />
-                <QuickStatBadge
-                  label={`${formatPercent(quickStats.weightedAvgScrollDepth)} scroll`}
-                  color={scrollDepthColor(quickStats.weightedAvgScrollDepth)}
-                />
-              </>
-            )}
-            <button
-              onClick={startEdit}
-              className="text-xs font-medium text-ink-soft hover:text-navy"
-            >
-              Edit
-            </button>
-          </div>
+          <button
+            onClick={startEdit}
+            className="text-xs font-medium text-ink-soft hover:text-navy"
+          >
+            Edit
+          </button>
         </div>
+        {quickStats && (
+          <div className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+            <StatTile label="Published" value={quickStats.articlesPublished.toLocaleString()} />
+            <StatTile label="Total PVs" value={formatCompactNumber(quickStats.totalPageviews)} />
+            <StatTile
+              label="Evergreen PVs"
+              value={formatCompactNumber(
+                Math.max(0, quickStats.totalPageviews - quickStats.publishedPageviews)
+              )}
+            />
+            <StatTile
+              label="Scroll Depth"
+              value={formatPercent(quickStats.weightedAvgScrollDepth)}
+            />
+            <StatTile
+              label="Time on Page"
+              value={formatDuration(quickStats.weightedAvgTimeOnPage)}
+            />
+            <StatTile
+              label="PVs / New Article"
+              value={
+                quickStats.pvPerPublishedArticle !== null
+                  ? formatCompactNumber(quickStats.pvPerPublishedArticle)
+                  : "—"
+              }
+            />
+          </div>
+        )}
         {observations.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {observations.map((o) => (

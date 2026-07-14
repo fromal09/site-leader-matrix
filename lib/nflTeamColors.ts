@@ -1,0 +1,38 @@
+export const NFL_TEAM_COLORS: Record<string, { primary: string; secondary: string }> = {
+  "Kansas City Chiefs": { primary: "#E31837", secondary: "#FFB81C" },
+  "New York Giants": { primary: "#0B2265", secondary: "#A71930" },
+  "New England Patriots": { primary: "#002244", secondary: "#C60C30" },
+  "Washington Commanders": { primary: "#5A1414", secondary: "#FFB612" },
+  "Pittsburgh Steelers": { primary: "#FFB612", secondary: "#101820" },
+  "Tennessee Titans": { primary: "#0C2340", secondary: "#4B92DB" },
+  "Las Vegas Raiders": { primary: "#000000", secondary: "#A5ACAF" },
+  "Denver Broncos": { primary: "#FB4F14", secondary: "#002244" },
+  "Cincinnati Bengals": { primary: "#FB4F14", secondary: "#000000" },
+  "Dallas Cowboys": { primary: "#003594", secondary: "#869397" },
+  "Cleveland Browns": { primary: "#311D00", secondary: "#FF3C00" },
+  "Philadelphia Eagles": { primary: "#004C54", secondary: "#A5ACAF" },
+  "Green Bay Packers": { primary: "#203731", secondary: "#FFB612" },
+  "San Francisco 49ers": { primary: "#AA0000", secondary: "#B3995D" },
+  "Minnesota Vikings": { primary: "#4F2683", secondary: "#FFC62F" },
+  "Houston Texans": { primary: "#03202F", secondary: "#A71930" },
+  "New Orleans Saints": { primary: "#D3BC8D", secondary: "#101820" },
+  "Chicago Bears": { primary: "#0B162A", secondary: "#C83803" },
+  "Atlanta Falcons": { primary: "#A71930", secondary: "#000000" },
+  "Carolina Panthers": { primary: "#0085CA", secondary: "#101820" },
+  "Arizona Cardinals": { primary: "#97233F", secondary: "#000000" },
+  "Detroit Lions": { primary: "#0076B6", secondary: "#B0B7BC" },
+  "New York Jets": { primary: "#125740", secondary: "#000000" },
+  "Seattle Seahawks": { primary: "#002244", secondary: "#69BE28" },
+  "Jacksonville Jaguars": { primary: "#101820", secondary: "#D7A22A" },
+  "Los Angeles Chargers": { primary: "#0080C6", secondary: "#FFC20E" },
+  "Buffalo Bills": { primary: "#00338D", secondary: "#C60C30" },
+  "Indianapolis Colts": { primary: "#002C5F", secondary: "#A5ACAF" },
+  "Tampa Bay Buccaneers": { primary: "#D50A0A", secondary: "#34302B" },
+  "Baltimore Ravens": { primary: "#241773", secondary: "#9E7C0C" },
+  "Miami Dolphins": { primary: "#008E97", secondary: "#F58220" },
+  "Los Angeles Rams": { primary: "#003594", secondary: "#FFA300" },
+};
+
+export function teamColor(siteTopic: string): { primary: string; secondary: string } {
+  return NFL_TEAM_COLORS[siteTopic] ?? { primary: "var(--navy)", secondary: "var(--ink-soft)" };
+}
