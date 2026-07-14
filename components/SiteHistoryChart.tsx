@@ -85,7 +85,7 @@ export function SiteHistoryChart({ siteId }: { siteId: number }) {
                 tickFormatter={(v) => metricDef.format(v)}
               />
               <Tooltip
-                formatter={(v: any) => metricDef.format(Number(v))}
+                formatter={(v: any) => [metricDef.format(Number(v)), metricDef.label]}
                 labelStyle={{ fontFamily: "var(--font-data)" }}
               />
               <Line

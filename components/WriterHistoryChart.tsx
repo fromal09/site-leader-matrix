@@ -119,7 +119,12 @@ export function WriterHistoryChart({ writers }: { writers: DepthChartWriter[] })
                 tick={{ fontSize: 11, fill: "var(--ink-soft)" }}
                 tickFormatter={(v) => metricDef.format(v)}
               />
-              <Tooltip formatter={(v: any) => metricDef.format(Number(v))} />
+              <Tooltip
+                formatter={(v: any, seriesKey: any) => {
+                  const w = data.find((d) => `w${d.writerId}` === seriesKey);
+                  return [metricDef.format(Number(v)), w?.name ?? seriesKey];
+                }}
+              />
               <Legend
                 formatter={(value: string) => {
                   const w = data.find((d) => `w${d.writerId}` === value);

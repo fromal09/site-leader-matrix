@@ -50,7 +50,9 @@ export function HomepageHistoryChart({ siteId }: { siteId: number }) {
                 tick={{ fontSize: 11, fill: "var(--ink-soft)" }}
                 tickFormatter={(v) => formatCompactNumber(v)}
               />
-              <Tooltip formatter={(v: any) => formatCompactNumber(Number(v))} />
+              <Tooltip
+                formatter={(v: any) => [formatCompactNumber(Number(v)), "Homepage & Site Pages PVs"]}
+              />
               <Line
                 type="monotone"
                 dataKey="homepagePageviews"
