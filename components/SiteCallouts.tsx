@@ -142,13 +142,13 @@ export function SiteCallouts({
           </p>
           <div className="space-y-3">
             <CalloutRow
-              label="Needs Packaging / Topic Improvements"
+              label="Not Driving Traffic"
               color="var(--grade-low)"
               writers={needsImprovement}
               emptyText="None this period"
             />
             <CalloutRow
-              label="Thin Content Concerns"
+              label="Low Engagement"
               color="var(--grade-low)"
               writers={thinContent}
               emptyText="None this period"
