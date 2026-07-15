@@ -76,7 +76,7 @@ function DepthChartsHomeInner() {
   const [periods, setPeriods] = useState<Period[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortKey, setSortKey] = useState<SortKey>("totalPageviews");
   const [sortDesc, setSortDesc] = useState(true);
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
@@ -141,7 +141,7 @@ function DepthChartsHomeInner() {
             Division Overview
           </p>
           <h1 className="font-display text-3xl font-bold text-navy">
-            {division} Site Depth Charts
+            {division} Site Depth Charts and Performance
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-ink-soft">
             Click into any site to build out its writer roster.

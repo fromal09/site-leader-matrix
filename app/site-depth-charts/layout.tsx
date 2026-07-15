@@ -16,7 +16,7 @@ export default function SiteDepthChartsLayout({
             </Link>
             <span className="text-ink-soft">/</span>
             <Link href={DC_BASE} className="font-medium text-navy">
-              Site Depth Charts
+              Site Depth Charts and Performance
             </Link>
           </div>
           <div className="flex items-center gap-4">

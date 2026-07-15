@@ -21,10 +21,10 @@ export const TOOLS: Tool[] = [
   },
   {
     slug: "site-depth-charts",
-    name: "Site Depth Charts",
+    name: "Site Depth Charts and Performance",
     tagline: "",
     description:
-      "Roster cards for every site — writer, role, and (soon) traffic performance at a glance.",
+      "Roster cards for every site — writer, role, and traffic performance at a glance.",
     href: "/site-depth-charts",
     status: "available",
   },

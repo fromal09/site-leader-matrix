@@ -104,7 +104,7 @@ export default function DivisionResourcesPage() {
       <div className="mt-2 mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="font-data text-xs uppercase tracking-widest text-ink-soft">
-            Site Depth Charts
+            Site Depth Charts and Performance
           </p>
           <h1 className="font-display text-3xl font-bold text-navy">Division Resources</h1>
           {periodLabel && (

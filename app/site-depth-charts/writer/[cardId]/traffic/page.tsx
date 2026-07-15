@@ -90,7 +90,7 @@ export default function WriterTrafficHistoryPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
       <Link href={DC_BASE} className="text-xs font-medium text-ink-soft hover:text-navy">
-        ← Site Depth Charts
+        ← Site Depth Charts and Performance
       </Link>
 
       {loading ? (
