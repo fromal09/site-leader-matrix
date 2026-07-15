@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { WriterCard } from "@/components/WriterCard";
 import { SiteCallouts } from "@/components/SiteCallouts";
-import { TeamThemeWrapper } from "@/components/TeamThemeWrapper";
 import { CondensedRoster } from "@/components/CondensedRoster";
 import { SiteHistoryChart } from "@/components/SiteHistoryChart";
 import { HomepageHistoryChart } from "@/components/HomepageHistoryChart";
@@ -145,7 +144,6 @@ export default function DepthChartSitePage() {
   }).filter((s) => s.writers.length > 0);
 
   return (
-    <TeamThemeWrapper siteTopic={site.site_topic}>
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <Link href={DC_BASE} className="text-xs font-medium text-ink-soft hover:text-navy">
         ← All sites
@@ -399,6 +397,5 @@ export default function DepthChartSitePage() {
         </>
       )}
     </main>
-    </TeamThemeWrapper>
   );
 }

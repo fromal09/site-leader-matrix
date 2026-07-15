@@ -95,10 +95,20 @@ export function SiteCallouts({
 
     const scrollObs = obs.find((o) => o.key === "scroll");
     const timeObs = obs.find((o) => o.key === "timeOnPage");
-    if (scrollObs?.direction === "above" || timeObs?.direction === "above") {
+    // Engagement callouts use a stricter bar than the badges shown
+    // elsewhere — "mild" (15-30% deviation) isn't enough to be called out
+    // here, only "moderate" or "strong" (30%+).
+    const isNotable = (o: typeof scrollObs) => !!o && o.tier !== "mild";
+    if (
+      (isNotable(scrollObs) && scrollObs!.direction === "above") ||
+      (isNotable(timeObs) && timeObs!.direction === "above")
+    ) {
       engagementHeroes.push({ id: writer.id, name: writer.name });
     }
-    if (scrollObs?.direction === "below" || timeObs?.direction === "below") {
+    if (
+      (isNotable(scrollObs) && scrollObs!.direction === "below") ||
+      (isNotable(timeObs) && timeObs!.direction === "below")
+    ) {
       thinContent.push({ id: writer.id, name: writer.name });
     }
   }
