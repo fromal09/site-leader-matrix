@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { pageviewWeightedAverage } from "@/lib/trafficStats";
+import { buildMatchNames } from "@/lib/nameNormalize";
 
 export async function GET(
   req: NextRequest,
@@ -46,8 +47,12 @@ export async function GET(
       availablePeriods.find((p) => p.key === selectedPeriodKey)?.label ?? selectedPeriodKey;
 
     const writers = await sql`
-      SELECT id, name, traffic_dashboard_name FROM depth_chart_writers
-      WHERE site_id = ${siteIdNum} AND archived = FALSE
+      SELECT dcw.id, dcw.name, dcw.traffic_dashboard_name,
+        COALESCE(array_agg(wa.alias) FILTER (WHERE wa.alias IS NOT NULL), '{}') AS aliases
+      FROM depth_chart_writers dcw
+      LEFT JOIN writer_aliases wa ON wa.writer_id = dcw.id
+      WHERE dcw.site_id = ${siteIdNum} AND dcw.archived = FALSE
+      GROUP BY dcw.id
     `;
 
     const articleRows = await sql`
@@ -125,8 +130,8 @@ export async function GET(
     > = {};
 
     for (const w of writers as any[]) {
-      const matchName = (w.traffic_dashboard_name || w.name || "").trim().toLowerCase();
-      const rows = matchName ? byAuthor.get(matchName) ?? [] : [];
+      const matchNames = buildMatchNames(w.name, w.traffic_dashboard_name, w.aliases);
+      const rows = matchNames.flatMap((mn) => byAuthor.get(mn) ?? []);
       if (rows.length === 0) continue;
 
       const articlesPublished = rows.filter((r) => r.published_month === selectedPeriodKey).length;

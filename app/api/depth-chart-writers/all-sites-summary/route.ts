@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
         availablePeriods: [],
         selectedPeriod: null,
         divisionTotals: null,
+        byDivision: {},
       });
     }
 
@@ -44,6 +45,7 @@ export async function GET(req: NextRequest) {
       )
       SELECT
         mi.site_id,
+        s.division,
         COUNT(*) FILTER (
           WHERE TO_CHAR(at.first_published_date, 'YYYY-MM') = ${selectedPeriodKey}
         ) AS articles_published,
@@ -69,8 +71,9 @@ export async function GET(req: NextRequest) {
         ), 0) AS pv_per_published_article
       FROM article_traffic at
       JOIN matching_imports mi ON mi.id = at.import_id
+      JOIN sites s ON s.id = mi.site_id
       WHERE at.article_author IS NOT NULL
-      GROUP BY mi.site_id
+      GROUP BY mi.site_id, s.division
     `;
 
     const result: Record<
@@ -95,6 +98,18 @@ export async function GET(req: NextRequest) {
     let divTimeWeightedSum = 0;
     let divTimeDenom = 0;
 
+    type DivAccum = {
+      totalPageviews: number;
+      publishedPageviews: number;
+      articlesPublished: number;
+      scrollWeightedSum: number;
+      scrollDenom: number;
+      timeWeightedSum: number;
+      timeDenom: number;
+      siteCount: number;
+    };
+    const byDivisionAccum = new Map<string, DivAccum>();
+
     for (const r of rows as any[]) {
       const totalPageviews = Number(r.total_pageviews);
       const publishedPageviews = Number(r.published_pageviews);
@@ -118,6 +133,54 @@ export async function GET(req: NextRequest) {
       divScrollDenom += scrollDenom;
       divTimeWeightedSum += Number(r.time_weighted_sum);
       divTimeDenom += timeDenom;
+
+      const divKey = r.division as string;
+      if (!byDivisionAccum.has(divKey)) {
+        byDivisionAccum.set(divKey, {
+          totalPageviews: 0,
+          publishedPageviews: 0,
+          articlesPublished: 0,
+          scrollWeightedSum: 0,
+          scrollDenom: 0,
+          timeWeightedSum: 0,
+          timeDenom: 0,
+          siteCount: 0,
+        });
+      }
+      const acc = byDivisionAccum.get(divKey)!;
+      acc.totalPageviews += totalPageviews;
+      acc.publishedPageviews += publishedPageviews;
+      acc.articlesPublished += Number(r.articles_published);
+      acc.scrollWeightedSum += Number(r.scroll_weighted_sum);
+      acc.scrollDenom += scrollDenom;
+      acc.timeWeightedSum += Number(r.time_weighted_sum);
+      acc.timeDenom += timeDenom;
+      acc.siteCount += 1;
+    }
+
+    const byDivision: Record<
+      string,
+      {
+        siteCount: number;
+        articlesPublished: number;
+        totalPageviews: number;
+        evergreenPageviews: number;
+        weightedAvgScrollDepth: number | null;
+        weightedAvgTimeOnPage: number | null;
+        pvPerPublishedArticle: number | null;
+      }
+    > = {};
+    for (const [divKey, acc] of byDivisionAccum) {
+      byDivision[divKey] = {
+        siteCount: acc.siteCount,
+        articlesPublished: acc.articlesPublished,
+        totalPageviews: acc.totalPageviews,
+        evergreenPageviews: acc.totalPageviews - acc.publishedPageviews,
+        weightedAvgScrollDepth: acc.scrollDenom > 0 ? acc.scrollWeightedSum / acc.scrollDenom : null,
+        weightedAvgTimeOnPage: acc.timeDenom > 0 ? acc.timeWeightedSum / acc.timeDenom : null,
+        pvPerPublishedArticle:
+          acc.articlesPublished > 0 ? acc.publishedPageviews / acc.articlesPublished : null,
+      };
     }
 
     const divisionTotals = {
@@ -137,6 +200,7 @@ export async function GET(req: NextRequest) {
       availablePeriods,
       selectedPeriod: { key: selectedPeriodKey, label: selectedPeriodLabel },
       divisionTotals,
+      byDivision,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

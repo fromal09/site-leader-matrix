@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { computeEngagementScore } from "@/lib/engagementScore";
+import { buildMatchNames } from "@/lib/nameNormalize";
 
 export async function GET(
   req: NextRequest,
@@ -24,8 +25,13 @@ export async function GET(
       return NextResponse.json({ error: "Writer not found." }, { status: 404 });
     }
 
-    const matchName = (writer.traffic_dashboard_name || writer.name || "").trim();
-    if (!matchName) {
+    const aliasRows = await sql`SELECT alias FROM writer_aliases WHERE writer_id = ${Number(cardId)}`;
+    const matchNames = buildMatchNames(
+      writer.name,
+      writer.traffic_dashboard_name,
+      (aliasRows as any[]).map((a) => a.alias)
+    );
+    if (matchNames.length === 0) {
       return NextResponse.json({ matched: false });
     }
 
@@ -38,13 +44,13 @@ export async function GET(
       FROM article_traffic at
       JOIN traffic_imports ti ON ti.id = at.import_id
       WHERE at.site_id = ${writer.site_id}
-        AND LOWER(TRIM(at.article_author)) = LOWER(TRIM(${matchName}))
+        AND LOWER(TRIM(at.article_author)) = ANY(${matchNames}::text[])
       ORDER BY ti.period_key DESC, at.pageviews DESC
     `;
 
     const rowsArr = rows as any[];
     if (rowsArr.length === 0) {
-      return NextResponse.json({ matched: false, matchName });
+      return NextResponse.json({ matched: false, matchName: matchNames[0] });
     }
 
     const latestPeriodKey = rowsArr[0].period_key;
@@ -123,7 +129,7 @@ export async function GET(
 
     return NextResponse.json({
       matched: true,
-      matchName,
+      matchName: matchNames[0],
       latestPeriodLabel,
       latestPeriodKey: selectedPeriodKey,
       stats: {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { pageviewWeightedAverage } from "@/lib/trafficStats";
+import { buildMatchNames } from "@/lib/nameNormalize";
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -27,8 +28,12 @@ export async function GET(req: NextRequest) {
 
   try {
     const writerRows = await sql`
-      SELECT id, site_id, name, traffic_dashboard_name FROM depth_chart_writers
-      WHERE id = ANY(${writerIds}::int[])
+      SELECT dcw.id, dcw.site_id, dcw.name, dcw.traffic_dashboard_name,
+        COALESCE(array_agg(wa.alias) FILTER (WHERE wa.alias IS NOT NULL), '{}') AS aliases
+      FROM depth_chart_writers dcw
+      LEFT JOIN writer_aliases wa ON wa.writer_id = dcw.id
+      WHERE dcw.id = ANY(${writerIds}::int[])
+      GROUP BY dcw.id
     `;
     const writers = writerRows as any[];
     if (writers.length === 0) return NextResponse.json({ writers: [] });
@@ -53,15 +58,16 @@ export async function GET(req: NextRequest) {
     }
 
     const result = writers.map((w) => {
-      const matchName = (w.traffic_dashboard_name || w.name || "").trim().toLowerCase();
+      const matchNames = buildMatchNames(w.name, w.traffic_dashboard_name, w.aliases);
       const periodsForSite = Array.from(
         new Set(rows.filter((r) => r.site_id === w.site_id).map((r) => r.period_key))
       ).sort();
 
       const history = [];
       for (const periodKey of periodsForSite) {
-        const key = `${w.site_id}::${matchName}::${periodKey}`;
-        const wrows = bySiteAuthorPeriod.get(key) ?? [];
+        const wrows = matchNames.flatMap(
+          (mn) => bySiteAuthorPeriod.get(`${w.site_id}::${mn}::${periodKey}`) ?? []
+        );
         if (wrows.length === 0) continue;
 
         const publishedRows = wrows.filter((r) => r.published_month === periodKey);

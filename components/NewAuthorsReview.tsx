@@ -36,7 +36,9 @@ export function NewAuthorsReview({
       ]);
       const existingNames = new Set(
         (writersRes.writers ?? []).flatMap((w: any) =>
-          [w.name, w.traffic_dashboard_name].filter(Boolean).map((n: string) => n.trim().toLowerCase())
+          [w.name, w.traffic_dashboard_name, ...(w.aliases ?? [])]
+            .filter(Boolean)
+            .map((n: string) => n.trim().toLowerCase())
         )
       );
       const ignoredNames = new Set(

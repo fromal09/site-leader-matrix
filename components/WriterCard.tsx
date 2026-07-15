@@ -15,6 +15,7 @@ import {
 } from "@/lib/observations";
 import type { DepthChartRole, DepthChartWriter, SectionKey } from "@/lib/depthCharts";
 import type { SiteTrafficTotals, WriterQuickStats } from "@/lib/traffic";
+import { WriterAliasesEditor } from "./WriterAliasesEditor";
 
 const ADD_NEW = "__add_new__";
 
@@ -402,6 +403,7 @@ export function WriterCard({
             </button>
           )}
         </div>
+        {writer && <WriterAliasesEditor writerId={writer.id} />}
         {error && <p className="text-sm text-grade-low">{error}</p>}
         <div className="flex items-center justify-between pt-1">
           {writer ? (

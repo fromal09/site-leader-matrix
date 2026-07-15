@@ -13,11 +13,14 @@ export async function GET(
   const { siteId } = await params;
   try {
     const writers = await sql`
-      SELECT id, site_id, name, role, traffic_dashboard_name, sort_order,
-        created_by, updated_by, created_at, updated_at
-      FROM depth_chart_writers
-      WHERE site_id = ${Number(siteId)} AND archived = FALSE
-      ORDER BY sort_order ASC, id ASC
+      SELECT dcw.id, dcw.site_id, dcw.name, dcw.role, dcw.traffic_dashboard_name, dcw.sort_order,
+        dcw.created_by, dcw.updated_by, dcw.created_at, dcw.updated_at,
+        COALESCE(array_agg(wa.alias) FILTER (WHERE wa.alias IS NOT NULL), '{}') AS aliases
+      FROM depth_chart_writers dcw
+      LEFT JOIN writer_aliases wa ON wa.writer_id = dcw.id
+      WHERE dcw.site_id = ${Number(siteId)} AND dcw.archived = FALSE
+      GROUP BY dcw.id
+      ORDER BY dcw.sort_order ASC, dcw.id ASC
     `;
     return NextResponse.json({ writers });
   } catch (err: any) {

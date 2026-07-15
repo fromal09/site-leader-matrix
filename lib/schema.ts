@@ -157,4 +157,15 @@ CREATE TABLE IF NOT EXISTS ignored_traffic_authors (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE(site_id, author_name)
 );
+
+CREATE TABLE IF NOT EXISTS writer_aliases (
+  id SERIAL PRIMARY KEY,
+  writer_id INT NOT NULL REFERENCES depth_chart_writers(id) ON DELETE CASCADE,
+  alias TEXT NOT NULL,
+  created_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(writer_id, alias)
+);
+
+CREATE INDEX IF NOT EXISTS idx_writer_aliases_writer ON writer_aliases(writer_id);
 `;

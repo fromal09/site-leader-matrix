@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { pageviewWeightedAverage } from "@/lib/trafficStats";
-import { normalizeNameKey, pickBestCasing } from "@/lib/nameNormalize";
+import { normalizeNameKey, pickBestCasing, buildMatchNames } from "@/lib/nameNormalize";
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -35,10 +35,13 @@ export async function GET(req: NextRequest) {
     // hold it — a person with this role on some sites and a different role
     // (e.g. Site Expert) elsewhere only pulls in the cards that match.
     const writerCards = await sql`
-      SELECT dcw.id, dcw.site_id, dcw.name, dcw.traffic_dashboard_name, s.site_name
+      SELECT dcw.id, dcw.site_id, dcw.name, dcw.traffic_dashboard_name, s.site_name,
+        COALESCE(array_agg(wa.alias) FILTER (WHERE wa.alias IS NOT NULL), '{}') AS aliases
       FROM depth_chart_writers dcw
       JOIN sites s ON s.id = dcw.site_id
+      LEFT JOIN writer_aliases wa ON wa.writer_id = dcw.id
       WHERE dcw.role = ${role} AND dcw.archived = FALSE
+      GROUP BY dcw.id, s.site_name
     `;
     const cards = writerCards as any[];
     if (cards.length === 0) {
@@ -79,9 +82,9 @@ export async function GET(req: NextRequest) {
     const byName = new Map<string, { variants: Set<string>; sites: SiteBreakdown[] }>();
 
     for (const card of cards) {
-      const matchName = (card.traffic_dashboard_name || card.name || "").trim().toLowerCase();
-      if (!matchName) continue;
-      const rows = bySiteAuthor.get(`${card.site_id}::${matchName}`) ?? [];
+      const matchNames = buildMatchNames(card.name, card.traffic_dashboard_name, card.aliases);
+      if (matchNames.length === 0) continue;
+      const rows = matchNames.flatMap((mn) => bySiteAuthor.get(`${card.site_id}::${mn}`) ?? []);
       if (rows.length === 0) continue;
 
       const publishedRows = rows.filter((r) => r.published_month === selectedPeriodKey);

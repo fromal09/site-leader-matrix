@@ -2,6 +2,21 @@ export function normalizeNameKey(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+// A writer can be matched by their display name, their traffic dashboard
+// name, and any number of extra aliases (e.g. "John Canady" and "JCanady").
+// This collapses all of those into one deduped, normalized set to check
+// article bylines against.
+export function buildMatchNames(
+  name: string,
+  trafficDashboardName: string | null | undefined,
+  aliases: (string | null | undefined)[] | null | undefined
+): string[] {
+  const all = [name, trafficDashboardName, ...(aliases ?? [])]
+    .filter((s): s is string => Boolean(s && s.trim()))
+    .map(normalizeNameKey);
+  return Array.from(new Set(all));
+}
+
 // Given multiple casing variants of what's really the same name, picks the
 // best one to display: prefers a properly-cased version (not ALL CAPS, not
 // all lowercase) over the others, falling back to whichever was seen first.

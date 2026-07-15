@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { pageviewWeightedAverage } from "@/lib/trafficStats";
-import { normalizeNameKey } from "@/lib/nameNormalize";
+import { normalizeNameKey, buildMatchNames } from "@/lib/nameNormalize";
 
 export async function GET() {
   const session = await getSession();
@@ -24,10 +24,13 @@ export async function GET() {
 
     const writers = await sql`
       SELECT dcw.id, dcw.site_id, dcw.name, dcw.role, dcw.traffic_dashboard_name,
-        s.site_name
+        s.site_name,
+        COALESCE(array_agg(wa.alias) FILTER (WHERE wa.alias IS NOT NULL), '{}') AS aliases
       FROM depth_chart_writers dcw
       JOIN sites s ON s.id = dcw.site_id
+      LEFT JOIN writer_aliases wa ON wa.writer_id = dcw.id
       WHERE dcw.archived = FALSE
+      GROUP BY dcw.id, s.site_name
     `;
 
     // One query across every site's latest period, aggregated in JS per
@@ -54,13 +57,12 @@ export async function GET() {
     const result = [];
     const seenSitePerson = new Set<string>();
     for (const w of writers as any[]) {
-      const matchName = (w.traffic_dashboard_name || w.name || "").trim().toLowerCase();
-      if (!matchName) continue;
+      const matchNames = buildMatchNames(w.name, w.traffic_dashboard_name, w.aliases);
+      if (matchNames.length === 0) continue;
       const dedupeKey = `${w.site_id}::${normalizeNameKey(w.name)}`;
       if (seenSitePerson.has(dedupeKey)) continue;
-      const key = `${w.site_id}::${matchName}`;
-      const rows = byKey.get(key);
-      if (!rows || rows.length === 0) continue;
+      const rows = matchNames.flatMap((mn) => byKey.get(`${w.site_id}::${mn}`) ?? []);
+      if (rows.length === 0) continue;
       seenSitePerson.add(dedupeKey);
 
       const latestPeriodKey = latestMap.get(w.site_id)!;
