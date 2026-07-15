@@ -32,7 +32,7 @@ export function WriterLeaderboard({ division }: { division: string }) {
   const [writers, setWriters] = useState<LeaderboardWriter[]>([]);
   const [loading, setLoading] = useState(true);
   const [metric, setMetric] = useState<MetricKey>("totalPageviews");
-  const [minArticles, setMinArticles] = useState(1);
+  const [minArticles, setMinArticles] = useState(0);
 
   useEffect(() => {
     setLoading(true);
@@ -72,7 +72,7 @@ export function WriterLeaderboard({ division }: { division: string }) {
           ))}
         </select>
         <label className="flex items-center gap-2 text-xs text-ink-soft">
-          Min. articles published
+          Min. new articles this period
           <input
             type="number"
             min={0}

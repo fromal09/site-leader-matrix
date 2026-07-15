@@ -9,7 +9,7 @@ export type Division = {
 
 export const DIVISIONS: Division[] = [
   { key: "NFL", name: "NFL", tagline: "", status: "available" },
-  { key: "NBA", name: "NBA", tagline: "Rosters seeded, traffic pending", status: "available" },
+  { key: "NBA", name: "NBA", tagline: "", status: "available" },
   { key: "NCAA", name: "NCAA", tagline: "Coming soon", status: "coming-soon" },
   { key: "MLB", name: "MLB", tagline: "Coming soon", status: "coming-soon" },
   { key: "NHL", name: "NHL", tagline: "Coming soon", status: "coming-soon" },

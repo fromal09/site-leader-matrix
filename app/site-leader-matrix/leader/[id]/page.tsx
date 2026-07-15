@@ -9,6 +9,7 @@ import { GradeStamp } from "@/components/GradeStamp";
 import { CanonizeButton } from "@/components/CanonizeButton";
 import { HistoryLog } from "@/components/HistoryLog";
 import { ChangeLeaderForm } from "@/components/ChangeLeaderForm";
+import { TeamThemeWrapper } from "@/components/TeamThemeWrapper";
 import { SLM_BASE } from "@/lib/routes";
 import { CATEGORIES } from "@/lib/categories";
 import { average, gradeBand, BAND_COLORS } from "@/lib/grades";
@@ -59,6 +60,7 @@ export default function LeaderPage() {
   const placeholderCount = site.scores.filter((s) => !s.is_canonized).length;
 
   return (
+    <TeamThemeWrapper siteTopic={site.site_topic}>
     <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
       <Link href={SLM_BASE} className="text-xs font-medium text-ink-soft hover:text-navy">
         ← All sites
@@ -119,5 +121,6 @@ export default function LeaderPage() {
         />
       </div>
     </main>
+    </TeamThemeWrapper>
   );
 }

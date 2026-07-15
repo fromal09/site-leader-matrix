@@ -108,37 +108,53 @@ export function SiteCallouts({
       <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-navy">
         Callouts{periodLabel ? ` — ${periodLabel}` : ""}
       </h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <CalloutRow
-          label="Main Traffic-Driver"
-          color="var(--navy)"
-          writers={mainDriver ? [{ id: mainDriver.writer.id, name: mainDriver.writer.name }] : []}
-          emptyText="No data yet"
-        />
-        <CalloutRow
-          label="Home-Run Hitters"
-          color="var(--grade-good)"
-          writers={homeRunHitters}
-          emptyText="None this period"
-        />
-        <CalloutRow
-          label="Needs Packaging / Topic Improvements"
-          color="var(--grade-low)"
-          writers={needsImprovement}
-          emptyText="None this period"
-        />
-        <CalloutRow
-          label="Engagement Heroes"
-          color="var(--grade-good)"
-          writers={engagementHeroes}
-          emptyText="None this period"
-        />
-        <CalloutRow
-          label="Thin Content Concerns"
-          color="var(--grade-low)"
-          writers={thinContent}
-          emptyText="None this period"
-        />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <p className="mb-2 font-display text-xs font-bold uppercase tracking-wider text-grade-good">
+            The Good
+          </p>
+          <div className="space-y-3">
+            <CalloutRow
+              label="Main Traffic-Driver"
+              color="var(--navy)"
+              writers={
+                mainDriver ? [{ id: mainDriver.writer.id, name: mainDriver.writer.name }] : []
+              }
+              emptyText="No data yet"
+            />
+            <CalloutRow
+              label="Home-Run Hitters"
+              color="var(--grade-good)"
+              writers={homeRunHitters}
+              emptyText="None this period"
+            />
+            <CalloutRow
+              label="Engagement Heroes"
+              color="var(--grade-good)"
+              writers={engagementHeroes}
+              emptyText="None this period"
+            />
+          </div>
+        </div>
+        <div>
+          <p className="mb-2 font-display text-xs font-bold uppercase tracking-wider text-grade-low">
+            The Bad
+          </p>
+          <div className="space-y-3">
+            <CalloutRow
+              label="Needs Packaging / Topic Improvements"
+              color="var(--grade-low)"
+              writers={needsImprovement}
+              emptyText="None this period"
+            />
+            <CalloutRow
+              label="Thin Content Concerns"
+              color="var(--grade-low)"
+              writers={thinContent}
+              emptyText="None this period"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
