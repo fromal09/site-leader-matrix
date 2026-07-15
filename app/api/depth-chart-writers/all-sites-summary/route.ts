@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
   }
 
   const requestedPeriod = req.nextUrl.searchParams.get("period");
+  const requestedDivision = req.nextUrl.searchParams.get("division");
 
   try {
     const periodRows = await sql`
@@ -109,8 +110,10 @@ export async function GET(req: NextRequest) {
       siteCount: number;
     };
     const byDivisionAccum = new Map<string, DivAccum>();
+    const siteDivision = new Map<number, string>();
 
     for (const r of rows as any[]) {
+      siteDivision.set(r.site_id, r.division);
       const totalPageviews = Number(r.total_pageviews);
       const publishedPageviews = Number(r.published_pageviews);
       const scrollDenom = Number(r.scroll_weight_denom);
@@ -197,8 +200,16 @@ export async function GET(req: NextRequest) {
         divArticlesPublished > 0 ? divPublishedPageviews / divArticlesPublished : null,
     };
 
+    const filteredSites = requestedDivision
+      ? Object.fromEntries(
+          Object.entries(result).filter(
+            ([siteId]) => siteDivision.get(Number(siteId)) === requestedDivision
+          )
+        )
+      : result;
+
     return NextResponse.json({
-      sites: result,
+      sites: filteredSites,
       availablePeriods,
       selectedPeriod: { key: selectedPeriodKey, label: selectedPeriodLabel },
       divisionTotals,

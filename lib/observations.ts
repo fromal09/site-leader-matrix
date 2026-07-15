@@ -2,7 +2,7 @@ export type ObservationTier = "mild" | "moderate" | "strong";
 export type ObservationDirection = "above" | "below";
 
 export type Observation = {
-  key: "scroll" | "pvPerArticle";
+  key: "scroll" | "pvPerArticle" | "timeOnPage";
   direction: ObservationDirection;
   tier: ObservationTier;
   deviationPct: number; // signed, e.g. 0.42 for +42%
@@ -29,11 +29,13 @@ function tierFor(absDeviation: number): ObservationTier | null {
 type WriterMetrics = {
   weightedAvgScrollDepth: number | null;
   pvPerPublishedArticle: number | null;
+  weightedAvgTimeOnPage: number | null;
 };
 
 type SiteMetrics = {
   weightedAvgScrollDepth: number | null;
   pvPerPublishedArticle: number | null;
+  weightedAvgTimeOnPage: number | null;
 };
 
 export function computeWriterObservations(
@@ -84,6 +86,28 @@ export function computeWriterObservations(
         detail:
           `Average pageviews per new article is ${Math.round(Math.abs(dev) * 100)}% ${direction} the site average this period` +
           (direction === "above" ? " — a strong traffic driver." : "."),
+      });
+    }
+  }
+
+  if (
+    writer.weightedAvgTimeOnPage !== null &&
+    site.weightedAvgTimeOnPage !== null &&
+    site.weightedAvgTimeOnPage > 0
+  ) {
+    const dev =
+      (writer.weightedAvgTimeOnPage - site.weightedAvgTimeOnPage) /
+      site.weightedAvgTimeOnPage;
+    const tier = tierFor(Math.abs(dev));
+    if (tier) {
+      const direction: ObservationDirection = dev > 0 ? "above" : "below";
+      out.push({
+        key: "timeOnPage",
+        direction,
+        tier,
+        deviationPct: dev,
+        label: `Time on Page ${dev > 0 ? "+" : ""}${Math.round(dev * 100)}%`,
+        detail: `Average time on page is ${Math.round(Math.abs(dev) * 100)}% ${direction} the site average this period.`,
       });
     }
   }

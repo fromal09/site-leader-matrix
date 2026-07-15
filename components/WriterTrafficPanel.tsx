@@ -112,10 +112,12 @@ export function WriterTrafficPanel({
           {
             weightedAvgScrollDepth: s.weightedAvgScrollDepth,
             pvPerPublishedArticle: writerPvPerPublishedArticle,
+            weightedAvgTimeOnPage: s.weightedAvgTimeOnPage,
           },
           {
             weightedAvgScrollDepth: siteTotals.weightedAvgScrollDepth,
             pvPerPublishedArticle: siteTotals.pvPerPublishedArticle,
+            weightedAvgTimeOnPage: siteTotals.weightedAvgTimeOnPage,
           }
         )
       : [];

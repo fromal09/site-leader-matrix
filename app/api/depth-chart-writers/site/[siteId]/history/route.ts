@@ -23,6 +23,12 @@ export async function GET(
   const siteIdNum = Number(siteId);
 
   try {
+    const siteDivisionRows = await sql`SELECT id, division FROM sites`;
+    const siteDivisionMap = new Map<number, string>(
+      (siteDivisionRows as any[]).map((r) => [r.id, r.division])
+    );
+    const targetDivision = siteDivisionMap.get(siteIdNum) ?? "NFL";
+
     const rows = await sql`
       SELECT at.site_id, ti.period_key, ti.period_label,
         COUNT(*) FILTER (
@@ -88,6 +94,7 @@ export async function GET(
 
     const byPeriod = new Map<string, Stats[]>();
     for (const s of bySitePeriod.values()) {
+      if (siteDivisionMap.get(s.siteId) !== targetDivision) continue;
       if (!byPeriod.has(s.periodKey)) byPeriod.set(s.periodKey, []);
       byPeriod.get(s.periodKey)!.push(s);
     }

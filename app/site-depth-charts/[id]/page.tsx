@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { WriterCard } from "@/components/WriterCard";
+import { SiteCallouts } from "@/components/SiteCallouts";
 import { CondensedRoster } from "@/components/CondensedRoster";
 import { SiteHistoryChart } from "@/components/SiteHistoryChart";
 import { HomepageHistoryChart } from "@/components/HomepageHistoryChart";
@@ -73,9 +74,10 @@ export default function DepthChartSitePage() {
       fetch(statsUrl).then((r) => r.json()),
     ]);
     const resolvedPeriodKey = statsRes.periodKey ?? null;
-    const allSitesUrl = resolvedPeriodKey
-      ? `/api/depth-chart-writers/all-sites-summary?period=${encodeURIComponent(resolvedPeriodKey)}`
-      : "/api/depth-chart-writers/all-sites-summary";
+    const siteDivision = siteRes.site?.division ?? "NFL";
+    const allSitesParams = new URLSearchParams({ division: siteDivision });
+    if (resolvedPeriodKey) allSitesParams.set("period", resolvedPeriodKey);
+    const allSitesUrl = `/api/depth-chart-writers/all-sites-summary?${allSitesParams.toString()}`;
     const allSitesRes = await fetch(allSitesUrl).then((r) => r.json());
 
     setSite(siteRes.site ?? null);
@@ -268,6 +270,13 @@ export default function DepthChartSitePage() {
               </div>
             </div>
           )}
+
+          <SiteCallouts
+            writers={writers}
+            quickStats={quickStats}
+            siteTotals={siteTotals}
+            periodLabel={statsPeriodLabel}
+          />
 
           {homepageTraffic && homepageTraffic.pageCount > 0 && (
             <div className="card mb-6 rounded-md p-4">

@@ -67,9 +67,11 @@ export default function HomePage() {
                   GO
                 </span>
               </div>
-              <p className="font-data text-xs uppercase tracking-wide text-ink-soft">
-                {division.tagline}
-              </p>
+              {division.tagline && (
+                <p className="font-data text-xs uppercase tracking-wide text-ink-soft">
+                  {division.tagline}
+                </p>
+              )}
 
               {loading ? (
                 <p className="mt-2 text-xs text-ink-soft">Loading…</p>
@@ -123,9 +125,11 @@ export default function HomePage() {
                   SOON
                 </span>
               </div>
-              <p className="font-data text-xs uppercase tracking-wide text-ink-soft">
-                {division.tagline}
-              </p>
+              {division.tagline && (
+                <p className="font-data text-xs uppercase tracking-wide text-ink-soft">
+                  {division.tagline}
+                </p>
+              )}
             </div>
           );
         })}

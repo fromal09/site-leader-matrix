@@ -202,10 +202,12 @@ export function WriterCard({
           {
             weightedAvgScrollDepth: quickStats.weightedAvgScrollDepth,
             pvPerPublishedArticle: quickStats.pvPerPublishedArticle,
+            weightedAvgTimeOnPage: quickStats.weightedAvgTimeOnPage,
           },
           {
             weightedAvgScrollDepth: siteTotals.weightedAvgScrollDepth,
             pvPerPublishedArticle: siteTotals.pvPerPublishedArticle,
+            weightedAvgTimeOnPage: siteTotals.weightedAvgTimeOnPage,
           }
         )
       : [];
