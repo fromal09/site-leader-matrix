@@ -97,17 +97,23 @@ export function SiteCallouts({
     const timeObs = obs.find((o) => o.key === "timeOnPage");
     // Engagement callouts use a stricter bar than the badges shown
     // elsewhere — "mild" (15-30% deviation) isn't enough to be called out
-    // here, only "moderate" or "strong" (30%+).
+    // here, only "moderate" or "strong" (30%+) — and, same as the
+    // traffic-driver callouts, at least 3 new articles this period so a
+    // handful of old evergreen hits can't swing the read on someone who
+    // barely published.
     const isNotable = (o: typeof scrollObs) => !!o && o.tier !== "mild";
+    const hasEnoughOutput = stats.articlesPublished >= 3;
     if (
-      (isNotable(scrollObs) && scrollObs!.direction === "above") ||
-      (isNotable(timeObs) && timeObs!.direction === "above")
+      hasEnoughOutput &&
+      ((isNotable(scrollObs) && scrollObs!.direction === "above") ||
+        (isNotable(timeObs) && timeObs!.direction === "above"))
     ) {
       engagementHeroes.push({ id: writer.id, name: writer.name });
     }
     if (
-      (isNotable(scrollObs) && scrollObs!.direction === "below") ||
-      (isNotable(timeObs) && timeObs!.direction === "below")
+      hasEnoughOutput &&
+      ((isNotable(scrollObs) && scrollObs!.direction === "below") ||
+        (isNotable(timeObs) && timeObs!.direction === "below"))
     ) {
       thinContent.push({ id: writer.id, name: writer.name });
     }
