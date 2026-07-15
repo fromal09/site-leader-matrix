@@ -1,14 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { pageviewWeightedAverage } from "@/lib/trafficStats";
 import { normalizeNameKey, buildMatchNames } from "@/lib/nameNormalize";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   }
+
+  const division = req.nextUrl.searchParams.get("division") ?? "NFL";
 
   try {
     const latestBySite = await sql`
@@ -29,7 +31,7 @@ export async function GET() {
       FROM depth_chart_writers dcw
       JOIN sites s ON s.id = dcw.site_id
       LEFT JOIN writer_aliases wa ON wa.writer_id = dcw.id
-      WHERE dcw.archived = FALSE
+      WHERE dcw.archived = FALSE AND s.division = ${division}
       GROUP BY dcw.id, s.site_name
     `;
 

@@ -161,6 +161,7 @@ export async function GET(req: NextRequest) {
     const byDivision: Record<
       string,
       {
+        periodLabel: string;
         siteCount: number;
         articlesPublished: number;
         totalPageviews: number;
@@ -172,6 +173,7 @@ export async function GET(req: NextRequest) {
     > = {};
     for (const [divKey, acc] of byDivisionAccum) {
       byDivision[divKey] = {
+        periodLabel: selectedPeriodLabel,
         siteCount: acc.siteCount,
         articlesPublished: acc.articlesPublished,
         totalPageviews: acc.totalPageviews,

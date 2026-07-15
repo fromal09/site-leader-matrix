@@ -72,7 +72,7 @@ function DepthChartsHomeInner() {
 
   const [allSites, setAllSites] = useState<Site[]>([]);
   const [summaries, setSummaries] = useState<Record<number, SiteSummary>>({});
-  const [divisionTotals, setDivisionTotals] = useState<DivisionTotals | null>(null);
+  const [byDivision, setByDivision] = useState<Record<string, DivisionTotals>>({});
   const [periods, setPeriods] = useState<Period[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -85,10 +85,7 @@ function DepthChartsHomeInner() {
     [allSites, division]
   );
   const availableDivisions = DIVISIONS.filter((d) => d.status === "available");
-  // The aggregate endpoints (Division Snapshot, Leaderboard) aren't
-  // division-scoped yet since only NFL has traffic data ingested so far —
-  // hide them for other divisions rather than show misleading NFL numbers.
-  const showAggregates = division === "NFL";
+  const divisionTotals = byDivision[division] ?? null;
 
   async function loadSummary(periodKey?: string) {
     const url = periodKey
@@ -96,7 +93,7 @@ function DepthChartsHomeInner() {
       : "/api/depth-chart-writers/all-sites-summary";
     const res = await fetch(url).then((r) => r.json());
     setSummaries(res.sites ?? {});
-    setDivisionTotals(res.divisionTotals ?? null);
+    setByDivision(res.byDivision ?? {});
     setPeriods(res.availablePeriods ?? []);
     if (res.selectedPeriod) setSelectedPeriod(res.selectedPeriod.key);
   }
@@ -228,7 +225,7 @@ function DepthChartsHomeInner() {
         <p className="text-sm text-ink-soft">Loading sites…</p>
       ) : (
         <>
-          {showAggregates && divisionTotals && (
+          {divisionTotals && (
             <div className="card mb-6 rounded-md p-4">
               <div className="mb-2 flex items-baseline justify-between">
                 <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-navy">
@@ -271,7 +268,7 @@ function DepthChartsHomeInner() {
             </div>
           )}
 
-          <div className={`grid grid-cols-1 gap-6 ${showAggregates ? "lg:grid-cols-[1fr_300px]" : ""}`}>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
             {viewMode === "table" ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
@@ -411,11 +408,9 @@ function DepthChartsHomeInner() {
             </div>
             )}
 
-            {showAggregates && (
-              <div>
-                <WriterLeaderboard />
-              </div>
-            )}
+            <div>
+              <WriterLeaderboard division={division} />
+            </div>
           </div>
         </>
       )}

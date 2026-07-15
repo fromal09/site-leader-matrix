@@ -28,18 +28,19 @@ const METRICS: { key: MetricKey; label: string; format: (w: LeaderboardWriter) =
   { key: "articlesPublished", label: "Articles Published", format: (w) => String(w.articlesPublished) },
 ];
 
-export function WriterLeaderboard() {
+export function WriterLeaderboard({ division }: { division: string }) {
   const [writers, setWriters] = useState<LeaderboardWriter[]>([]);
   const [loading, setLoading] = useState(true);
   const [metric, setMetric] = useState<MetricKey>("totalPageviews");
   const [minArticles, setMinArticles] = useState(1);
 
   useEffect(() => {
-    fetch("/api/depth-chart-writers/leaderboard")
+    setLoading(true);
+    fetch(`/api/depth-chart-writers/leaderboard?division=${encodeURIComponent(division)}`)
       .then((r) => r.json())
       .then((d) => setWriters(d.writers ?? []))
       .finally(() => setLoading(false));
-  }, []);
+  }, [division]);
 
   const metricDef = METRICS.find((m) => m.key === metric)!;
 
