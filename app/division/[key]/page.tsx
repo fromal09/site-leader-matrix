@@ -49,7 +49,7 @@ export default function DivisionHubPage() {
               <span className="stamp h-9 w-9 shrink-0 text-[10px] text-grade-good">GO</span>
             </div>
             <p className="font-data text-xs uppercase tracking-wide text-ink-soft">
-              {tool.tagline}
+              {division.name} Division
             </p>
             <p className="mt-2 text-sm text-ink">{tool.description}</p>
             <span className="mt-4 text-xs font-medium text-navy group-hover:underline">

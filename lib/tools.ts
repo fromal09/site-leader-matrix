@@ -13,7 +13,7 @@ export const TOOLS: Tool[] = [
   {
     slug: "site-leader-matrix",
     name: "Site Leader Matrix",
-    tagline: "NFL Division",
+    tagline: "",
     description:
       "Scouting-style grades for site leaders across Fan Authority, Editorial Instincts, Ownership, and Leadership — with history tracking and division-wide trends.",
     href: "/site-leader-matrix",
@@ -22,7 +22,7 @@ export const TOOLS: Tool[] = [
   {
     slug: "site-depth-charts",
     name: "Site Depth Charts",
-    tagline: "NFL Division",
+    tagline: "",
     description:
       "Roster cards for every site — writer, role, and (soon) traffic performance at a glance.",
     href: "/site-depth-charts",

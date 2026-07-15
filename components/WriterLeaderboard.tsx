@@ -28,19 +28,27 @@ const METRICS: { key: MetricKey; label: string; format: (w: LeaderboardWriter) =
   { key: "articlesPublished", label: "Articles Published", format: (w) => String(w.articlesPublished) },
 ];
 
-export function WriterLeaderboard({ division }: { division: string }) {
+export function WriterLeaderboard({ division, period }: { division: string; period?: string | null }) {
   const [writers, setWriters] = useState<LeaderboardWriter[]>([]);
+  const [cardsChecked, setCardsChecked] = useState(0);
+  const [cardsMatched, setCardsMatched] = useState(0);
   const [loading, setLoading] = useState(true);
   const [metric, setMetric] = useState<MetricKey>("totalPageviews");
   const [minArticles, setMinArticles] = useState(0);
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/depth-chart-writers/leaderboard?division=${encodeURIComponent(division)}`)
+    const params = new URLSearchParams({ division });
+    if (period) params.set("period", period);
+    fetch(`/api/depth-chart-writers/leaderboard?${params.toString()}`)
       .then((r) => r.json())
-      .then((d) => setWriters(d.writers ?? []))
+      .then((d) => {
+        setWriters(d.writers ?? []);
+        setCardsChecked(d.cardsChecked ?? 0);
+        setCardsMatched(d.cardsMatched ?? 0);
+      })
       .finally(() => setLoading(false));
-  }, [division]);
+  }, [division, period]);
 
   const metricDef = METRICS.find((m) => m.key === metric)!;
 
@@ -87,7 +95,15 @@ export function WriterLeaderboard({ division }: { division: string }) {
         {loading ? (
           <p className="text-xs text-ink-soft">Loading…</p>
         ) : top10.length === 0 ? (
-          <p className="text-xs italic text-ink-soft">No writers match this filter yet.</p>
+          <p className="text-xs italic text-ink-soft">
+            {cardsChecked === 0
+              ? `No writer cards exist for this division yet.`
+              : `Checked ${cardsChecked} writer card${cardsChecked === 1 ? "" : "s"} — ${cardsMatched} matched traffic data for this period. ${
+                  cardsMatched === 0
+                    ? "Check that each card's traffic dashboard name (or an alias) matches the byline in your upload."
+                    : "None meet the current filter."
+                }`}
+          </p>
         ) : (
           <ol className="space-y-1.5">
             {top10.map((w, i) => (

@@ -409,7 +409,7 @@ function DepthChartsHomeInner() {
             )}
 
             <div>
-              <WriterLeaderboard division={division} />
+              <WriterLeaderboard division={division} period={selectedPeriod} />
             </div>
           </div>
         </>
