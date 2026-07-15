@@ -10,7 +10,7 @@ export async function GET() {
 
   try {
     const sites = await sql`
-      SELECT id, site_name, site_topic, leader_name, sort_order, hostname
+      SELECT id, site_name, site_topic, leader_name, sort_order, hostname, division
       FROM sites
       WHERE archived = FALSE
       ORDER BY sort_order ASC, site_name ASC

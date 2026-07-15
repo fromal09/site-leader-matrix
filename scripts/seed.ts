@@ -3,7 +3,8 @@
 // Safe to re-run: uses ON CONFLICT so it won't duplicate sites/scores.
 
 import { neon } from "@neondatabase/serverless";
-import data from "./seed-data.json";
+import nflData from "./seed-data.json";
+import nbaData from "./nba-seed-data.json";
 import { SCHEMA_SQL } from "../lib/schema";
 import { splitSqlStatements } from "../lib/sqlUtils";
 
@@ -15,6 +16,11 @@ if (!DATABASE_URL) {
 
 const sql = neon(DATABASE_URL);
 
+const DIVISIONS: { division: string; data: any[] }[] = [
+  { division: "NFL", data: nflData as any[] },
+  { division: "NBA", data: nbaData as any[] },
+];
+
 async function main() {
   const statements = splitSqlStatements(SCHEMA_SQL);
   for (const stmt of statements) {
@@ -25,29 +31,33 @@ async function main() {
   const categories = ["fan_authority", "editorial_instincts", "ownership", "leadership"] as const;
 
   let order = 0;
-  for (const row of data as any[]) {
-    order += 1;
-    const siteRows = await sql`
-      INSERT INTO sites (site_name, site_topic, leader_name, sort_order)
-      VALUES (${row.site_name}, ${row.site_topic}, ${row.leader_name}, ${order})
-      ON CONFLICT (site_name) DO NOTHING
-      RETURNING id
-    `;
-    let siteId = (siteRows as any[])[0]?.id;
-    if (!siteId) {
-      const existing = await sql`SELECT id FROM sites WHERE site_name = ${row.site_name}`;
-      siteId = (existing as any[])[0]?.id;
-    }
-    if (!siteId) continue;
-
-    for (const cat of categories) {
-      await sql`
-        INSERT INTO scores (site_id, category, score, note, is_canonized)
-        VALUES (${siteId}, ${cat}, ${row[cat]}, '', FALSE)
-        ON CONFLICT (site_id, category) DO NOTHING
+  for (const { division, data } of DIVISIONS) {
+    for (const row of data) {
+      order += 1;
+      const siteRows = await sql`
+        INSERT INTO sites (site_name, site_topic, leader_name, sort_order, division)
+        VALUES (${row.site_name}, ${row.site_topic}, ${row.leader_name}, ${order}, ${division})
+        ON CONFLICT (site_name) DO NOTHING
+        RETURNING id
       `;
+      let siteId = (siteRows as any[])[0]?.id;
+      if (!siteId) {
+        const existing = await sql`SELECT id FROM sites WHERE site_name = ${row.site_name}`;
+        siteId = (existing as any[])[0]?.id;
+        // Backfill division for sites that existed before this column did.
+        await sql`UPDATE sites SET division = ${division} WHERE id = ${siteId} AND (division IS NULL OR division = '')`;
+      }
+      if (!siteId) continue;
+
+      for (const cat of categories) {
+        await sql`
+          INSERT INTO scores (site_id, category, score, note, is_canonized)
+          VALUES (${siteId}, ${cat}, ${row[cat]}, '', FALSE)
+          ON CONFLICT (site_id, category) DO NOTHING
+        `;
+      }
+      console.log(`Seeded [${division}]: ${row.site_name} (${row.site_topic})`);
     }
-    console.log(`Seeded: ${row.site_name} (${row.site_topic})`);
   }
 
   console.log("Done. All scores were inserted as UN-canonized placeholders.");

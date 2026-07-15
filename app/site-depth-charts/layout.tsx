@@ -12,7 +12,7 @@ export default function SiteDepthChartsLayout({
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2 sm:px-6">
           <div className="flex items-center gap-2 font-data text-xs">
             <Link href="/" className="text-ink-soft hover:text-navy">
-              All Tools
+              All Divisions
             </Link>
             <span className="text-ink-soft">/</span>
             <Link href={DC_BASE} className="font-medium text-navy">

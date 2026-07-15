@@ -1,18 +1,32 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { RadarCard } from "@/components/RadarCard";
 import { DivisionAverageRadar } from "@/components/DivisionAverageRadar";
 import { TrendsPanel } from "@/components/TrendsPanel";
 import { CanonizeButton } from "@/components/CanonizeButton";
 import { CATEGORIES } from "@/lib/categories";
 import { average } from "@/lib/grades";
+import { DIVISIONS } from "@/lib/divisions";
 import type { Site } from "@/lib/types";
 
 type SortKey = "overall" | (typeof CATEGORIES)[number]["key"];
 
-export default function HomePage() {
-  const [sites, setSites] = useState<Site[]>([]);
+export default function SiteLeaderMatrixPage() {
+  return (
+    <Suspense fallback={<main className="mx-auto max-w-6xl px-4 py-6 sm:px-6"><p className="text-sm text-ink-soft">Loading…</p></main>}>
+      <SiteLeaderMatrixInner />
+    </Suspense>
+  );
+}
+
+function SiteLeaderMatrixInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const division = searchParams.get("division") ?? "NFL";
+
+  const [allSites, setAllSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>("overall");
 
@@ -20,13 +34,18 @@ export default function HomePage() {
     setLoading(true);
     const res = await fetch("/api/sites");
     const data = await res.json();
-    setSites(data.sites ?? []);
+    setAllSites(data.sites ?? []);
     setLoading(false);
   }
 
   useEffect(() => {
     load();
   }, []);
+
+  const sites = useMemo(
+    () => allSites.filter((s) => (s.division ?? "NFL") === division),
+    [allSites, division]
+  );
 
   const placeholderCount = useMemo(
     () => sites.reduce((n, s) => n + s.scores.filter((sc) => !sc.is_canonized).length, 0),
@@ -49,6 +68,8 @@ export default function HomePage() {
     return copy;
   }, [sites, sortKey]);
 
+  const availableDivisions = DIVISIONS.filter((d) => d.status === "available");
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -57,16 +78,36 @@ export default function HomePage() {
             Division Overview
           </p>
           <h1 className="font-display text-3xl font-bold text-navy">
-            NFL Site Leader Grades
+            {division} Site Leader Grades
           </h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {availableDivisions.length > 1 && (
+            <label className="flex items-center gap-2 text-xs">
+              <span className="text-ink-soft uppercase tracking-wide">Division</span>
+              <select
+                value={division}
+                onChange={(e) => router.push(`?division=${e.target.value}`)}
+                className="rounded border border-rule-strong bg-white px-2 py-1 font-data text-xs"
+              >
+                {availableDivisions.map((d) => (
+                  <option key={d.key} value={d.key}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <CanonizeButton count={placeholderCount} onDone={load} />
         </div>
       </div>
 
       {loading ? (
         <p className="text-sm text-ink-soft">Loading the grade book…</p>
+      ) : sites.length === 0 ? (
+        <p className="text-sm italic text-ink-soft">
+          No {division} sites seeded yet.
+        </p>
       ) : (
         <>
           <div className="mb-6">

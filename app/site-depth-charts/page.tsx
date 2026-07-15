@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { dcSiteHref } from "@/lib/routes";
 import { formatCompactNumber, formatDuration, formatPercent } from "@/lib/trafficFormat";
 import { teamColor } from "@/lib/nflTeamColors";
 import { WriterLeaderboard } from "@/components/WriterLeaderboard";
 import { StatTile } from "@/components/StatTile";
+import { DIVISIONS } from "@/lib/divisions";
 import type { Site } from "@/lib/types";
 
 type SiteSummary = {
@@ -56,7 +58,19 @@ const TABLE_COLUMNS: { key: SortKey; label: string }[] = [
 ];
 
 export default function DepthChartsHomePage() {
-  const [sites, setSites] = useState<Site[]>([]);
+  return (
+    <Suspense fallback={<main className="mx-auto max-w-6xl px-4 py-6 sm:px-6"><p className="text-sm text-ink-soft">Loading…</p></main>}>
+      <DepthChartsHomeInner />
+    </Suspense>
+  );
+}
+
+function DepthChartsHomeInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const division = searchParams.get("division") ?? "NFL";
+
+  const [allSites, setAllSites] = useState<Site[]>([]);
   const [summaries, setSummaries] = useState<Record<number, SiteSummary>>({});
   const [divisionTotals, setDivisionTotals] = useState<DivisionTotals | null>(null);
   const [periods, setPeriods] = useState<Period[]>([]);
@@ -65,6 +79,16 @@ export default function DepthChartsHomePage() {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDesc, setSortDesc] = useState(true);
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
+
+  const sites = useMemo(
+    () => allSites.filter((s) => (s.division ?? "NFL") === division),
+    [allSites, division]
+  );
+  const availableDivisions = DIVISIONS.filter((d) => d.status === "available");
+  // The aggregate endpoints (Division Snapshot, Leaderboard) aren't
+  // division-scoped yet since only NFL has traffic data ingested so far —
+  // hide them for other divisions rather than show misleading NFL numbers.
+  const showAggregates = division === "NFL";
 
   async function loadSummary(periodKey?: string) {
     const url = periodKey
@@ -79,7 +103,7 @@ export default function DepthChartsHomePage() {
 
   useEffect(() => {
     Promise.all([fetch("/api/sites").then((r) => r.json()), loadSummary()])
-      .then(([sitesRes]) => setSites(sitesRes.sites ?? []))
+      .then(([sitesRes]) => setAllSites(sitesRes.sites ?? []))
       .finally(() => setLoading(false));
   }, []);
 
@@ -120,13 +144,29 @@ export default function DepthChartsHomePage() {
             Division Overview
           </p>
           <h1 className="font-display text-3xl font-bold text-navy">
-            Site Depth Charts
+            {division} Site Depth Charts
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-ink-soft">
             Click into any site to build out its writer roster.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          {availableDivisions.length > 1 && (
+            <label className="flex items-center gap-2 text-xs">
+              <span className="text-ink-soft uppercase tracking-wide">Division</span>
+              <select
+                value={division}
+                onChange={(e) => router.push(`?division=${e.target.value}`)}
+                className="rounded border border-rule-strong bg-white px-2 py-1 font-data text-xs"
+              >
+                {availableDivisions.map((d) => (
+                  <option key={d.key} value={d.key}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {periods.length > 0 && (
             <label className="flex items-center gap-2 text-xs">
               <span className="text-ink-soft uppercase tracking-wide">Month</span>
@@ -188,7 +228,7 @@ export default function DepthChartsHomePage() {
         <p className="text-sm text-ink-soft">Loading sites…</p>
       ) : (
         <>
-          {divisionTotals && (
+          {showAggregates && divisionTotals && (
             <div className="card mb-6 rounded-md p-4">
               <div className="mb-2 flex items-baseline justify-between">
                 <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-navy">
@@ -231,7 +271,7 @@ export default function DepthChartsHomePage() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
+          <div className={`grid grid-cols-1 gap-6 ${showAggregates ? "lg:grid-cols-[1fr_300px]" : ""}`}>
             {viewMode === "table" ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
@@ -371,9 +411,11 @@ export default function DepthChartsHomePage() {
             </div>
             )}
 
-            <div>
-              <WriterLeaderboard />
-            </div>
+            {showAggregates && (
+              <div>
+                <WriterLeaderboard />
+              </div>
+            )}
           </div>
         </>
       )}
