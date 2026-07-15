@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { DIVISIONS } from "@/lib/divisions";
 import { formatCompactNumber, formatPercent } from "@/lib/trafficFormat";
+import { useStickyNotes } from "@/lib/stickyNotes";
+import { StickyNotesCluster } from "@/components/StickyNotesCluster";
 
 type DivisionMetrics = {
   siteCount: number;
@@ -19,6 +21,10 @@ export default function HomePage() {
   const [byDivision, setByDivision] = useState<Record<string, DivisionMetrics>>({});
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { notesFor, addNote, removeNote } = useStickyNotes(
+    "division",
+    DIVISIONS.map((d) => d.key)
+  );
 
   useEffect(() => {
     fetch("/api/depth-chart-writers/all-sites-summary")
@@ -53,83 +59,92 @@ export default function HomePage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {DIVISIONS.map((division) => {
           const metrics = byDivision[division.key];
-          return division.status === "available" ? (
-            <Link
-              key={division.key}
-              href={`/division/${division.key}`}
-              className="card group flex flex-col rounded-md p-5 transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <div className="mb-2 flex items-start justify-between gap-2">
-                <h2 className="font-display text-xl font-semibold text-navy">
-                  {division.name}
-                </h2>
-                <span className="stamp h-9 w-9 shrink-0 text-[10px] text-grade-good">
-                  GO
-                </span>
-              </div>
-              {division.tagline && (
-                <p className="font-data text-xs uppercase tracking-wide text-ink-soft">
-                  {division.tagline}
-                </p>
-              )}
+          const divisionNotes = notesFor(division.key);
+          return (
+            <div key={division.key} className="relative">
+              {division.status === "available" ? (
+                <Link
+                  href={`/division/${division.key}`}
+                  className="card group flex flex-col rounded-md p-5 transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <h2 className="font-display text-xl font-semibold text-navy">
+                      {division.name}
+                    </h2>
+                    <span className="stamp h-9 w-9 shrink-0 text-[10px] text-grade-good">
+                      GO
+                    </span>
+                  </div>
+                  {division.tagline && (
+                    <p className="font-data text-xs uppercase tracking-wide text-ink-soft">
+                      {division.tagline}
+                    </p>
+                  )}
 
-              {loading ? (
-                <p className="mt-2 text-xs text-ink-soft">Loading…</p>
-              ) : metrics ? (
-                <div className="mt-2 grid grid-cols-2 gap-1 border-t border-rule pt-2">
-                  <div className="font-data text-[10px] text-ink-soft">
-                    <span className="font-semibold text-ink">
-                      {metrics.articlesPublished}
-                    </span>{" "}
-                    published
-                  </div>
-                  <div className="font-data text-[10px] text-ink-soft">
-                    <span className="font-semibold text-ink">
-                      {formatCompactNumber(metrics.totalPageviews)}
-                    </span>{" "}
-                    PVs
-                  </div>
-                  <div className="font-data text-[10px] text-ink-soft">
-                    <span className="font-semibold text-ink">
-                      {formatCompactNumber(metrics.evergreenPageviews)}
-                    </span>{" "}
-                    evergreen
-                  </div>
-                  <div className="font-data text-[10px] text-ink-soft">
-                    <span className="font-semibold text-ink">
-                      {formatPercent(metrics.weightedAvgScrollDepth)}
-                    </span>{" "}
-                    scroll
-                  </div>
-                </div>
+                  {loading ? (
+                    <p className="mt-2 text-xs text-ink-soft">Loading…</p>
+                  ) : metrics ? (
+                    <div className="mt-2 grid grid-cols-2 gap-1 border-t border-rule pt-2">
+                      <div className="font-data text-[10px] text-ink-soft">
+                        <span className="font-semibold text-ink">
+                          {metrics.articlesPublished}
+                        </span>{" "}
+                        published
+                      </div>
+                      <div className="font-data text-[10px] text-ink-soft">
+                        <span className="font-semibold text-ink">
+                          {formatCompactNumber(metrics.totalPageviews)}
+                        </span>{" "}
+                        PVs
+                      </div>
+                      <div className="font-data text-[10px] text-ink-soft">
+                        <span className="font-semibold text-ink">
+                          {formatCompactNumber(metrics.evergreenPageviews)}
+                        </span>{" "}
+                        evergreen
+                      </div>
+                      <div className="font-data text-[10px] text-ink-soft">
+                        <span className="font-semibold text-ink">
+                          {formatPercent(metrics.weightedAvgScrollDepth)}
+                        </span>{" "}
+                        scroll
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-2 border-t border-rule pt-2 text-[10px] italic text-ink-soft">
+                      No traffic data yet
+                    </div>
+                  )}
+
+                  <span className="mt-3 text-xs font-medium text-navy group-hover:underline">
+                    Open →
+                  </span>
+                </Link>
               ) : (
-                <div className="mt-2 border-t border-rule pt-2 text-[10px] italic text-ink-soft">
-                  No traffic data yet
+                <div className="card relative flex flex-col rounded-md p-5 opacity-60">
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <h2 className="font-display text-xl font-semibold text-ink-soft">
+                      {division.name}
+                    </h2>
+                    <span className="stamp h-9 w-9 shrink-0 text-[9px] text-ink-soft">
+                      SOON
+                    </span>
+                  </div>
+                  {division.tagline && (
+                    <p className="font-data text-xs uppercase tracking-wide text-ink-soft">
+                      {division.tagline}
+                    </p>
+                  )}
                 </div>
               )}
 
-              <span className="mt-3 text-xs font-medium text-navy group-hover:underline">
-                Open →
-              </span>
-            </Link>
-          ) : (
-            <div
-              key={division.key}
-              className="card relative flex flex-col rounded-md p-5 opacity-60"
-            >
-              <div className="mb-2 flex items-start justify-between gap-2">
-                <h2 className="font-display text-xl font-semibold text-ink-soft">
-                  {division.name}
-                </h2>
-                <span className="stamp h-9 w-9 shrink-0 text-[9px] text-ink-soft">
-                  SOON
-                </span>
-              </div>
-              {division.tagline && (
-                <p className="font-data text-xs uppercase tracking-wide text-ink-soft">
-                  {division.tagline}
-                </p>
-              )}
+              {/* Sticky notes sit outside the <Link> so they don't trigger navigation. */}
+              <StickyNotesCluster
+                notes={divisionNotes}
+                onAdd={(body, color) => addNote(division.key, body, color)}
+                onRemove={removeNote}
+                addButtonPosition="bottom-right"
+              />
             </div>
           );
         })}

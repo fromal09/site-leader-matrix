@@ -161,3 +161,78 @@ CREATE TABLE IF NOT EXISTS writer_aliases (
 );
 
 CREATE INDEX IF NOT EXISTS idx_writer_aliases_writer ON writer_aliases(writer_id);
+
+-- Space-saving archive: once a month's raw article_traffic rows are pruned
+-- (see /api/admin/archive-old-traffic), the site- and writer-level totals
+-- for that period live here instead, so trend charts keep working without
+-- needing every individual article kept around forever.
+
+ALTER TABLE traffic_imports ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE TABLE IF NOT EXISTS site_traffic_archive (
+  id SERIAL PRIMARY KEY,
+  site_id INT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  period_key TEXT NOT NULL,
+  period_label TEXT NOT NULL,
+  articles_published INT NOT NULL DEFAULT 0,
+  total_pageviews BIGINT NOT NULL DEFAULT 0,
+  evergreen_pageviews BIGINT NOT NULL DEFAULT 0,
+  homepage_pageviews BIGINT NOT NULL DEFAULT 0,
+  weighted_avg_scroll_depth NUMERIC,
+  weighted_avg_time_on_page NUMERIC,
+  archived_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(site_id, period_key)
+);
+
+CREATE TABLE IF NOT EXISTS writer_traffic_archive (
+  id SERIAL PRIMARY KEY,
+  writer_id INT NOT NULL REFERENCES depth_chart_writers(id) ON DELETE CASCADE,
+  site_id INT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  period_key TEXT NOT NULL,
+  period_label TEXT NOT NULL,
+  articles_published INT NOT NULL DEFAULT 0,
+  total_pageviews BIGINT NOT NULL DEFAULT 0,
+  weighted_avg_scroll_depth NUMERIC,
+  weighted_avg_time_on_page NUMERIC,
+  archived_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(writer_id, period_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_site_traffic_archive_site ON site_traffic_archive(site_id);
+CREATE INDEX IF NOT EXISTS idx_writer_traffic_archive_writer ON writer_traffic_archive(writer_id);
+
+-- Post-it style quick notes. Generic on purpose: subject_type/subject_id
+-- identify ANY container in the app (a writer, a site, a division-home
+-- card, the home page overall, ...), field_label optionally narrows it to
+-- one specific stat/field within that container. Visible to everyone who
+-- signs in — there's no per-user privacy model in this app.
+CREATE TABLE IF NOT EXISTS sticky_notes (
+  id SERIAL PRIMARY KEY,
+  subject_type TEXT NOT NULL,
+  subject_id TEXT NOT NULL,
+  field_label TEXT,
+  color TEXT NOT NULL DEFAULT 'yellow',
+  body TEXT NOT NULL,
+  created_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sticky_notes_subject ON sticky_notes(subject_type, subject_id);
+
+-- Post-it style notes. Fully generic: subject_type + subject_id identify
+-- WHAT the note is about (a writer, a site, the home screen, a division —
+-- anything), and field_label optionally narrows it to one specific field
+-- within that subject (e.g. "Scroll Depth"). NULL field_label means the
+-- note is about the subject as a whole.
+CREATE TABLE IF NOT EXISTS sticky_notes (
+  id SERIAL PRIMARY KEY,
+  subject_type TEXT NOT NULL,
+  subject_id TEXT NOT NULL,
+  field_label TEXT,
+  content TEXT NOT NULL,
+  color TEXT NOT NULL DEFAULT 'yellow',
+  created_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sticky_notes_subject ON sticky_notes(subject_type, subject_id);

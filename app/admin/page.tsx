@@ -10,6 +10,10 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [failedStatement, setFailedStatement] = useState<string | null>(null);
 
+  const [archiveBusy, setArchiveBusy] = useState(false);
+  const [archiveResult, setArchiveResult] = useState<string | null>(null);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+
   async function runMigrations() {
     if (!requireAuth()) return;
     setBusy(true);
@@ -27,6 +31,32 @@ export default function AdminPage() {
       return;
     }
     setResult(`Ran ${data.ranStatements}/${data.totalStatements} schema statement(s) successfully.`);
+  }
+
+  async function archiveOldTraffic() {
+    if (!requireAuth()) return;
+    const year = new Date().getFullYear();
+    const confirmed = window.confirm(
+      `This permanently deletes individual article rows for any month before January ${year}. ` +
+        `Site-level and writer-level monthly totals are saved first and will keep working in the ` +
+        `trend charts — you just won't be able to drill into specific old articles anymore. Continue?`
+    );
+    if (!confirmed) return;
+    setArchiveBusy(true);
+    setArchiveResult(null);
+    setArchiveError(null);
+    const res = await fetch("/api/admin/archive-old-traffic", { method: "POST" });
+    const data = await res.json();
+    setArchiveBusy(false);
+    if (!res.ok) {
+      setArchiveError(data.error ?? "Archiving failed.");
+      return;
+    }
+    setArchiveResult(
+      data.importsArchived === 0
+        ? "Nothing to archive — no imports older than this year."
+        : `Archived ${data.importsArchived} month(s) of data, freeing ${data.rowsFreed.toLocaleString()} article rows.`
+    );
   }
 
   return (
@@ -52,6 +82,26 @@ export default function AdminPage() {
           {failedStatement}
         </pre>
       )}
+
+      <h2 className="mt-10 font-display text-2xl font-bold text-navy">
+        Archive Prior-Year Traffic Detail
+      </h2>
+      <p className="mt-2 text-sm text-ink-soft">
+        Rolls up individual article rows from before the current year into permanent
+        site-level and writer-level monthly totals, then deletes the detail rows to free
+        database storage. Trend charts keep working for archived months — only the
+        per-article drill-down (top articles, full article list, homepage page list) goes
+        away for those old months. Current-year data is never touched.
+      </p>
+      <button
+        onClick={archiveOldTraffic}
+        disabled={archiveBusy}
+        className="mt-4 rounded border-2 border-grease-red px-4 py-2 text-sm font-semibold uppercase tracking-wide text-grease-red hover:bg-grease-red hover:text-white disabled:opacity-60"
+      >
+        {archiveBusy ? "Archiving…" : "Archive Prior-Year Traffic"}
+      </button>
+      {archiveResult && <p className="mt-3 text-sm text-grade-good">{archiveResult}</p>}
+      {archiveError && <p className="mt-3 text-sm text-grade-low">{archiveError}</p>}
     </main>
   );
 }

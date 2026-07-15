@@ -92,6 +92,33 @@ export async function GET(
       bySitePeriod.set(`${r.site_id}::${r.period_key}`, stats);
     }
 
+    // Pre-current-year periods may have had their raw article_traffic
+    // pruned (see /api/admin/archive-old-traffic) — pull those from the
+    // archive table instead so old trend points and ranks still work.
+    const archiveRows = await sql`SELECT * FROM site_traffic_archive`;
+    for (const r of archiveRows as any[]) {
+      const key = `${r.site_id}::${r.period_key}`;
+      if (bySitePeriod.has(key)) continue; // live data takes precedence if both exist
+      const archivedTotal = Number(r.total_pageviews);
+      const archivedEvergreen = Number(r.evergreen_pageviews);
+      const archivedPublishedPV = archivedTotal - archivedEvergreen;
+      bySitePeriod.set(key, {
+        siteId: r.site_id,
+        periodKey: r.period_key,
+        periodLabel: r.period_label,
+        articlesPublished: r.articles_published,
+        totalPageviews: archivedTotal,
+        evergreenPageviews: archivedEvergreen,
+        weightedAvgScrollDepth:
+          r.weighted_avg_scroll_depth !== null ? Number(r.weighted_avg_scroll_depth) : null,
+        weightedAvgTimeOnPage:
+          r.weighted_avg_time_on_page !== null ? Number(r.weighted_avg_time_on_page) : null,
+        pvPerPublishedArticle:
+          r.articles_published > 0 ? archivedPublishedPV / r.articles_published : null,
+        homepagePageviews: Number(r.homepage_pageviews),
+      });
+    }
+
     const byPeriod = new Map<string, Stats[]>();
     for (const s of bySitePeriod.values()) {
       if (siteDivisionMap.get(s.siteId) !== targetDivision) continue;

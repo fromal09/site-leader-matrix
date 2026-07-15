@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Oswald, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Oswald, IBM_Plex_Sans, IBM_Plex_Mono, Caveat } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import { LoginModal } from "@/components/LoginModal";
@@ -24,6 +24,12 @@ const plexMono = IBM_Plex_Mono({
   weight: ["400", "500", "600"],
 });
 
+const caveat = Caveat({
+  variable: "--font-caveat",
+  subsets: ["latin"],
+  weight: ["500", "600"],
+});
+
 export const metadata: Metadata = {
   title: "Sports Directors Reference Guide",
   description: "Internal tools for evaluating and developing site leadership.",
@@ -37,7 +43,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${oswald.variable} ${plexSans.variable} ${plexMono.variable} h-full`}
+      className={`${oswald.variable} ${plexSans.variable} ${plexMono.variable} ${caveat.variable} h-full`}
     >
       <body className="min-h-full">
         <AuthProvider>

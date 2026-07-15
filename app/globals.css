@@ -31,6 +31,7 @@
   --font-display: var(--font-oswald);
   --font-body: var(--font-plex-sans);
   --font-data: var(--font-plex-mono);
+  --font-hand: var(--font-caveat);
 }
 
 body {
@@ -84,4 +85,115 @@ button {
 .scroll-thin::-webkit-scrollbar-thumb {
   background: var(--rule-strong);
   border-radius: 4px;
+}
+
+/* Sticky notes — post-it style quick notes, see components/StickyNotesCluster.tsx */
+.sticky-note {
+  position: absolute;
+  width: 168px;
+  padding: 14px 14px 10px;
+  font-family: var(--font-hand);
+  font-size: 17px;
+  line-height: 1.25;
+  color: #2b2610;
+  box-shadow: 3px 4px 8px rgba(0, 0, 0, 0.18);
+  z-index: 20;
+  border-radius: 1px;
+}
+
+.sticky-note::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-3deg);
+  width: 46px;
+  height: 16px;
+  background: rgba(220, 220, 200, 0.55);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.sticky-note-meta {
+  margin-top: 8px;
+  font-family: var(--font-data);
+  font-size: 9px;
+  color: rgba(0, 0, 0, 0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.sticky-note-field-tag {
+  display: inline-block;
+  font-family: var(--font-data);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(0, 0, 0, 0.08);
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-bottom: 6px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.sticky-note-delete {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 13px;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.35);
+  font-family: var(--font-data);
+}
+.sticky-note-delete:hover {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.sticky-note--yellow { background: #fdf1a8; }
+.sticky-note--pink { background: #fbd0dc; }
+.sticky-note--blue { background: #c9e4f7; }
+.sticky-note--green { background: #d7ecc7; }
+
+.sticky-pin-badge {
+  position: absolute;
+  top: -9px;
+  right: -9px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--grease-red);
+  color: white;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-data);
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.25);
+  z-index: 21;
+}
+
+.sticky-pin-badge--ghost {
+  background: var(--rule-strong);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.stat-tile-pinnable:hover .sticky-pin-badge--ghost,
+.sticky-pin-badge--ghost:focus {
+  opacity: 1;
+}
+
+.pin-note-btn {
+  font-family: var(--font-data);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  border: 1px dashed var(--rule-strong);
+  border-radius: 4px;
+  padding: 2px 6px;
+  background: white;
+  white-space: nowrap;
+}
+.pin-note-btn:hover {
+  border-color: var(--navy);
+  color: var(--navy);
 }

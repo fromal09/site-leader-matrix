@@ -94,6 +94,37 @@ export async function GET(req: NextRequest) {
       return { writerId: w.id, name: w.name, history };
     });
 
+    // Merge in archived (pre-current-year, raw-data-pruned) periods.
+    const archiveRows = await sql`
+      SELECT * FROM writer_traffic_archive WHERE writer_id = ANY(${writerIds}::int[])
+    `;
+    const archiveByWriter = new Map<number, any[]>();
+    for (const r of archiveRows as any[]) {
+      if (!archiveByWriter.has(r.writer_id)) archiveByWriter.set(r.writer_id, []);
+      archiveByWriter.get(r.writer_id)!.push(r);
+    }
+    for (const w of result) {
+      const archived = archiveByWriter.get(w.writerId) ?? [];
+      const existingKeys = new Set(w.history.map((h) => h.periodKey));
+      for (const r of archived) {
+        if (existingKeys.has(r.period_key)) continue; // live data takes precedence
+        w.history.push({
+          periodKey: r.period_key,
+          periodLabel: r.period_label,
+          articlesPublished: r.articles_published,
+          totalPageviews: Number(r.total_pageviews),
+          evergreenPageviews: Number(r.total_pageviews) - 0, // archive doesn't split evergreen at writer level
+          pvPerPublishedArticle:
+            r.articles_published > 0 ? Number(r.total_pageviews) / r.articles_published : null,
+          weightedAvgScrollDepth:
+            r.weighted_avg_scroll_depth !== null ? Number(r.weighted_avg_scroll_depth) : null,
+          weightedAvgTimeOnPage:
+            r.weighted_avg_time_on_page !== null ? Number(r.weighted_avg_time_on_page) : null,
+        });
+      }
+      w.history.sort((a, b) => a.periodKey.localeCompare(b.periodKey));
+    }
+
     return NextResponse.json({ writers: result });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

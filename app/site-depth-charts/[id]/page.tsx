@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { WriterCard } from "@/components/WriterCard";
+import { useStickyNotes } from "@/lib/stickyNotes";
+import { StickyNotesCluster } from "@/components/StickyNotesCluster";
 import { SiteCallouts } from "@/components/SiteCallouts";
 import { CondensedRoster } from "@/components/CondensedRoster";
 import { SiteHistoryChart } from "@/components/SiteHistoryChart";
@@ -57,6 +59,19 @@ export default function DepthChartSitePage() {
   const [statsPeriodLabel, setStatsPeriodLabel] = useState<string | null>(null);
   const [statsPeriodKey, setStatsPeriodKey] = useState<string | null>(null);
   const [sitePeriods, setSitePeriods] = useState<{ key: string; label: string }[]>([]);
+  const {
+    notesFor: siteNotesFor,
+    addNote: addSiteNote,
+    removeNote: removeSiteNote,
+  } = useStickyNotes("site", site ? [site.id] : []);
+  const {
+    allNotesFor: writerNotesFor,
+    addNote: addWriterNote,
+    removeNote: removeWriterNote,
+  } = useStickyNotes(
+    "writer",
+    writers.map((w) => w.id)
+  );
   const [loading, setLoading] = useState(true);
   const [addingNew, setAddingNew] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("condensed");
@@ -219,7 +234,7 @@ export default function DepthChartSitePage() {
       ) : (
         <>
           {siteTotals && (
-            <div className="card mb-6 rounded-md p-4">
+            <div className="card relative mb-6 rounded-md p-4">
               <div className="mb-2 flex items-baseline justify-between">
                 <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-navy">
                   Site Snapshot — {statsPeriodLabel}
@@ -268,6 +283,12 @@ export default function DepthChartSitePage() {
                   tint={rankTint(rankAmong(site.id, (s: AllSiteSummary) => s.pvPerPublishedArticle, allSummaries))}
                 />
               </div>
+              <StickyNotesCluster
+                notes={siteNotesFor(site.id)}
+                onAdd={(body, color) => addSiteNote(site.id, body, color)}
+                onRemove={removeSiteNote}
+                addButtonPosition="top-right"
+              />
             </div>
           )}
 
@@ -387,6 +408,11 @@ export default function DepthChartSitePage() {
                         onRoleCreated={(r) => setRoles((prev) => [...prev, r])}
                         onSaved={() => load(statsPeriodKey ?? undefined)}
                         onDiscardNew={() => {}}
+                        writerNotes={writerNotesFor(w.id)}
+                        onAddNote={(fieldLabel, body, color) =>
+                          addWriterNote(w.id, body, color, fieldLabel)
+                        }
+                        onRemoveNote={removeWriterNote}
                       />
                     ))}
                   </div>

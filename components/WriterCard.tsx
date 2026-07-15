@@ -7,6 +7,9 @@ import { WriterTrafficPanel } from "./WriterTrafficPanel";
 import { WriterNotesPanel } from "./WriterNotesPanel";
 import { formatCompactNumber, formatDuration, formatPercent } from "@/lib/trafficFormat";
 import { StatTile } from "./StatTile";
+import { FieldPinBadge } from "./FieldPinBadge";
+import { StickyNotesCluster } from "./StickyNotesCluster";
+import type { StickyNoteRecord, StickyColor } from "@/lib/stickyNotes";
 import { rankAmong, rankTier, rankTierColors } from "@/lib/rankColor";
 import {
   computeWriterObservations,
@@ -171,6 +174,9 @@ export function WriterCard({
   onRoleCreated,
   onSaved,
   onDiscardNew,
+  writerNotes = [],
+  onAddNote,
+  onRemoveNote,
 }: {
   siteId: number;
   writer: DepthChartWriter | null; // null = new, unsaved card
@@ -181,7 +187,12 @@ export function WriterCard({
   onRoleCreated: (role: DepthChartRole) => void;
   onSaved: () => void;
   onDiscardNew: () => void;
+  writerNotes?: StickyNoteRecord[];
+  onAddNote?: (fieldLabel: string | null, body: string, color: StickyColor) => Promise<boolean>;
+  onRemoveNote?: (id: number) => void;
 }) {
+  const onAdd = onAddNote ?? (async () => false);
+  const onRemove = onRemoveNote ?? (() => {});
   const { requireAuth } = useAuth();
   const [editing, setEditing] = useState(writer === null);
   const [name, setName] = useState(writer?.name ?? "");
@@ -271,7 +282,7 @@ export function WriterCard({
   if (!editing && writer) {
     return (
       <div
-        className="card rounded-md border-l-4 p-4"
+        className="card relative rounded-md border-l-4 p-4"
         style={{ borderLeftColor: color }}
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -295,46 +306,82 @@ export function WriterCard({
         </div>
         {quickStats && (
           <div className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
-            <StatTile
-              label="Published"
-              value={quickStats.articlesPublished.toLocaleString()}
-              tint={peerTint(writer.id, (s) => s.articlesPublished, allQuickStats)}
-            />
-            <StatTile
-              label="Total PVs"
-              value={formatCompactNumber(quickStats.totalPageviews)}
-              tint={peerTint(writer.id, (s) => s.totalPageviews, allQuickStats)}
-            />
-            <StatTile
-              label="Evergreen PVs"
-              value={formatCompactNumber(
-                Math.max(0, quickStats.totalPageviews - quickStats.publishedPageviews)
-              )}
-              tint={peerTint(
-                writer.id,
-                (s) => Math.max(0, s.totalPageviews - s.publishedPageviews),
-                allQuickStats
-              )}
-            />
-            <StatTile
-              label="Scroll Depth"
-              value={formatPercent(quickStats.weightedAvgScrollDepth)}
-              tint={peerTint(writer.id, (s) => s.weightedAvgScrollDepth, allQuickStats)}
-            />
-            <StatTile
-              label="Time on Page"
-              value={formatDuration(quickStats.weightedAvgTimeOnPage)}
-              tint={peerTint(writer.id, (s) => s.weightedAvgTimeOnPage, allQuickStats)}
-            />
-            <StatTile
-              label="PVs / New Article"
-              value={
-                quickStats.pvPerPublishedArticle !== null
-                  ? formatCompactNumber(quickStats.pvPerPublishedArticle)
-                  : "—"
-              }
-              tint={peerTint(writer.id, (s) => s.pvPerPublishedArticle, allQuickStats)}
-            />
+            <div className="relative">
+              <StatTile
+                label="Published"
+                value={quickStats.articlesPublished.toLocaleString()}
+                tint={peerTint(writer.id, (s) => s.articlesPublished, allQuickStats)}
+              />
+              <FieldPinBadge
+                notes={writerNotes.filter((n) => n.field_label === "Published")}
+                onAdd={(body, color) => onAdd("Published", body, color)}
+              />
+            </div>
+            <div className="relative">
+              <StatTile
+                label="Total PVs"
+                value={formatCompactNumber(quickStats.totalPageviews)}
+                tint={peerTint(writer.id, (s) => s.totalPageviews, allQuickStats)}
+              />
+              <FieldPinBadge
+                notes={writerNotes.filter((n) => n.field_label === "Total PVs")}
+                onAdd={(body, color) => onAdd("Total PVs", body, color)}
+              />
+            </div>
+            <div className="relative">
+              <StatTile
+                label="Evergreen PVs"
+                value={formatCompactNumber(
+                  Math.max(0, quickStats.totalPageviews - quickStats.publishedPageviews)
+                )}
+                tint={peerTint(
+                  writer.id,
+                  (s) => Math.max(0, s.totalPageviews - s.publishedPageviews),
+                  allQuickStats
+                )}
+              />
+              <FieldPinBadge
+                notes={writerNotes.filter((n) => n.field_label === "Evergreen PVs")}
+                onAdd={(body, color) => onAdd("Evergreen PVs", body, color)}
+              />
+            </div>
+            <div className="relative">
+              <StatTile
+                label="Scroll Depth"
+                value={formatPercent(quickStats.weightedAvgScrollDepth)}
+                tint={peerTint(writer.id, (s) => s.weightedAvgScrollDepth, allQuickStats)}
+              />
+              <FieldPinBadge
+                notes={writerNotes.filter((n) => n.field_label === "Scroll Depth")}
+                onAdd={(body, color) => onAdd("Scroll Depth", body, color)}
+              />
+            </div>
+            <div className="relative">
+              <StatTile
+                label="Time on Page"
+                value={formatDuration(quickStats.weightedAvgTimeOnPage)}
+                tint={peerTint(writer.id, (s) => s.weightedAvgTimeOnPage, allQuickStats)}
+              />
+              <FieldPinBadge
+                notes={writerNotes.filter((n) => n.field_label === "Time on Page")}
+                onAdd={(body, color) => onAdd("Time on Page", body, color)}
+              />
+            </div>
+            <div className="relative">
+              <StatTile
+                label="PVs / New Article"
+                value={
+                  quickStats.pvPerPublishedArticle !== null
+                    ? formatCompactNumber(quickStats.pvPerPublishedArticle)
+                    : "—"
+                }
+                tint={peerTint(writer.id, (s) => s.pvPerPublishedArticle, allQuickStats)}
+              />
+              <FieldPinBadge
+                notes={writerNotes.filter((n) => n.field_label === "PVs / New Article")}
+                onAdd={(body, color) => onAdd("PVs / New Article", body, color)}
+              />
+            </div>
           </div>
         )}
         {observations.length > 0 && (
@@ -346,6 +393,12 @@ export function WriterCard({
         )}
         <WriterTrafficPanel writerId={writer.id} siteTotals={siteTotals ?? null} />
         <WriterNotesPanel writerId={writer.id} />
+        <StickyNotesCluster
+          notes={writerNotes.filter((n) => n.field_label === null)}
+          onAdd={(body, color) => onAdd(null, body, color)}
+          onRemove={onRemove}
+          addButtonPosition="top-right"
+        />
       </div>
     );
   }
