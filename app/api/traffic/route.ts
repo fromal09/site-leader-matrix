@@ -9,7 +9,7 @@ export async function GET() {
   }
   try {
     const imports = await sql`
-      SELECT ti.id, ti.site_id, s.site_name, s.site_topic, ti.period_key, ti.period_label,
+      SELECT ti.id, ti.site_id, s.site_name, s.site_topic, s.division, ti.period_key, ti.period_label,
         ti.row_count, ti.imported_by, ti.imported_at
       FROM traffic_imports ti
       JOIN sites s ON s.id = ti.site_id

@@ -14,7 +14,7 @@ export function dcSiteHref(id: number | string) {
   return `${DC_BASE}/${id}`;
 }
 
-export const TRAFFIC_BASE = "/site-depth-charts/traffic";
+export const TRAFFIC_BASE = "/traffic-data";
 
 export function trafficImportHref(id: number | string) {
   return `${TRAFFIC_BASE}/${id}`;

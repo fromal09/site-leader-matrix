@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "./AuthProvider";
+import { TRAFFIC_BASE } from "@/lib/routes";
 
 export function Header() {
   const { session, openLogin, logout } = useAuth();
@@ -20,6 +21,12 @@ export function Header() {
               <span className="font-data text-xs text-ink-soft">
                 Signed in as <strong className="text-ink">{session.name}</strong>
               </span>
+              <Link
+                href={TRAFFIC_BASE}
+                className="text-xs font-medium text-ink-soft hover:text-navy"
+              >
+                Traffic Data
+              </Link>
               <Link
                 href="/admin"
                 className="text-xs font-medium text-ink-soft hover:text-navy"

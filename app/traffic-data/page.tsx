@@ -16,6 +16,7 @@ type ImportRow = {
   site_id: number;
   site_name: string;
   site_topic: string;
+  division: string;
   period_key: string;
   period_label: string;
   row_count: number;
@@ -173,12 +174,14 @@ export default function TrafficPage() {
     <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
       <div className="mb-6">
         <p className="font-data text-xs uppercase tracking-widest text-ink-soft">
-          Site Depth Charts
+          FanSided Network
         </p>
         <h1 className="font-display text-3xl font-bold text-navy">Traffic Data</h1>
         <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-          Upload a monthly article-performance export — single-site or multi-site in one
-          file. Re-uploading the same site and month replaces what's there, so a
+          Upload a monthly article-performance export — single-site, multi-site, or
+          mixed across divisions in one file. Sites in the picker below are grouped by
+          division, so an NFL site and an NBA site can be mapped and ingested in the
+          same batch. Re-uploading the same site and month replaces what's there, so a
           partial-month upload followed by a fuller one later just works.
         </p>
       </div>
@@ -259,10 +262,20 @@ export default function TrafficPage() {
                         <option value="" disabled>
                           Choose a site…
                         </option>
-                        {sites.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.site_name} ({s.site_topic})
-                          </option>
+                        {Object.entries(
+                          sites.reduce<Record<string, typeof sites>>((acc, s) => {
+                            const div = s.division ?? "NFL";
+                            (acc[div] ??= []).push(s);
+                            return acc;
+                          }, {})
+                        ).map(([div, divSites]) => (
+                          <optgroup key={div} label={div}>
+                            {divSites.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.site_name} ({s.site_topic})
+                              </option>
+                            ))}
+                          </optgroup>
                         ))}
                         <option value={DO_NOT_INCLUDE}>Do Not Include</option>
                       </select>
@@ -338,6 +351,7 @@ export default function TrafficPage() {
             <thead>
               <tr className="border-b border-rule-strong font-data text-xs uppercase tracking-wide text-ink-soft">
                 <th className="py-2 pr-4">Site</th>
+                <th className="py-2 pr-4">Division</th>
                 <th className="py-2 pr-4">Period</th>
                 <th className="py-2 pr-4">Rows</th>
                 <th className="py-2 pr-4">Uploaded By</th>
@@ -352,6 +366,7 @@ export default function TrafficPage() {
                     <div className="font-medium text-ink">{imp.site_name}</div>
                     <div className="text-xs text-ink-soft">{imp.site_topic}</div>
                   </td>
+                  <td className="py-2 pr-4 font-data text-xs text-ink-soft">{imp.division}</td>
                   <td className="py-2 pr-4">{imp.period_label}</td>
                   <td className="py-2 pr-4 font-data">{imp.row_count.toLocaleString()}</td>
                   <td className="py-2 pr-4">{imp.imported_by ?? "—"}</td>

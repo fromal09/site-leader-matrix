@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { DC_BASE, TRAFFIC_BASE } from "@/lib/routes";
+import { DC_BASE } from "@/lib/routes";
 
 export default function SiteDepthChartsLayout({
   children,
@@ -25,12 +25,6 @@ export default function SiteDepthChartsLayout({
               className="text-xs font-medium text-ink-soft hover:text-navy"
             >
               Division Resources
-            </Link>
-            <Link
-              href={TRAFFIC_BASE}
-              className="text-xs font-medium text-ink-soft hover:text-navy"
-            >
-              Traffic Data
             </Link>
           </div>
         </div>
