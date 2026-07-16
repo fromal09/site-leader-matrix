@@ -1,11 +1,21 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { StickyNoteRecord, StickyColor, STICKY_COLORS, STICKY_COLOR_HEX } from "@/lib/stickyNotes";
+import { useEffect, useRef, useState } from "react";
+import {
+  StickyNoteRecord,
+  StickyNoteReply,
+  StickyColor,
+  STICKY_COLORS,
+  STICKY_COLOR_HEX,
+} from "@/lib/stickyNotes";
 
 function clamp(n: number, min = 0, max = 92) {
   return Math.min(max, Math.max(min, n));
 }
+
+// Distance a pointer can move between down/up and still count as a click
+// (opening the reply thread) rather than a drag.
+const DRAG_THRESHOLD_PX = 4;
 
 function ComposeSticky({
   x,
@@ -15,28 +25,27 @@ function ComposeSticky({
 }: {
   x: number;
   y: number;
-  onSubmit: (body: string, color: StickyColor) => Promise<boolean>;
+  onSubmit: (body: string, color: StickyColor) => void;
   onCancel: () => void;
 }) {
   const [text, setText] = useState("");
   const [color, setColor] = useState<StickyColor>("yellow");
-  const [busy, setBusy] = useState(false);
 
-  async function submit() {
+  function submit() {
     if (!text.trim()) {
       onCancel();
       return;
     }
-    setBusy(true);
-    const ok = await onSubmit(text.trim(), color);
-    setBusy(false);
-    if (!ok) onCancel();
+    // Close immediately — the note this becomes shows up right away via
+    // the optimistic update, so there's no in-between "ghost" state.
+    onCancel();
+    onSubmit(text.trim(), color);
   }
 
   return (
     <div
-      className={`sticky-note sticky-note--${color} sticky-note-compose`}
-      style={{ left: `${x}%`, top: `${y}%` }}
+      className="sticky-note sticky-note--yellow sticky-note-compose"
+      style={{ left: `${x}%`, top: `${y}%`, backgroundColor: STICKY_COLOR_HEX[color] }}
       onClick={(e) => e.stopPropagation()}
       onDoubleClick={(e) => e.stopPropagation()}
     >
@@ -47,6 +56,7 @@ function ComposeSticky({
         onBlur={submit}
         onKeyDown={(e) => {
           if (e.key === "Escape") onCancel();
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit();
         }}
         placeholder="Quick note…"
         rows={3}
@@ -72,11 +82,92 @@ function ComposeSticky({
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={submit}
-          disabled={busy}
           className="ml-auto font-data text-[10px] uppercase tracking-wide text-ink"
           style={{ opacity: 0.65 }}
         >
           Pin
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ReplyThread({
+  noteId,
+  onCountChange,
+}: {
+  noteId: number;
+  onCountChange: (delta: number) => void;
+}) {
+  const [replies, setReplies] = useState<StickyNoteReply[] | null>(null);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/sticky-notes/${noteId}/replies`)
+      .then((r) => r.json())
+      .then((d) => setReplies(d.replies ?? []));
+  }, [noteId]);
+
+  async function send() {
+    if (!draft.trim()) return;
+    setBusy(true);
+    const res = await fetch(`/api/sticky-notes/${noteId}/replies`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: draft.trim() }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      const data = await res.json();
+      setReplies((prev) => [...(prev ?? []), data.reply]);
+      onCountChange(1);
+      setDraft("");
+    }
+  }
+
+  async function remove(replyId: number) {
+    setReplies((prev) => (prev ?? []).filter((r) => r.id !== replyId));
+    onCountChange(-1);
+    await fetch(`/api/sticky-notes/${noteId}/replies/${replyId}`, { method: "DELETE" });
+  }
+
+  return (
+    <div
+      className="sticky-note-thread"
+      onClick={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      {replies === null ? (
+        <p className="sticky-note-thread-loading">Loading…</p>
+      ) : (
+        replies.map((r) => (
+          <div key={r.id} className="sticky-note-reply">
+            <span>{r.body}</span>
+            <button
+              className="sticky-note-reply-delete"
+              onClick={() => remove(r.id)}
+              aria-label="Delete reply"
+            >
+              ×
+            </button>
+            <div className="sticky-note-reply-meta">— {r.created_by ?? "Unknown"}</div>
+          </div>
+        ))
+      )}
+      <div className="sticky-note-reply-input">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") send();
+          }}
+          placeholder="Reply…"
+          disabled={busy}
+        />
+        <button onClick={send} disabled={busy || !draft.trim()} aria-label="Send reply">
+          ↵
         </button>
       </div>
     </div>
@@ -91,7 +182,7 @@ function fallbackPos(id: number) {
     { x: 30, y: 55 },
     { x: 70, y: 50 },
   ];
-  return slots[id % slots.length];
+  return slots[Math.abs(id) % slots.length];
 }
 
 export function StickyBoard({
@@ -99,17 +190,20 @@ export function StickyBoard({
   onAdd,
   onRemove,
   onUpdatePosition,
+  onBumpReplyCount,
   children,
 }: {
   notes: StickyNoteRecord[];
-  onAdd: (body: string, color: StickyColor, posX: number, posY: number) => Promise<boolean>;
+  onAdd: (body: string, color: StickyColor, posX: number, posY: number) => void;
   onRemove: (id: number) => void;
   onUpdatePosition: (id: number, posX: number, posY: number) => void;
+  onBumpReplyCount?: (id: number, delta: number) => void;
   children: React.ReactNode;
 }) {
   const boardRef = useRef<HTMLDivElement>(null);
   const [composeAt, setComposeAt] = useState<{ x: number; y: number } | null>(null);
   const [dragState, setDragState] = useState<{ id: number; x: number; y: number } | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   function handleDoubleClick(e: React.MouseEvent) {
     const target = e.target as HTMLElement;
@@ -126,8 +220,15 @@ export function StickyBoard({
     e.stopPropagation();
     if (!boardRef.current) return;
     const rect = boardRef.current.getBoundingClientRect();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    let moved = false;
 
     function onMove(ev: PointerEvent) {
+      if (!moved && Math.hypot(ev.clientX - startX, ev.clientY - startY) > DRAG_THRESHOLD_PX) {
+        moved = true;
+      }
+      if (!moved) return;
       const x = clamp(((ev.clientX - rect.left) / rect.width) * 100);
       const y = clamp(((ev.clientY - rect.top) / rect.height) * 100);
       setDragState({ id: note.id, x, y });
@@ -135,9 +236,13 @@ export function StickyBoard({
     function onUp(ev: PointerEvent) {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
-      const x = clamp(((ev.clientX - rect.left) / rect.width) * 100);
-      const y = clamp(((ev.clientY - rect.top) / rect.height) * 100);
-      onUpdatePosition(note.id, x, y);
+      if (moved) {
+        const x = clamp(((ev.clientX - rect.left) / rect.width) * 100);
+        const y = clamp(((ev.clientY - rect.top) / rect.height) * 100);
+        onUpdatePosition(note.id, x, y);
+      } else {
+        setExpandedId((prev) => (prev === note.id ? null : note.id));
+      }
       setDragState(null);
     }
     window.addEventListener("pointermove", onMove);
@@ -153,10 +258,11 @@ export function StickyBoard({
         const fallback = fallbackPos(note.id);
         const x = dragging ? dragState!.x : (note.pos_x ?? fallback.x);
         const y = dragging ? dragState!.y : (note.pos_y ?? fallback.y);
+        const expanded = expandedId === note.id;
         return (
           <div
             key={note.id}
-            className={`sticky-note sticky-note--${note.color}`}
+            className={`sticky-note sticky-note--${note.color}${expanded ? " sticky-note-expanded" : ""}`}
             style={{ left: `${x}%`, top: `${y}%`, cursor: dragging ? "grabbing" : "grab" }}
             onPointerDown={(e) => startDrag(note, e)}
           >
@@ -180,6 +286,22 @@ export function StickyBoard({
                 day: "numeric",
               })}
             </div>
+            <button
+              className="sticky-note-reply-toggle"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpandedId((prev) => (prev === note.id ? null : note.id));
+              }}
+            >
+              💬 Reply{note.reply_count > 0 ? ` (${note.reply_count})` : ""}
+            </button>
+            {expanded && (
+              <ReplyThread
+                noteId={note.id}
+                onCountChange={(delta) => onBumpReplyCount?.(note.id, delta)}
+              />
+            )}
           </div>
         );
       })}

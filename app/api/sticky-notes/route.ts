@@ -20,11 +20,15 @@ export async function GET(req: NextRequest) {
 
   try {
     const notes = await sql`
-      SELECT id, subject_type, subject_id, field_label, color, body, pos_x, pos_y, created_by, created_at
-      FROM sticky_notes
-      WHERE subject_type = ${subjectType} AND subject_id = ANY(${subjectIds}::text[])
-        AND deleted_at IS NULL
-      ORDER BY created_at ASC
+      SELECT sn.id, sn.subject_type, sn.subject_id, sn.field_label, sn.color, sn.body,
+        sn.pos_x, sn.pos_y, sn.created_by, sn.created_at,
+        COUNT(r.id)::int AS reply_count
+      FROM sticky_notes sn
+      LEFT JOIN sticky_note_replies r ON r.note_id = sn.id
+      WHERE sn.subject_type = ${subjectType} AND sn.subject_id = ANY(${subjectIds}::text[])
+        AND sn.deleted_at IS NULL
+      GROUP BY sn.id
+      ORDER BY sn.created_at ASC
     `;
     return NextResponse.json({ notes });
   } catch (err: any) {
@@ -52,7 +56,7 @@ export async function POST(req: NextRequest) {
       )
       RETURNING id, subject_type, subject_id, field_label, color, body, pos_x, pos_y, created_by, created_at
     `;
-    return NextResponse.json({ note: (rows as any[])[0] });
+    return NextResponse.json({ note: { ...(rows as any[])[0], reply_count: 0 } });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

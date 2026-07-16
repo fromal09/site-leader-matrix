@@ -157,6 +157,95 @@ button {
   cursor: default;
 }
 
+.sticky-note-expanded {
+  z-index: 30;
+}
+
+.sticky-note-reply-toggle {
+  margin-top: 6px;
+  display: block;
+  font-family: var(--font-data);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: rgba(0, 0, 0, 0.45);
+}
+.sticky-note-reply-toggle:hover {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.sticky-note-thread {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.15);
+  cursor: default;
+}
+
+.sticky-note-thread-loading {
+  font-family: var(--font-data);
+  font-size: 9px;
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.sticky-note-reply {
+  position: relative;
+  padding: 3px 16px 3px 0;
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.3;
+  color: #2b2610;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+.sticky-note-reply:last-of-type {
+  border-bottom: none;
+}
+
+.sticky-note-reply-meta {
+  font-family: var(--font-data);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.sticky-note-reply-delete {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  font-size: 12px;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.3);
+  font-family: var(--font-data);
+}
+.sticky-note-reply-delete:hover {
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.sticky-note-reply-input {
+  display: flex;
+  gap: 4px;
+  margin-top: 5px;
+}
+.sticky-note-reply-input input {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+  padding: 3px 5px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  outline: none;
+}
+.sticky-note-reply-input button {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.5);
+  padding: 0 4px;
+}
+.sticky-note-reply-input button:hover {
+  color: rgba(0, 0, 0, 0.8);
+}
+
 .sticky-note-textarea {
   width: 100%;
   resize: none;

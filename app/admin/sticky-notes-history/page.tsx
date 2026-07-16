@@ -29,7 +29,7 @@ function formatWhen(iso: string) {
 export default function StickyNoteHistoryPage() {
   const [notes, setNotes] = useState<HistoryNote[]>([]);
   const [loading, setLoading] = useState(true);
-  const [restoringId, setRestoringId] = useState<number | null>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
 
   function load() {
     setLoading(true);
@@ -42,9 +42,24 @@ export default function StickyNoteHistoryPage() {
   useEffect(load, []);
 
   async function restore(id: number) {
-    setRestoringId(id);
+    setBusyId(id);
     await fetch(`/api/sticky-notes/${id}/restore`, { method: "POST" });
-    setRestoringId(null);
+    setBusyId(null);
+    load();
+  }
+
+  async function deleteNote(id: number) {
+    setBusyId(id);
+    await fetch(`/api/sticky-notes/${id}`, { method: "DELETE" });
+    setBusyId(null);
+    load();
+  }
+
+  async function removeFromHistory(id: number) {
+    if (!window.confirm("Permanently remove this from history? This can't be undone.")) return;
+    setBusyId(id);
+    await fetch(`/api/sticky-notes/${id}?permanent=true`, { method: "DELETE" });
+    setBusyId(null);
     load();
   }
 
@@ -58,7 +73,8 @@ export default function StickyNoteHistoryPage() {
       <p className="mt-2 text-sm text-ink-soft">
         The most recent 200 sticky notes across the whole app, active and removed. Anyone
         can remove a note whether they wrote it or not, so this is here in case something
-        gets cleared that shouldn't have — restoring puts it right back where it was.
+        gets cleared that shouldn&apos;t have — restoring puts it right back where it was.
+        Removing from history is permanent and can&apos;t be undone.
       </p>
 
       {loading ? (
@@ -78,7 +94,10 @@ export default function StickyNoteHistoryPage() {
                 style={{ backgroundColor: STICKY_COLOR_HEX[n.color] ?? "#fdf1a8" }}
               />
               <div className="min-w-0 flex-1">
-                <p className="text-sm text-ink" style={{ textDecoration: n.deleted_at ? "line-through" : "none" }}>
+                <p
+                  className="text-sm text-ink"
+                  style={{ textDecoration: n.deleted_at ? "line-through" : "none" }}
+                >
                   {n.body}
                 </p>
                 <p className="mt-1 font-data text-[11px] text-ink-soft">
@@ -93,15 +112,34 @@ export default function StickyNoteHistoryPage() {
                   )}
                 </p>
               </div>
-              {n.deleted_at && (
-                <button
-                  onClick={() => restore(n.id)}
-                  disabled={restoringId === n.id}
-                  className="shrink-0 rounded border border-navy px-2.5 py-1 text-xs font-medium text-navy hover:bg-navy hover:text-white disabled:opacity-60"
-                >
-                  {restoringId === n.id ? "Restoring…" : "Restore"}
-                </button>
-              )}
+              <div className="flex shrink-0 gap-1.5">
+                {n.deleted_at ? (
+                  <>
+                    <button
+                      onClick={() => restore(n.id)}
+                      disabled={busyId === n.id}
+                      className="rounded border border-navy px-2.5 py-1 text-xs font-medium text-navy hover:bg-navy hover:text-white disabled:opacity-60"
+                    >
+                      Restore
+                    </button>
+                    <button
+                      onClick={() => removeFromHistory(n.id)}
+                      disabled={busyId === n.id}
+                      className="rounded border border-grease-red px-2.5 py-1 text-xs font-medium text-grease-red hover:bg-grease-red hover:text-white disabled:opacity-60"
+                    >
+                      Remove from history
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => deleteNote(n.id)}
+                    disabled={busyId === n.id}
+                    className="rounded border border-grease-red px-2.5 py-1 text-xs font-medium text-grease-red hover:bg-grease-red hover:text-white disabled:opacity-60"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
             </li>
           ))}
         </ul>

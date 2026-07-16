@@ -23,7 +23,18 @@ export type StickyNoteRecord = {
   pos_y: number | null;
   created_by: string | null;
   created_at: string;
+  reply_count: number;
 };
+
+export type StickyNoteReply = {
+  id: number;
+  note_id: number;
+  body: string;
+  created_by: string | null;
+  created_at: string;
+};
+
+let tempIdCounter = -1;
 
 // Batched fetch: one request covers every subject a page needs (e.g. every
 // writer on a roster, every division card on the home page), instead of
@@ -61,6 +72,9 @@ export function useStickyNotes(subjectType: string, subjectIds: (string | number
     return notes.filter((n) => n.subject_id === sid);
   }
 
+  // Optimistic: the note appears — draggable, deletable, repliable — the
+  // instant you hit Pin, using a temporary id until the server confirms and
+  // hands back the real one. No waiting on a round trip to interact with it.
   async function addNote(
     subjectId: string | number,
     body: string,
@@ -69,6 +83,22 @@ export function useStickyNotes(subjectType: string, subjectIds: (string | number
     posX: number | null = null,
     posY: number | null = null
   ) {
+    const tempId = tempIdCounter--;
+    const optimistic: StickyNoteRecord = {
+      id: tempId,
+      subject_type: subjectType,
+      subject_id: String(subjectId),
+      field_label: fieldLabel,
+      color,
+      body,
+      pos_x: posX,
+      pos_y: posY,
+      created_by: null,
+      created_at: new Date().toISOString(),
+      reply_count: 0,
+    };
+    setNotes((prev) => [...prev, optimistic]);
+
     const res = await fetch("/api/sticky-notes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -82,23 +112,40 @@ export function useStickyNotes(subjectType: string, subjectIds: (string | number
         posY,
       }),
     });
-    if (res.ok) load();
-    return res.ok;
+
+    if (res.ok) {
+      const data = await res.json();
+      setNotes((prev) => prev.map((n) => (n.id === tempId ? data.note : n)));
+      return true;
+    }
+    // Failed — drop the optimistic note.
+    setNotes((prev) => prev.filter((n) => n.id !== tempId));
+    return false;
   }
 
   async function removeNote(id: number) {
-    await fetch(`/api/sticky-notes/${id}`, { method: "DELETE" });
+    // Optimistic: gone from the board immediately, sync in the background.
+    const prevNotes = notes;
     setNotes((prev) => prev.filter((n) => n.id !== id));
+    if (id < 0) return; // still-pending optimistic note, nothing to delete server-side yet
+    const res = await fetch(`/api/sticky-notes/${id}`, { method: "DELETE" });
+    if (!res.ok) setNotes(prevNotes); // roll back on failure
   }
 
   async function updatePosition(id: number, posX: number, posY: number) {
-    // Optimistic — the drag already shows the note in place; just persist.
     setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, pos_x: posX, pos_y: posY } : n)));
+    if (id < 0) return;
     await fetch(`/api/sticky-notes/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ posX, posY }),
     });
+  }
+
+  function bumpReplyCount(id: number, delta: number) {
+    setNotes((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, reply_count: Math.max(0, n.reply_count + delta) } : n))
+    );
   }
 
   return {
@@ -109,6 +156,7 @@ export function useStickyNotes(subjectType: string, subjectIds: (string | number
     addNote,
     removeNote,
     updatePosition,
+    bumpReplyCount,
     refetch: load,
   };
 }

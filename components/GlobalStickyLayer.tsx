@@ -13,7 +13,10 @@ function GlobalStickyLayerInner({ children }: { children: React.ReactNode }) {
   // ?division=NBA are the same path but should not share a corkboard.
   const subjectId = qs ? `${pathname}?${qs}` : pathname;
 
-  const { notesFor, addNote, removeNote, updatePosition } = useStickyNotes("page", [subjectId]);
+  const { notesFor, addNote, removeNote, updatePosition, bumpReplyCount } = useStickyNotes(
+    "page",
+    [subjectId]
+  );
 
   return (
     <StickyBoard
@@ -21,6 +24,7 @@ function GlobalStickyLayerInner({ children }: { children: React.ReactNode }) {
       onAdd={(body, color, x, y) => addNote(subjectId, body, color, null, x, y)}
       onRemove={removeNote}
       onUpdatePosition={updatePosition}
+      onBumpReplyCount={bumpReplyCount}
     >
       {children}
     </StickyBoard>

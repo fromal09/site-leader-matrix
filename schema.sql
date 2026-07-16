@@ -226,6 +226,16 @@ ALTER TABLE sticky_notes ADD COLUMN IF NOT EXISTS pos_y REAL;
 ALTER TABLE sticky_notes ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 ALTER TABLE sticky_notes ADD COLUMN IF NOT EXISTS deleted_by TEXT;
 
+CREATE TABLE IF NOT EXISTS sticky_note_replies (
+  id SERIAL PRIMARY KEY,
+  note_id INT NOT NULL REFERENCES sticky_notes(id) ON DELETE CASCADE,
+  body TEXT NOT NULL,
+  created_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sticky_note_replies_note ON sticky_note_replies(note_id);
+
 CREATE INDEX IF NOT EXISTS idx_sticky_notes_subject ON sticky_notes(subject_type, subject_id);
 
 -- Post-it style notes. Fully generic: subject_type + subject_id identify
