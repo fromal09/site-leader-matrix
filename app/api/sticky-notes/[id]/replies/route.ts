@@ -47,9 +47,22 @@ export async function POST(
     const reply = (rows as any[])[0];
 
     const knownNameRows = await sql`
-      SELECT DISTINCT created_by AS name FROM sticky_notes WHERE created_by IS NOT NULL
-      UNION
-      SELECT DISTINCT created_by AS name FROM sticky_note_replies WHERE created_by IS NOT NULL
+      SELECT DISTINCT name FROM (
+        SELECT updated_by AS name FROM scores
+        UNION ALL SELECT changed_by FROM score_history
+        UNION ALL SELECT updated_by FROM division_notes
+        UNION ALL SELECT changed_by FROM leader_changes
+        UNION ALL SELECT created_by FROM depth_chart_roles
+        UNION ALL SELECT created_by FROM depth_chart_writers
+        UNION ALL SELECT updated_by FROM depth_chart_writers
+        UNION ALL SELECT imported_by FROM traffic_imports
+        UNION ALL SELECT created_by FROM writer_notes
+        UNION ALL SELECT created_by FROM ignored_traffic_authors
+        UNION ALL SELECT created_by FROM writer_aliases
+        UNION ALL SELECT created_by FROM sticky_notes
+        UNION ALL SELECT created_by FROM sticky_note_replies
+      ) all_names
+      WHERE name IS NOT NULL AND name != ''
     `;
     const mentioned = extractMentions(body, (knownNameRows as any[]).map((r) => r.name));
     for (const name of mentioned) {
