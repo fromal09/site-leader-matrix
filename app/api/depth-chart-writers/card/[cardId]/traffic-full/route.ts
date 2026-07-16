@@ -15,8 +15,11 @@ export async function GET(
   const { cardId } = await params;
   try {
     const writerRows = await sql`
-      SELECT id, site_id, name, role, traffic_dashboard_name
-      FROM depth_chart_writers WHERE id = ${Number(cardId)}
+      SELECT dcw.id, dcw.site_id, dcw.name, dcw.role, dcw.traffic_dashboard_name,
+        s.division, s.site_name
+      FROM depth_chart_writers dcw
+      JOIN sites s ON s.id = dcw.site_id
+      WHERE dcw.id = ${Number(cardId)}
     `;
     const writer = (writerRows as any[])[0];
     if (!writer) {

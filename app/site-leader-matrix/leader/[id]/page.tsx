@@ -60,7 +60,10 @@ export default function LeaderPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
-      <Link href={SLM_BASE} className="text-xs font-medium text-ink-soft hover:text-navy">
+      <Link
+        href={`${SLM_BASE}?division=${site.division}`}
+        className="text-xs font-medium text-ink-soft hover:text-navy"
+      >
         ← All sites
       </Link>
 
@@ -125,6 +128,7 @@ export default function LeaderPage() {
             label={c.label}
             row={site.scores.find((s) => s.category === c.key)}
             onSaved={load}
+            division={site.division}
           />
         ))}
       </div>

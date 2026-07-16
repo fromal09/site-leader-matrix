@@ -1,11 +1,14 @@
+"use client";
+
+import { Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { slmRubricHref, SLM_BASE } from "@/lib/routes";
 
-export default function SiteLeaderMatrixLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function SubNavInner({ children }: { children: React.ReactNode }) {
+  const searchParams = useSearchParams();
+  const division = searchParams.get("division") ?? "NFL";
+
   return (
     <div>
       <div className="border-b border-rule bg-paper-raised">
@@ -15,12 +18,12 @@ export default function SiteLeaderMatrixLayout({
               All Divisions
             </Link>
             <span className="text-ink-soft">/</span>
-            <Link href={SLM_BASE} className="font-medium text-navy">
+            <Link href={`${SLM_BASE}?division=${division}`} className="font-medium text-navy">
               Site Leader Matrix
             </Link>
           </div>
           <Link
-            href={slmRubricHref()}
+            href={slmRubricHref(undefined, division)}
             className="text-xs font-medium text-ink-soft hover:text-navy"
           >
             Grading Rubric
@@ -29,5 +32,17 @@ export default function SiteLeaderMatrixLayout({
       </div>
       {children}
     </div>
+  );
+}
+
+export default function SiteLeaderMatrixLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense fallback={<div>{children}</div>}>
+      <SubNavInner>{children}</SubNavInner>
+    </Suspense>
   );
 }

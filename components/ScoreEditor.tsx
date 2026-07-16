@@ -13,12 +13,14 @@ export function ScoreEditor({
   label,
   row,
   onSaved,
+  division,
 }: {
   siteId: number;
   category: CategoryKey;
   label: string;
   row: ScoreRow | undefined;
   onSaved: () => void;
+  division?: string;
 }) {
   const { requireAuth } = useAuth();
   const [editing, setEditing] = useState(false);
@@ -59,7 +61,7 @@ export function ScoreEditor({
         </h3>
         <div className="flex items-center gap-2">
           <a
-            href={slmRubricHref(category)}
+            href={slmRubricHref(category, division)}
             className="text-[10px] font-medium text-ink-soft underline decoration-dotted hover:text-navy"
           >
             what does this mean?

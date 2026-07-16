@@ -154,7 +154,10 @@ export default function DepthChartSitePage() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-      <Link href={DC_BASE} className="text-xs font-medium text-ink-soft hover:text-navy">
+      <Link
+        href={`${DC_BASE}?division=${site.division}`}
+        className="text-xs font-medium text-ink-soft hover:text-navy"
+      >
         ← All sites
       </Link>
 

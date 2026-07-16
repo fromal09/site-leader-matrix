@@ -12,6 +12,8 @@ type Writer = {
   site_id: number;
   name: string;
   role: string;
+  division: string;
+  site_name: string;
 };
 
 type SortKey = "pageviews" | "date" | "title";
@@ -89,7 +91,10 @@ export default function WriterTrafficHistoryPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
-      <Link href={DC_BASE} className="text-xs font-medium text-ink-soft hover:text-navy">
+      <Link
+        href={writer ? `${DC_BASE}?division=${writer.division}` : DC_BASE}
+        className="text-xs font-medium text-ink-soft hover:text-navy"
+      >
         ← Site Depth Charts and Performance
       </Link>
 

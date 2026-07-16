@@ -4,8 +4,9 @@ export function slmLeaderHref(id: number | string) {
   return `${SLM_BASE}/leader/${id}`;
 }
 
-export function slmRubricHref(anchor?: string) {
-  return `${SLM_BASE}/rubric${anchor ? `#${anchor}` : ""}`;
+export function slmRubricHref(anchor?: string, division?: string) {
+  const qs = division ? `?division=${division}` : "";
+  return `${SLM_BASE}/rubric${qs}${anchor ? `#${anchor}` : ""}`;
 }
 
 export const DC_BASE = "/site-depth-charts";

@@ -1,12 +1,22 @@
+"use client";
+
+import { Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { SLM_BASE } from "@/lib/routes";
 import { CATEGORIES } from "@/lib/categories";
 import { RUBRIC } from "@/lib/rubric";
 
-export default function RubricPage() {
+function RubricInner() {
+  const searchParams = useSearchParams();
+  const division = searchParams.get("division") ?? "NFL";
+
   return (
     <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
-      <Link href={SLM_BASE} className="text-xs font-medium text-ink-soft hover:text-navy">
+      <Link
+        href={`${SLM_BASE}?division=${division}`}
+        className="text-xs font-medium text-ink-soft hover:text-navy"
+      >
         ← All sites
       </Link>
 
@@ -71,5 +81,19 @@ export default function RubricPage() {
         })}
       </div>
     </main>
+  );
+}
+
+export default function RubricPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
+          <p className="text-sm text-ink-soft">Loading…</p>
+        </main>
+      }
+    >
+      <RubricInner />
+    </Suspense>
   );
 }
