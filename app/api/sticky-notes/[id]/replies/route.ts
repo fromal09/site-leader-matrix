@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { extractMentions } from "@/lib/mentions";
 
 export async function GET(
   _req: NextRequest,
@@ -43,7 +44,23 @@ export async function POST(
       VALUES (${Number(id)}, ${body.trim()}, ${session.name})
       RETURNING id, note_id, body, created_by, created_at
     `;
-    return NextResponse.json({ reply: (rows as any[])[0] });
+    const reply = (rows as any[])[0];
+
+    const knownNameRows = await sql`
+      SELECT DISTINCT created_by AS name FROM sticky_notes WHERE created_by IS NOT NULL
+      UNION
+      SELECT DISTINCT created_by AS name FROM sticky_note_replies WHERE created_by IS NOT NULL
+    `;
+    const mentioned = extractMentions(body, (knownNameRows as any[]).map((r) => r.name));
+    for (const name of mentioned) {
+      if (name.toLowerCase() === session.name.toLowerCase()) continue;
+      await sql`
+        INSERT INTO sticky_note_mentions (reply_id, mentioned_name, created_by)
+        VALUES (${reply.id}, ${name}, ${session.name})
+      `;
+    }
+
+    return NextResponse.json({ reply });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

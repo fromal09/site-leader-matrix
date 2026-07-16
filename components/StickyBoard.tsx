@@ -8,6 +8,8 @@ import {
   STICKY_COLORS,
   STICKY_COLOR_HEX,
 } from "@/lib/stickyNotes";
+import { trailingMentionQuery, applyMention } from "@/lib/mentions";
+import { MentionDropdown, useKnownNames } from "./MentionDropdown";
 
 function clamp(n: number, min = 0, max = 92) {
   return Math.min(max, Math.max(min, n));
@@ -30,6 +32,8 @@ function ComposeSticky({
 }) {
   const [text, setText] = useState("");
   const [color, setColor] = useState<StickyColor>("yellow");
+  const knownNames = useKnownNames();
+  const mentionQuery = trailingMentionQuery(text);
 
   function submit() {
     if (!text.trim()) {
@@ -62,6 +66,13 @@ function ComposeSticky({
         rows={3}
         className="sticky-note-textarea"
       />
+      {mentionQuery !== null && (
+        <MentionDropdown
+          query={mentionQuery}
+          names={knownNames}
+          onPick={(name) => setText((t) => applyMention(t, name))}
+        />
+      )}
       <div className="mt-1.5 flex items-center gap-1.5">
         {STICKY_COLORS.map((c) => (
           <button
@@ -102,6 +113,8 @@ function ReplyThread({
   const [replies, setReplies] = useState<StickyNoteReply[] | null>(null);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const knownNames = useKnownNames();
+  const mentionQuery = trailingMentionQuery(draft);
 
   useEffect(() => {
     fetch(`/api/sticky-notes/${noteId}/replies`)
@@ -170,6 +183,13 @@ function ReplyThread({
           ↵
         </button>
       </div>
+      {mentionQuery !== null && (
+        <MentionDropdown
+          query={mentionQuery}
+          names={knownNames}
+          onPick={(name) => setDraft((t) => applyMention(t, name))}
+        />
+      )}
     </div>
   );
 }

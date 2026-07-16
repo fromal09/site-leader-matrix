@@ -236,6 +236,18 @@ CREATE TABLE IF NOT EXISTS sticky_note_replies (
 
 CREATE INDEX IF NOT EXISTS idx_sticky_note_replies_note ON sticky_note_replies(note_id);
 
+CREATE TABLE IF NOT EXISTS sticky_note_mentions (
+  id SERIAL PRIMARY KEY,
+  note_id INT REFERENCES sticky_notes(id) ON DELETE CASCADE,
+  reply_id INT REFERENCES sticky_note_replies(id) ON DELETE CASCADE,
+  mentioned_name TEXT NOT NULL,
+  created_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  read_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_sticky_note_mentions_name ON sticky_note_mentions(mentioned_name);
+
 CREATE INDEX IF NOT EXISTS idx_sticky_notes_subject ON sticky_notes(subject_type, subject_id);
 
 -- Post-it style notes. Fully generic: subject_type + subject_id identify
