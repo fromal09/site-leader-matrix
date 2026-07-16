@@ -5,6 +5,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { LoginModal } from "@/components/LoginModal";
 import { Gate } from "@/components/Gate";
 import { Header } from "@/components/Header";
+import { GlobalStickyLayer } from "@/components/GlobalStickyLayer";
 
 const oswald = Oswald({
   variable: "--font-oswald",
@@ -48,8 +49,10 @@ export default function RootLayout({
       <body className="min-h-full">
         <AuthProvider>
           <Gate>
-            <Header />
-            {children}
+            <GlobalStickyLayer>
+              <Header />
+              {children}
+            </GlobalStickyLayer>
           </Gate>
           <LoginModal />
         </AuthProvider>

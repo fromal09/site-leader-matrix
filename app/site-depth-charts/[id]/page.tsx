@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { WriterCard } from "@/components/WriterCard";
 import { useStickyNotes } from "@/lib/stickyNotes";
-import { StickyBoard } from "@/components/StickyBoard";
 import { SiteCallouts } from "@/components/SiteCallouts";
 import { CondensedRoster } from "@/components/CondensedRoster";
 import { SiteHistoryChart } from "@/components/SiteHistoryChart";
@@ -59,12 +58,6 @@ export default function DepthChartSitePage() {
   const [statsPeriodLabel, setStatsPeriodLabel] = useState<string | null>(null);
   const [statsPeriodKey, setStatsPeriodKey] = useState<string | null>(null);
   const [sitePeriods, setSitePeriods] = useState<{ key: string; label: string }[]>([]);
-  const {
-    notesFor: pageNotesFor,
-    addNote: addPageNote,
-    removeNote: removePageNote,
-    updatePosition: updatePageNotePosition,
-  } = useStickyNotes("page", site ? [`roster-${site.id}`] : []);
   const {
     allNotesFor: writerNotesFor,
     addNote: addWriterNote,
@@ -233,12 +226,7 @@ export default function DepthChartSitePage() {
           <WriterHistoryChart writers={writers} />
         </div>
       ) : (
-        <StickyBoard
-          notes={pageNotesFor(`roster-${site.id}`)}
-          onAdd={(body, color, x, y) => addPageNote(`roster-${site.id}`, body, color, null, x, y)}
-          onRemove={removePageNote}
-          onUpdatePosition={updatePageNotePosition}
-        >
+        <>
           {siteTotals && (
             <div className="card relative mb-6 rounded-md p-4">
               <div className="mb-2 flex items-baseline justify-between">
@@ -420,7 +408,7 @@ export default function DepthChartSitePage() {
               </div>
             ))}
           </div>
-        </StickyBoard>
+        </>
       )}
     </main>
   );

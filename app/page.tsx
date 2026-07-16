@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DIVISIONS } from "@/lib/divisions";
 import { formatCompactNumber, formatPercent } from "@/lib/trafficFormat";
-import { useStickyNotes } from "@/lib/stickyNotes";
-import { StickyBoard } from "@/components/StickyBoard";
 import { useClickOrDoubleClick } from "@/lib/useClickOrDoubleClick";
 
 type DivisionMetrics = {
@@ -91,9 +89,6 @@ export default function HomePage() {
   const [byDivision, setByDivision] = useState<Record<string, DivisionMetrics>>({});
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  // One shared canvas for the whole page — notes aren't tied to a specific
-  // division, they just live wherever you drop them.
-  const { notesFor, addNote, removeNote, updatePosition } = useStickyNotes("page", ["home"]);
 
   useEffect(() => {
     fetch("/api/depth-chart-writers/all-sites-summary")
@@ -106,15 +101,9 @@ export default function HomePage() {
   }, []);
 
   return (
-    <StickyBoard
-      notes={notesFor("home")}
-      onAdd={(body, color, x, y) => addNote("home", body, color, null, x, y)}
-      onRemove={removeNote}
-      onUpdatePosition={updatePosition}
-    >
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-        <div className="mb-8">
-          <p className="font-data text-xs uppercase tracking-widest text-ink-soft">
+    <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+      <div className="mb-8">
+        <p className="font-data text-xs uppercase tracking-widest text-ink-soft">
             FanSided Network
           </p>
           <h1 className="font-display text-3xl font-bold text-navy sm:text-4xl">
@@ -163,6 +152,5 @@ export default function HomePage() {
           )}
         </div>
       </main>
-    </StickyBoard>
   );
 }
