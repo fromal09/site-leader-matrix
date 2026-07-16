@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
     const rows = await sql`
       SELECT
         m.id, m.mentioned_name, m.created_by, m.created_at, m.note_id, m.reply_id,
+        COALESCE(m.note_id, r.note_id) AS effective_note_id,
         COALESCE(sn.subject_type, sn2.subject_type) AS subject_type,
         COALESCE(sn.subject_id, sn2.subject_id) AS subject_id,
         COALESCE(sn.body, r.body) AS excerpt

@@ -10,6 +10,7 @@ type Mention = {
   created_at: string;
   subject_type: string | null;
   subject_id: string | null;
+  effective_note_id: number | null;
   excerpt: string | null;
 };
 
@@ -50,7 +51,10 @@ export function MentionBadge({ name }: { name: string }) {
     setMentions((prev) => prev.filter((x) => x.id !== m.id));
     setOpen(false);
     if (m.subject_type === "page" && m.subject_id) {
-      router.push(m.subject_id);
+      const [path, existingQs] = m.subject_id.split("?");
+      const params = new URLSearchParams(existingQs ?? "");
+      if (m.effective_note_id) params.set("highlightNote", String(m.effective_note_id));
+      router.push(`${path}?${params.toString()}`);
     }
   }
 

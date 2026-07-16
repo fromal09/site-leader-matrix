@@ -185,6 +185,21 @@ button {
   z-index: 30;
 }
 
+@keyframes sticky-note-flash {
+  0%, 100% {
+    box-shadow: 3px 4px 8px rgba(0, 0, 0, 0.18);
+    outline: 2px solid transparent;
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(178, 58, 46, 0.55), 3px 4px 8px rgba(0, 0, 0, 0.18);
+    outline: 2px solid var(--grease-red);
+  }
+}
+.sticky-note-flash {
+  animation: sticky-note-flash 0.9s ease-in-out 2;
+  z-index: 35;
+}
+
 .sticky-note-reply-toggle {
   margin-top: 6px;
   display: block;

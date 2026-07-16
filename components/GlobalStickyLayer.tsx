@@ -8,9 +8,14 @@ import { StickyBoard } from "./StickyBoard";
 function GlobalStickyLayerInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const qs = searchParams.toString();
-  // Query params matter here — e.g. /site-leader-matrix?division=NFL and
-  // ?division=NBA are the same path but should not share a corkboard.
+  const highlightNoteId = searchParams.get("highlightNote");
+
+  // highlightNote is a one-time navigation signal, not part of what
+  // identifies this page's corkboard — excluding it keeps the subject id
+  // stable so it still matches the notes that already exist here.
+  const boardParams = new URLSearchParams(searchParams);
+  boardParams.delete("highlightNote");
+  const qs = boardParams.toString();
   const subjectId = qs ? `${pathname}?${qs}` : pathname;
 
   const { notesFor, addNote, removeNote, updatePosition, bumpReplyCount } = useStickyNotes(
@@ -25,6 +30,7 @@ function GlobalStickyLayerInner({ children }: { children: React.ReactNode }) {
       onRemove={removeNote}
       onUpdatePosition={updatePosition}
       onBumpReplyCount={bumpReplyCount}
+      highlightNoteId={highlightNoteId ? Number(highlightNoteId) : null}
     >
       {children}
     </StickyBoard>

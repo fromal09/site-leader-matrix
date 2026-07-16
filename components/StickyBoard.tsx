@@ -211,6 +211,7 @@ export function StickyBoard({
   onRemove,
   onUpdatePosition,
   onBumpReplyCount,
+  highlightNoteId,
   children,
 }: {
   notes: StickyNoteRecord[];
@@ -218,12 +219,31 @@ export function StickyBoard({
   onRemove: (id: number) => void;
   onUpdatePosition: (id: number, posX: number, posY: number) => void;
   onBumpReplyCount?: (id: number, delta: number) => void;
+  highlightNoteId?: number | null;
   children: React.ReactNode;
 }) {
   const boardRef = useRef<HTMLDivElement>(null);
   const [composeAt, setComposeAt] = useState<{ x: number; y: number } | null>(null);
   const [dragState, setDragState] = useState<{ id: number; x: number; y: number } | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [flashId, setFlashId] = useState<number | null>(null);
+  const highlightedRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!highlightNoteId) return;
+    if (highlightedRef.current === highlightNoteId) return; // already handled this one
+    const target = notes.find((n) => n.id === highlightNoteId);
+    if (!target) return; // notes still loading — effect re-runs when notes changes
+
+    highlightedRef.current = highlightNoteId;
+    setExpandedId(highlightNoteId);
+    const el = document.querySelector(`[data-note-id="${highlightNoteId}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      setFlashId(highlightNoteId);
+      setTimeout(() => setFlashId(null), 2500);
+    }
+  }, [highlightNoteId, notes]);
 
   function handleDoubleClick(e: React.MouseEvent) {
     const target = e.target as HTMLElement;
@@ -282,7 +302,8 @@ export function StickyBoard({
         return (
           <div
             key={note.id}
-            className={`sticky-note sticky-note--${note.color}${expanded ? " sticky-note-expanded" : ""}`}
+            data-note-id={note.id}
+            className={`sticky-note sticky-note--${note.color}${expanded ? " sticky-note-expanded" : ""}${flashId === note.id ? " sticky-note-flash" : ""}`}
             style={{ left: `${x}%`, top: `${y}%`, cursor: dragging ? "grabbing" : "grab" }}
             onPointerDown={(e) => startDrag(note, e)}
           >
