@@ -6,6 +6,7 @@ import {
   RadarChart,
   PolarGrid,
   PolarAngleAxis,
+  PolarRadiusAxis,
   ResponsiveContainer,
 } from "recharts";
 import { CATEGORIES } from "@/lib/categories";
@@ -83,6 +84,7 @@ export function RadarCard({
               dataKey="subject"
               tick={{ fill: "var(--ink-soft)", fontSize: 9 }}
             />
+            <PolarRadiusAxis angle={90} domain={[0, 10]} tick={false} axisLine={false} />
             <Radar
               dataKey="score"
               stroke={color}
