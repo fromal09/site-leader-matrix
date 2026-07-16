@@ -10,7 +10,7 @@ import {
 } from "recharts";
 import { CATEGORIES } from "@/lib/categories";
 import { gradeBand, BAND_COLORS } from "@/lib/grades";
-import { GradeStamp } from "./GradeStamp";
+import { teamColor } from "@/lib/nflTeamColors";
 import type { Site } from "@/lib/types";
 
 function VertexDot(props: any) {
@@ -33,12 +33,15 @@ export function DivisionAverageRadar({ sites }: { sites: Site[] }) {
   });
 
   const standouts = CATEGORIES.map((c) => {
-    let best: { site: Site; score: number } | null = null;
-    for (const s of sites) {
-      const sc = s.scores.find((row) => row.category === c.key)?.score;
-      if (sc !== undefined && (!best || sc > best.score)) best = { site: s, score: sc };
-    }
-    return { category: c, best };
+    const ranked = sites
+      .map((s) => {
+        const sc = s.scores.find((row) => row.category === c.key)?.score;
+        return sc !== undefined ? { site: s, score: sc } : null;
+      })
+      .filter((x): x is { site: Site; score: number } => x !== null)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+    return { category: c, top: ranked };
   });
 
   return (
@@ -78,26 +81,46 @@ export function DivisionAverageRadar({ sites }: { sites: Site[] }) {
           </ResponsiveContainer>
         </div>
 
-        <div className="flex-1 space-y-1.5">
+        <div className="flex-1 space-y-2.5">
           <p className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
             Standouts
           </p>
-          {standouts.map(({ category, best }) => (
-            <div
-              key={category.key}
-              className="flex items-center justify-between gap-2 rounded border border-rule-strong bg-white px-2.5 py-1.5"
-            >
-              <div className="min-w-0">
-                <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            {standouts.map(({ category, top }) => (
+              <div key={category.key}>
+                <div className="mb-1 font-data text-[10px] uppercase tracking-wide text-ink-soft">
                   {category.label}
                 </div>
-                <div className="truncate text-sm font-medium text-navy">
-                  {best?.site.site_name ?? "—"}
+                <div className="space-y-1">
+                  {top.length === 0 ? (
+                    <div className="text-xs italic text-ink-soft">—</div>
+                  ) : (
+                    top.map(({ site, score }, i) => {
+                      const colors = teamColor(site.site_topic);
+                      return (
+                        <div
+                          key={site.id}
+                          className="flex items-center gap-1.5 rounded border bg-white py-1 pl-2 pr-1.5"
+                          style={{ borderLeftWidth: 3, borderLeftColor: colors.primary, borderColor: "var(--rule-strong)" }}
+                        >
+                          <span className="font-data text-[10px] text-ink-soft">{i + 1}</span>
+                          <span className="min-w-0 flex-1 truncate text-xs font-medium text-navy">
+                            {site.site_name}
+                          </span>
+                          <span
+                            className="font-data text-[11px] font-semibold"
+                            style={{ color: BAND_COLORS[gradeBand(score)] }}
+                          >
+                            {score.toFixed(1)}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
-              {best && <GradeStamp avg={best.score} size="sm" />}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
