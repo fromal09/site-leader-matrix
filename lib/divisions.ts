@@ -13,7 +13,7 @@ export const DIVISIONS: Division[] = [
   { key: "NCAA", name: "NCAA", tagline: "", status: "available" },
   { key: "MLB", name: "MLB", tagline: "", status: "available" },
   { key: "NHL", name: "NHL", tagline: "", status: "available" },
-  { key: "Soccer", name: "Soccer", tagline: "Coming soon", status: "coming-soon" },
+  { key: "Soccer", name: "Soccer", tagline: "", status: "available" },
   { key: "Entertainment", name: "Entertainment", tagline: "Coming soon", status: "coming-soon" },
   { key: "Locals", name: "Locals", tagline: "", status: "available" },
 ];

@@ -9,6 +9,7 @@ import mlbData from "./mlb-seed-data.json";
 import nhlData from "./nhl-seed-data.json";
 import ncaaData from "./ncaa-seed-data.json";
 import localsData from "./locals-seed-data.json";
+import soccerData from "./soccer-seed-data.json";
 import { SCHEMA_SQL } from "../lib/schema";
 import { splitSqlStatements } from "../lib/sqlUtils";
 
@@ -27,6 +28,7 @@ const DIVISIONS: { division: string; data: any[] }[] = [
   { division: "NHL", data: nhlData as any[] },
   { division: "NCAA", data: ncaaData as any[] },
   { division: "Locals", data: localsData as any[] },
+  { division: "Soccer", data: soccerData as any[] },
 ];
 
 async function main() {
