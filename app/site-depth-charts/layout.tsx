@@ -1,11 +1,14 @@
+"use client";
+
+import { Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { DC_BASE } from "@/lib/routes";
 
-export default function SiteDepthChartsLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function SubNavInner({ children }: { children: React.ReactNode }) {
+  const searchParams = useSearchParams();
+  const division = searchParams.get("division") ?? "NFL";
+
   return (
     <div>
       <div className="border-b border-rule bg-paper-raised">
@@ -21,7 +24,7 @@ export default function SiteDepthChartsLayout({
           </div>
           <div className="flex items-center gap-4">
             <Link
-              href={`${DC_BASE}/division-resources`}
+              href={`${DC_BASE}/division-resources?division=${division}`}
               className="text-xs font-medium text-ink-soft hover:text-navy"
             >
               Division Resources
@@ -31,5 +34,17 @@ export default function SiteDepthChartsLayout({
       </div>
       {children}
     </div>
+  );
+}
+
+export default function SiteDepthChartsLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense fallback={<div>{children}</div>}>
+      <SubNavInner>{children}</SubNavInner>
+    </Suspense>
   );
 }

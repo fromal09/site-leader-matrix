@@ -10,16 +10,31 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   }
 
-  const role = req.nextUrl.searchParams.get("role");
-  if (!role) {
-    return NextResponse.json({ error: "Missing role." }, { status: 400 });
+  // Accepts either ?role=X (legacy, single) or ?roles=X,Y (multi). At least
+  // one role is required. Division is OPTIONAL: provide it to scope to one
+  // division (e.g. the Division Resources page), or omit it entirely to
+  // aggregate a person's work across every division they touch (the
+  // Network Writers and FTE pages).
+  const rolesParam = req.nextUrl.searchParams.get("roles") ?? req.nextUrl.searchParams.get("role");
+  if (!rolesParam) {
+    return NextResponse.json({ error: "Missing role(s)." }, { status: 400 });
   }
+  const roles = rolesParam.split(",").map((r) => r.trim()).filter(Boolean);
+  const division = req.nextUrl.searchParams.get("division"); // null = all divisions
   const requestedPeriod = req.nextUrl.searchParams.get("period");
 
   try {
-    const periodRows = await sql`
-      SELECT DISTINCT period_key, period_label FROM traffic_imports ORDER BY period_key DESC
-    `;
+    const periodRows = division
+      ? await sql`
+          SELECT DISTINCT ti.period_key, ti.period_label
+          FROM traffic_imports ti
+          JOIN sites s ON s.id = ti.site_id
+          WHERE s.division = ${division}
+          ORDER BY ti.period_key DESC
+        `
+      : await sql`
+          SELECT DISTINCT period_key, period_label FROM traffic_imports ORDER BY period_key DESC
+        `;
     const periods = periodRows as any[];
     if (periods.length === 0) {
       return NextResponse.json({ writers: [], selectedPeriod: null });
@@ -31,18 +46,30 @@ export async function GET(req: NextRequest) {
     const selectedPeriodLabel =
       periods.find((p) => p.period_key === selectedPeriodKey)?.period_label ?? selectedPeriodKey;
 
-    // Every writer CARD tagged with this exact role, on whichever sites they
-    // hold it — a person with this role on some sites and a different role
-    // (e.g. Site Expert) elsewhere only pulls in the cards that match.
-    const writerCards = await sql`
-      SELECT dcw.id, dcw.site_id, dcw.name, dcw.traffic_dashboard_name, s.site_name,
-        COALESCE(array_agg(wa.alias) FILTER (WHERE wa.alias IS NOT NULL), '{}') AS aliases
-      FROM depth_chart_writers dcw
-      JOIN sites s ON s.id = dcw.site_id
-      LEFT JOIN writer_aliases wa ON wa.writer_id = dcw.id
-      WHERE dcw.role = ${role} AND dcw.archived = FALSE
-      GROUP BY dcw.id, s.site_name
-    `;
+    // Every writer CARD tagged with one of these roles, on whichever sites
+    // they hold it — a person with this role on some sites and a different
+    // role elsewhere only pulls in the cards that match.
+    const writerCards = division
+      ? await sql`
+          SELECT dcw.id, dcw.site_id, dcw.name, dcw.role, dcw.traffic_dashboard_name,
+            s.site_name, s.division,
+            COALESCE(array_agg(wa.alias) FILTER (WHERE wa.alias IS NOT NULL), '{}') AS aliases
+          FROM depth_chart_writers dcw
+          JOIN sites s ON s.id = dcw.site_id
+          LEFT JOIN writer_aliases wa ON wa.writer_id = dcw.id
+          WHERE dcw.role = ANY(${roles}::text[]) AND dcw.archived = FALSE AND s.division = ${division}
+          GROUP BY dcw.id, s.site_name, s.division
+        `
+      : await sql`
+          SELECT dcw.id, dcw.site_id, dcw.name, dcw.role, dcw.traffic_dashboard_name,
+            s.site_name, s.division,
+            COALESCE(array_agg(wa.alias) FILTER (WHERE wa.alias IS NOT NULL), '{}') AS aliases
+          FROM depth_chart_writers dcw
+          JOIN sites s ON s.id = dcw.site_id
+          LEFT JOIN writer_aliases wa ON wa.writer_id = dcw.id
+          WHERE dcw.role = ANY(${roles}::text[]) AND dcw.archived = FALSE
+          GROUP BY dcw.id, s.site_name, s.division
+        `;
     const cards = writerCards as any[];
     if (cards.length === 0) {
       return NextResponse.json({
@@ -72,6 +99,8 @@ export async function GET(req: NextRequest) {
     type SiteBreakdown = {
       siteId: number;
       siteName: string;
+      division: string;
+      role: string;
       articlesPublished: number;
       totalPageviews: number;
       pvPerPublishedArticle: number | null;
@@ -94,6 +123,8 @@ export async function GET(req: NextRequest) {
       const breakdown: SiteBreakdown = {
         siteId: card.site_id,
         siteName: card.site_name,
+        division: card.division,
+        role: card.role,
         articlesPublished: publishedRows.length,
         totalPageviews,
         pvPerPublishedArticle:
@@ -133,9 +164,12 @@ export async function GET(req: NextRequest) {
         .filter((x) => x.weightedAvgTimeOnPage !== null)
         .map((x) => ({ value: x.weightedAvgTimeOnPage, pageviews: x.totalPageviews }));
 
+      const divisions = Array.from(new Set(sites.map((s) => s.division))).sort();
+
       return {
         name,
         siteCount: sites.length,
+        divisions,
         articlesPublished,
         totalPageviews,
         pvPerPublishedArticle: articlesPublished > 0 ? publishedPageviews / articlesPublished : null,

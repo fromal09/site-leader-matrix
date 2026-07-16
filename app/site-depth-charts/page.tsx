@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { dcSiteHref } from "@/lib/routes";
+import { dcSiteHref, DC_BASE } from "@/lib/routes";
 import { formatCompactNumber, formatDuration, formatPercent } from "@/lib/trafficFormat";
 import { teamColor } from "@/lib/nflTeamColors";
 import { WriterLeaderboard } from "@/components/WriterLeaderboard";
@@ -148,6 +148,12 @@ function DepthChartsHomeInner() {
           <p className="mt-1 max-w-2xl text-sm text-ink-soft">
             Click into any site to build out its writer roster.
           </p>
+          <Link
+            href={`${DC_BASE}/division-resources?division=${division}`}
+            className="mt-2 inline-block rounded border border-navy px-3 py-1.5 text-xs font-medium text-navy hover:bg-navy hover:text-white"
+          >
+            View {division} Division Resources (Rovers &amp; Staff Writers) →
+          </Link>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {availableDivisions.length > 1 && (

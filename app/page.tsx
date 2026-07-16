@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DIVISIONS } from "@/lib/divisions";
 import { formatCompactNumber, formatPercent } from "@/lib/trafficFormat";
@@ -131,6 +132,20 @@ export default function HomePage() {
               Traffic metrics below are for {periodLabel}
             </p>
           )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              href="/network-writers"
+              className="rounded border border-navy px-3 py-1.5 text-xs font-medium text-navy hover:bg-navy hover:text-white"
+            >
+              Network Writers (cross-division) →
+            </Link>
+            <Link
+              href="/fte"
+              className="rounded border border-navy px-3 py-1.5 text-xs font-medium text-navy hover:bg-navy hover:text-white"
+            >
+              FTE Report →
+            </Link>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

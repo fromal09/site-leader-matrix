@@ -30,6 +30,18 @@ export function Header() {
                 Traffic Data
               </Link>
               <Link
+                href="/network-writers"
+                className="text-xs font-medium text-ink-soft hover:text-navy"
+              >
+                Network Writers
+              </Link>
+              <Link
+                href="/fte"
+                className="text-xs font-medium text-ink-soft hover:text-navy"
+              >
+                FTE Report
+              </Link>
+              <Link
                 href="/admin"
                 className="text-xs font-medium text-ink-soft hover:text-navy"
               >
