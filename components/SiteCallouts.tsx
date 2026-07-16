@@ -33,7 +33,7 @@ function CalloutRow({
         <p className="mt-0.5 text-sm text-ink">
           {writers.map((w, i) => (
             <span key={w.id}>
-              <Link href={writerTrafficHref(w.id)} className="text-navy hover:underline">
+              <Link href={writerTrafficHref(w.id)} className="uppercase text-navy hover:underline">
                 {w.name}
               </Link>
               {i < writers.length - 1 ? ", " : ""}

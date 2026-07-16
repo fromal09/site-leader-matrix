@@ -161,6 +161,16 @@ export async function GET(req: NextRequest) {
       acc.siteCount += 1;
     }
 
+    const lastUpdatedRows = await sql`
+      SELECT s.division, MAX(ti.imported_at) AS last_updated
+      FROM traffic_imports ti
+      JOIN sites s ON s.id = ti.site_id
+      GROUP BY s.division
+    `;
+    const lastUpdatedByDivision = new Map<string, string>(
+      (lastUpdatedRows as any[]).map((r) => [r.division, r.last_updated])
+    );
+
     const byDivision: Record<
       string,
       {
@@ -172,6 +182,7 @@ export async function GET(req: NextRequest) {
         weightedAvgScrollDepth: number | null;
         weightedAvgTimeOnPage: number | null;
         pvPerPublishedArticle: number | null;
+        lastUpdatedAt: string | null;
       }
     > = {};
     for (const [divKey, acc] of byDivisionAccum) {
@@ -185,6 +196,7 @@ export async function GET(req: NextRequest) {
         weightedAvgTimeOnPage: acc.timeDenom > 0 ? acc.timeWeightedSum / acc.timeDenom : null,
         pvPerPublishedArticle:
           acc.articlesPublished > 0 ? acc.publishedPageviews / acc.articlesPublished : null,
+        lastUpdatedAt: lastUpdatedByDivision.get(divKey) ?? null,
       };
     }
 

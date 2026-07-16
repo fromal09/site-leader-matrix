@@ -168,7 +168,7 @@ export function WriterHistoryChart({ writers }: { writers: DepthChartWriter[] })
             <option value="">{slot === 0 ? "Choose a writer…" : "Compare with…"}</option>
             {writers.map((w) => (
               <option key={w.id} value={w.id}>
-                {w.name}
+                {w.name.toUpperCase()}
               </option>
             ))}
           </select>
@@ -232,13 +232,13 @@ export function WriterHistoryChart({ writers }: { writers: DepthChartWriter[] })
                 <Tooltip
                   formatter={(v: any, seriesKey: any) => {
                     const w = data.find((d) => `w${d.writerId}` === seriesKey);
-                    return [metricDef.format(Number(v)), w?.name ?? seriesKey];
+                    return [metricDef.format(Number(v)), (w?.name ?? String(seriesKey)).toUpperCase()];
                   }}
                 />
                 <Legend
                   formatter={(value: string) => {
                     const w = data.find((d) => `w${d.writerId}` === value);
-                    return w?.name ?? value;
+                    return (w?.name ?? value).toUpperCase();
                   }}
                 />
                 {data.map((w, i) => (
@@ -272,14 +272,14 @@ export function WriterHistoryChart({ writers }: { writers: DepthChartWriter[] })
                 formatter={(v: any, seriesKey: any) => {
                   const [wKey, year] = String(seriesKey).split("::");
                   const w = data.find((d) => `w${d.writerId}` === wKey);
-                  return [metricDef.format(Number(v)), `${w?.name ?? wKey} (${year})`];
+                  return [metricDef.format(Number(v)), `${(w?.name ?? wKey).toUpperCase()} (${year})`];
                 }}
               />
               <Legend
                 formatter={(value: string) => {
                   const [wKey, year] = value.split("::");
                   const w = data.find((d) => `w${d.writerId}` === wKey);
-                  return `${w?.name ?? wKey} — ${year}`;
+                  return `${(w?.name ?? wKey).toUpperCase()} — ${year}`;
                 }}
               />
               {seriesList.map((s) => (

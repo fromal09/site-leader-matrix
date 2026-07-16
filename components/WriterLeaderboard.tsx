@@ -112,7 +112,7 @@ export function WriterLeaderboard({ division, period }: { division: string; peri
                 <div className="min-w-0 flex-1">
                   <Link
                     href={writerTrafficHref(w.writerId)}
-                    className="block truncate font-medium text-navy hover:underline"
+                    className="block truncate font-medium uppercase text-navy hover:underline"
                   >
                     {w.name}
                   </Link>

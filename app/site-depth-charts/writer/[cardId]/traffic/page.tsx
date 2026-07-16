@@ -103,7 +103,7 @@ export default function WriterTrafficHistoryPage() {
             <p className="font-data text-xs uppercase tracking-widest text-ink-soft">
               Full Article History
             </p>
-            <h1 className="font-display text-3xl font-bold text-navy">{writer.name}</h1>
+            <h1 className="font-display text-3xl font-bold uppercase text-navy">{writer.name}</h1>
             <span
               className="mt-1 inline-block rounded-full px-2 py-0.5 font-data text-[11px] uppercase tracking-wide"
               style={{

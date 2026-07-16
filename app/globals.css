@@ -153,6 +153,28 @@ button {
 .sticky-note--blue { background: #c9e4f7; }
 .sticky-note--green { background: #d7ecc7; }
 
+.highlighter-mark {
+  position: relative;
+  padding: 1px 6px;
+  display: inline-block;
+  white-space: nowrap;
+}
+.highlighter-mark::before {
+  content: "";
+  position: absolute;
+  inset: -1px -4px;
+  z-index: -1;
+  border-radius: 40% 60% 55% 45% / 45% 55% 40% 60%;
+}
+.highlighter-mark--green::before {
+  background: rgba(110, 195, 100, 0.55);
+  transform: rotate(-1.5deg);
+}
+.highlighter-mark--red::before {
+  background: rgba(235, 100, 90, 0.5);
+  transform: rotate(1.4deg);
+}
+
 .sticky-note-compose {
   cursor: default;
 }

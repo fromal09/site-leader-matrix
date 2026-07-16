@@ -6,6 +6,7 @@ import { LoginModal } from "@/components/LoginModal";
 import { Gate } from "@/components/Gate";
 import { Header } from "@/components/Header";
 import { GlobalStickyLayer } from "@/components/GlobalStickyLayer";
+import { NotebookSpiral } from "@/components/NotebookSpiral";
 
 const oswald = Oswald({
   variable: "--font-oswald",
@@ -46,7 +47,8 @@ export default function RootLayout({
       lang="en"
       className={`${oswald.variable} ${plexSans.variable} ${plexMono.variable} ${caveat.variable} h-full`}
     >
-      <body className="min-h-full">
+      <body className="min-h-full pl-8">
+        <NotebookSpiral />
         <AuthProvider>
           <Gate>
             <GlobalStickyLayer>

@@ -286,7 +286,7 @@ export function WriterCard({
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="font-display text-lg font-semibold text-navy">
+            <div className="font-display text-lg font-semibold uppercase text-navy">
               {writer.name}
             </div>
             <span

@@ -30,7 +30,7 @@ export function CondensedRoster({
             const s = quickStats[w.id];
             return (
               <tr key={w.id} className="border-t border-rule">
-                <td className="px-3 py-1.5 font-medium text-ink">{w.name}</td>
+                <td className="px-3 py-1.5 font-medium uppercase text-ink">{w.name}</td>
                 <td className="px-3 py-1.5 font-data text-xs text-ink-soft">{w.role}</td>
                 <td className="px-3 py-1.5 text-right font-data">
                   {s ? s.articlesPublished.toLocaleString() : "—"}

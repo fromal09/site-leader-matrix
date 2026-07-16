@@ -14,6 +14,7 @@ type DivisionMetrics = {
   weightedAvgScrollDepth: number | null;
   weightedAvgTimeOnPage: number | null;
   pvPerPublishedArticle: number | null;
+  lastUpdatedAt: string | null;
 };
 
 function DivisionCard({
@@ -78,6 +79,16 @@ function DivisionCard({
         <div className="mt-2 border-t border-rule pt-2 text-[10px] italic text-ink-soft">
           No traffic data yet
         </div>
+      )}
+
+      {metrics?.lastUpdatedAt && (
+        <p className="mt-1.5 font-data text-[10px] text-ink-soft">
+          Updated{" "}
+          {new Date(metrics.lastUpdatedAt).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          })}
+        </p>
       )}
 
       <span className="mt-3 text-xs font-medium text-navy group-hover:underline">Open →</span>

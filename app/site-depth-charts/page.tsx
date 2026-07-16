@@ -9,6 +9,8 @@ import { teamColor } from "@/lib/nflTeamColors";
 import { WriterLeaderboard } from "@/components/WriterLeaderboard";
 import { StatTile } from "@/components/StatTile";
 import { DIVISIONS } from "@/lib/divisions";
+import { rankAmong } from "@/lib/rankColor";
+import { HighlightValue } from "@/components/HighlightValue";
 import type { Site } from "@/lib/types";
 
 type SiteSummary = {
@@ -270,7 +272,7 @@ function DepthChartsHomeInner() {
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
             {viewMode === "table" ? (
-              <div className="overflow-x-auto">
+              <div className="card overflow-x-auto rounded-md p-4" style={{ backgroundColor: "white" }}>
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-rule-strong font-data text-[10px] uppercase tracking-wide text-ink-soft">
@@ -303,27 +305,73 @@ function DepthChartsHomeInner() {
                             <div className="text-xs text-ink-soft">{site.site_topic}</div>
                           </td>
                           <td className="py-2 pr-4 text-right font-data">
-                            {s ? s.articlesPublished : "—"}
+                            {s ? (
+                              <HighlightValue
+                                rank={rankAmong(site.id, (x: SiteSummary) => x.articlesPublished, summaries)}
+                              >
+                                {s.articlesPublished}
+                              </HighlightValue>
+                            ) : (
+                              "—"
+                            )}
                           </td>
                           <td className="py-2 pr-4 text-right font-data">
                             {s ? s.authorsPublished : "—"}
                           </td>
                           <td className="py-2 pr-4 text-right font-data">
-                            {s ? formatCompactNumber(s.totalPageviews) : "—"}
+                            {s ? (
+                              <HighlightValue
+                                rank={rankAmong(site.id, (x: SiteSummary) => x.totalPageviews, summaries)}
+                              >
+                                {formatCompactNumber(s.totalPageviews)}
+                              </HighlightValue>
+                            ) : (
+                              "—"
+                            )}
                           </td>
                           <td className="py-2 pr-4 text-right font-data">
-                            {s ? formatCompactNumber(s.evergreenPageviews) : "—"}
+                            {s ? (
+                              <HighlightValue
+                                rank={rankAmong(site.id, (x: SiteSummary) => x.evergreenPageviews, summaries)}
+                              >
+                                {formatCompactNumber(s.evergreenPageviews)}
+                              </HighlightValue>
+                            ) : (
+                              "—"
+                            )}
                           </td>
                           <td className="py-2 pr-4 text-right font-data">
-                            {s ? formatPercent(s.weightedAvgScrollDepth) : "—"}
+                            {s ? (
+                              <HighlightValue
+                                rank={rankAmong(site.id, (x: SiteSummary) => x.weightedAvgScrollDepth, summaries)}
+                              >
+                                {formatPercent(s.weightedAvgScrollDepth)}
+                              </HighlightValue>
+                            ) : (
+                              "—"
+                            )}
                           </td>
                           <td className="py-2 pr-4 text-right font-data">
-                            {s ? formatDuration(s.weightedAvgTimeOnPage) : "—"}
+                            {s ? (
+                              <HighlightValue
+                                rank={rankAmong(site.id, (x: SiteSummary) => x.weightedAvgTimeOnPage, summaries)}
+                              >
+                                {formatDuration(s.weightedAvgTimeOnPage)}
+                              </HighlightValue>
+                            ) : (
+                              "—"
+                            )}
                           </td>
                           <td className="py-2 text-right font-data">
-                            {s && s.pvPerPublishedArticle !== null
-                              ? formatCompactNumber(s.pvPerPublishedArticle)
-                              : "—"}
+                            {s && s.pvPerPublishedArticle !== null ? (
+                              <HighlightValue
+                                rank={rankAmong(site.id, (x: SiteSummary) => x.pvPerPublishedArticle, summaries)}
+                              >
+                                {formatCompactNumber(s.pvPerPublishedArticle)}
+                              </HighlightValue>
+                            ) : (
+                              "—"
+                            )}
                           </td>
                         </tr>
                       );

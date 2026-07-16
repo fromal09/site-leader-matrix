@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { DC_BASE } from "@/lib/routes";
 import { formatCompactNumber, formatDuration, formatPercent } from "@/lib/trafficFormat";
+import { HighlightValue } from "@/components/HighlightValue";
 
 type SiteBreakdown = {
   siteId: number;
@@ -84,6 +85,19 @@ export default function DivisionResourcesPage() {
     });
     return copy;
   }, [writers, tableSort, tableSortDesc]);
+
+  function rankOf(
+    name: string,
+    metric: (w: ResourceWriter) => number | null
+  ): { rank: number; total: number } | null {
+    const entries = writers
+      .map((w) => ({ name: w.name, value: metric(w) }))
+      .filter((e): e is { name: string; value: number } => e.value !== null);
+    if (entries.length === 0) return null;
+    entries.sort((a, b) => b.value - a.value);
+    const idx = entries.findIndex((e) => e.name === name);
+    return idx === -1 ? null : { rank: idx + 1, total: entries.length };
+  }
 
   const columns: { key: TableSortKey; label: string }[] = [
     { key: "name", label: "Name" },
@@ -174,7 +188,7 @@ export default function DivisionResourcesPage() {
                   className="flex w-full flex-wrap items-center justify-between gap-2 text-left"
                 >
                   <div>
-                    <div className="font-display text-lg font-semibold text-navy">
+                    <div className="font-display text-lg font-semibold uppercase text-navy">
                       {w.name}
                     </div>
                     <div className="font-data text-[11px] text-ink-soft">
@@ -241,7 +255,7 @@ export default function DivisionResourcesPage() {
           })}
         </ul>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="card overflow-x-auto rounded-md p-4" style={{ backgroundColor: "white" }}>
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-rule-strong font-data text-[10px] uppercase tracking-wide text-ink-soft">
@@ -262,22 +276,34 @@ export default function DivisionResourcesPage() {
             <tbody>
               {tableRows.map((w) => (
                 <tr key={w.name} className="border-t border-rule">
-                  <td className="py-2 pr-4 font-medium text-ink">{w.name}</td>
+                  <td className="py-2 pr-4 font-medium uppercase text-ink">{w.name}</td>
                   <td className="py-2 pr-4 text-right font-data">{w.siteCount}</td>
-                  <td className="py-2 pr-4 text-right font-data">{w.articlesPublished}</td>
                   <td className="py-2 pr-4 text-right font-data">
-                    {formatCompactNumber(w.totalPageviews)}
+                    <HighlightValue rank={rankOf(w.name, (x) => x.articlesPublished)}>
+                      {w.articlesPublished}
+                    </HighlightValue>
                   </td>
                   <td className="py-2 pr-4 text-right font-data">
-                    {w.pvPerPublishedArticle !== null
-                      ? formatCompactNumber(w.pvPerPublishedArticle)
-                      : "—"}
+                    <HighlightValue rank={rankOf(w.name, (x) => x.totalPageviews)}>
+                      {formatCompactNumber(w.totalPageviews)}
+                    </HighlightValue>
                   </td>
                   <td className="py-2 pr-4 text-right font-data">
-                    {formatPercent(w.weightedAvgScrollDepth)}
+                    <HighlightValue rank={rankOf(w.name, (x) => x.pvPerPublishedArticle)}>
+                      {w.pvPerPublishedArticle !== null
+                        ? formatCompactNumber(w.pvPerPublishedArticle)
+                        : "—"}
+                    </HighlightValue>
+                  </td>
+                  <td className="py-2 pr-4 text-right font-data">
+                    <HighlightValue rank={rankOf(w.name, (x) => x.weightedAvgScrollDepth)}>
+                      {formatPercent(w.weightedAvgScrollDepth)}
+                    </HighlightValue>
                   </td>
                   <td className="py-2 text-right font-data">
-                    {formatDuration(w.weightedAvgTimeOnPage)}
+                    <HighlightValue rank={rankOf(w.name, (x) => x.weightedAvgTimeOnPage)}>
+                      {formatDuration(w.weightedAvgTimeOnPage)}
+                    </HighlightValue>
                   </td>
                 </tr>
               ))}
