@@ -1,0 +1,18 @@
+[
+  { "site_name": "ATL All Day", "site_topic": "All Atlanta Sports", "leader_name": "Vacant", "fan_authority": 5, "editorial_instincts": 5, "ownership": 5, "leadership": 5 },
+  { "site_name": "Chowder and Champions", "site_topic": "All Boston Sports", "leader_name": "Elie Deglaoui", "fan_authority": 5, "editorial_instincts": 5, "ownership": 5, "leadership": 5 },
+  { "site_name": "Dairyland Express", "site_topic": "All Wisconsin Sports", "leader_name": "Dylan Carter", "fan_authority": 5, "editorial_instincts": 5, "ownership": 5, "leadership": 5 },
+  { "site_name": "Da Windy City", "site_topic": "All Chicago Sports", "leader_name": "Casey McAleer", "fan_authority": 5, "editorial_instincts": 5, "ownership": 5, "leadership": 5 },
+  { "site_name": "Detroit Jock City", "site_topic": "All Detroit Sports", "leader_name": "Cem Yolbulan", "fan_authority": 5, "editorial_instincts": 5, "ownership": 5, "leadership": 5 },
+  { "site_name": "Empire Writes Back", "site_topic": "All New York Sports", "leader_name": "Vacant", "fan_authority": 5, "editorial_instincts": 5, "ownership": 5, "leadership": 5 },
+  { "site_name": "Factory of Sadness", "site_topic": "Only Cleveland Sports", "leader_name": "Vacant", "fan_authority": 5, "editorial_instincts": 5, "ownership": 5, "leadership": 5 },
+  { "site_name": "Golden Gate Sports", "site_topic": "All Bay Area Sports", "leader_name": "Vacant", "fan_authority": 5, "editorial_instincts": 5, "ownership": 5, "leadership": 5 },
+  { "site_name": "House of Houston", "site_topic": "All Houston Sports", "leader_name": "Vacant", "fan_authority": 5, "editorial_instincts": 5, "ownership": 5, "leadership": 5 },
+  { "site_name": "KC Kingdom", "site_topic": "All Kansas City Sports", "leader_name": "Parker Buchele", "fan_authority": 5, "editorial_instincts": 5, "ownership": 5, "leadership": 5 },
+  { "site_name": "LA Sports Hub", "site_topic": "All Los Angeles Sports", "leader_name": "Vacant", "fan_authority": 5, "editorial_instincts": 5, "ownership": 5, "leadership": 5 },
+  { "site_name": "Section 215", "site_topic": "All Philadelphia Sports", "leader_name": "Vacant", "fan_authority": 5, "editorial_instincts": 5, "ownership": 5, "leadership": 5 },
+  { "site_name": "Sport DFW", "site_topic": "All Dallas Sports", "leader_name": "Jared A'Latorre", "fan_authority": 5, "editorial_instincts": 5, "ownership": 5, "leadership": 5 },
+  { "site_name": "Sporting Sota", "site_topic": "All Minnessota Sports", "leader_name": "Vacant", "fan_authority": 5, "editorial_instincts": 5, "ownership": 5, "leadership": 5 },
+  { "site_name": "Tenn Truth", "site_topic": "All Tennessee Sports", "leader_name": "Vacant", "fan_authority": 5, "editorial_instincts": 5, "ownership": 5, "leadership": 5 },
+  { "site_name": "Tip of the Tower", "site_topic": "All Toronto Sports", "leader_name": "Vacant", "fan_authority": 5, "editorial_instincts": 5, "ownership": 5, "leadership": 5 }
+]

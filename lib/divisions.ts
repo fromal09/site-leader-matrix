@@ -15,7 +15,7 @@ export const DIVISIONS: Division[] = [
   { key: "NHL", name: "NHL", tagline: "", status: "available" },
   { key: "Soccer", name: "Soccer", tagline: "Coming soon", status: "coming-soon" },
   { key: "Entertainment", name: "Entertainment", tagline: "Coming soon", status: "coming-soon" },
-  { key: "Locals", name: "Locals", tagline: "Coming soon", status: "coming-soon" },
+  { key: "Locals", name: "Locals", tagline: "", status: "available" },
 ];
 
 export function divisionByKey(key: string): Division | undefined {
