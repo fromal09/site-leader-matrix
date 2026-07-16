@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 
 export default function AdminPage() {
@@ -102,6 +103,18 @@ export default function AdminPage() {
       </button>
       {archiveResult && <p className="mt-3 text-sm text-grade-good">{archiveResult}</p>}
       {archiveError && <p className="mt-3 text-sm text-grade-low">{archiveError}</p>}
+
+      <h2 className="mt-10 font-display text-2xl font-bold text-navy">Sticky Notes</h2>
+      <p className="mt-2 text-sm text-ink-soft">
+        Anyone can drag or clear any sticky note across the app. If something gets removed
+        that shouldn&apos;t have been, the history page shows everything with a one-click undo.
+      </p>
+      <Link
+        href="/admin/sticky-notes-history"
+        className="mt-4 inline-block rounded border border-navy px-4 py-2 text-sm font-medium text-navy hover:bg-navy hover:text-white"
+      >
+        View Sticky Note History
+      </Link>
     </main>
   );
 }

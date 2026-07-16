@@ -1,6 +1,14 @@
 import { letterGrade, gradeBand, BAND_COLORS } from "@/lib/grades";
 
-export function GradeStamp({ avg, size = "md" }: { avg: number; size?: "sm" | "md" | "lg" }) {
+export function GradeStamp({
+  avg,
+  size = "md",
+  label = "Average",
+}: {
+  avg: number;
+  size?: "sm" | "md" | "lg";
+  label?: string;
+}) {
   const grade = letterGrade(avg);
   const band = gradeBand(avg);
   const color = BAND_COLORS[band];
@@ -12,7 +20,7 @@ export function GradeStamp({ avg, size = "md" }: { avg: number; size?: "sm" | "m
       : "h-12 w-12 text-base";
 
   return (
-    <div className={`stamp ${dims}`} style={{ color }} title={`Average ${avg.toFixed(1)}`}>
+    <div className={`stamp ${dims}`} style={{ color }} title={`${label} ${avg.toFixed(1)}`}>
       {grade}
     </div>
   );

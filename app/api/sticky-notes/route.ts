@@ -20,9 +20,10 @@ export async function GET(req: NextRequest) {
 
   try {
     const notes = await sql`
-      SELECT id, subject_type, subject_id, field_label, color, body, created_by, created_at
+      SELECT id, subject_type, subject_id, field_label, color, body, pos_x, pos_y, created_by, created_at
       FROM sticky_notes
       WHERE subject_type = ${subjectType} AND subject_id = ANY(${subjectIds}::text[])
+        AND deleted_at IS NULL
       ORDER BY created_at ASC
     `;
     return NextResponse.json({ notes });
@@ -37,16 +38,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   }
 
-  const { subjectType, subjectId, fieldLabel, color, body } = await req.json();
+  const { subjectType, subjectId, fieldLabel, color, body, posX, posY } = await req.json();
   if (!subjectType || !subjectId || !body || !body.trim()) {
     return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
   }
 
   try {
     const rows = await sql`
-      INSERT INTO sticky_notes (subject_type, subject_id, field_label, color, body, created_by)
-      VALUES (${subjectType}, ${String(subjectId)}, ${fieldLabel ?? null}, ${color ?? "yellow"}, ${body.trim()}, ${session.name})
-      RETURNING id, subject_type, subject_id, field_label, color, body, created_by, created_at
+      INSERT INTO sticky_notes (subject_type, subject_id, field_label, color, body, pos_x, pos_y, created_by)
+      VALUES (
+        ${subjectType}, ${String(subjectId)}, ${fieldLabel ?? null}, ${color ?? "yellow"}, ${body.trim()},
+        ${posX ?? null}, ${posY ?? null}, ${session.name}
+      )
+      RETURNING id, subject_type, subject_id, field_label, color, body, pos_x, pos_y, created_by, created_at
     `;
     return NextResponse.json({ note: (rows as any[])[0] });
   } catch (err: any) {

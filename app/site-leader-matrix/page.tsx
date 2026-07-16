@@ -9,6 +9,8 @@ import { CanonizeButton } from "@/components/CanonizeButton";
 import { CATEGORIES } from "@/lib/categories";
 import { average } from "@/lib/grades";
 import { DIVISIONS } from "@/lib/divisions";
+import { useStickyNotes } from "@/lib/stickyNotes";
+import { StickyBoard } from "@/components/StickyBoard";
 import type { Site } from "@/lib/types";
 
 type SortKey = "overall" | (typeof CATEGORIES)[number]["key"];
@@ -69,6 +71,9 @@ function SiteLeaderMatrixInner() {
   }, [sites, sortKey]);
 
   const availableDivisions = DIVISIONS.filter((d) => d.status === "available");
+  const { notesFor, addNote, removeNote, updatePosition } = useStickyNotes("page", [
+    `slm-${division}`,
+  ]);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
@@ -109,7 +114,12 @@ function SiteLeaderMatrixInner() {
           No {division} sites seeded yet.
         </p>
       ) : (
-        <>
+        <StickyBoard
+          notes={notesFor(`slm-${division}`)}
+          onAdd={(body, color, x, y) => addNote(`slm-${division}`, body, color, null, x, y)}
+          onRemove={removeNote}
+          onUpdatePosition={updatePosition}
+        >
           <div className="mb-6">
             <DivisionAverageRadar sites={sites} />
           </div>
@@ -135,14 +145,14 @@ function SiteLeaderMatrixInner() {
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {sortedSites.map((site) => (
-              <RadarCard key={site.id} site={site} />
+              <RadarCard key={site.id} site={site} sortKey={sortKey} />
             ))}
           </div>
 
           <div className="mt-8">
             <TrendsPanel sites={sites} />
           </div>
-        </>
+        </StickyBoard>
       )}
     </main>
   );

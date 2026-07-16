@@ -19,6 +19,8 @@ export type StickyNoteRecord = {
   field_label: string | null;
   color: StickyColor;
   body: string;
+  pos_x: number | null;
+  pos_y: number | null;
   created_by: string | null;
   created_at: string;
 };
@@ -63,12 +65,22 @@ export function useStickyNotes(subjectType: string, subjectIds: (string | number
     subjectId: string | number,
     body: string,
     color: StickyColor,
-    fieldLabel: string | null = null
+    fieldLabel: string | null = null,
+    posX: number | null = null,
+    posY: number | null = null
   ) {
     const res = await fetch("/api/sticky-notes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subjectType, subjectId: String(subjectId), fieldLabel, color, body }),
+      body: JSON.stringify({
+        subjectType,
+        subjectId: String(subjectId),
+        fieldLabel,
+        color,
+        body,
+        posX,
+        posY,
+      }),
     });
     if (res.ok) load();
     return res.ok;
@@ -79,5 +91,24 @@ export function useStickyNotes(subjectType: string, subjectIds: (string | number
     setNotes((prev) => prev.filter((n) => n.id !== id));
   }
 
-  return { notes, loading, notesFor, allNotesFor, addNote, removeNote, refetch: load };
+  async function updatePosition(id: number, posX: number, posY: number) {
+    // Optimistic — the drag already shows the note in place; just persist.
+    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, pos_x: posX, pos_y: posY } : n)));
+    await fetch(`/api/sticky-notes/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ posX, posY }),
+    });
+  }
+
+  return {
+    notes,
+    loading,
+    notesFor,
+    allNotesFor,
+    addNote,
+    removeNote,
+    updatePosition,
+    refetch: load,
+  };
 }

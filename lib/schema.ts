@@ -220,9 +220,18 @@ CREATE TABLE IF NOT EXISTS sticky_notes (
   field_label TEXT,
   color TEXT NOT NULL DEFAULT 'yellow',
   body TEXT NOT NULL,
+  pos_x REAL,
+  pos_y REAL,
   created_by TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at TIMESTAMPTZ,
+  deleted_by TEXT
 );
+
+ALTER TABLE sticky_notes ADD COLUMN IF NOT EXISTS pos_x REAL;
+ALTER TABLE sticky_notes ADD COLUMN IF NOT EXISTS pos_y REAL;
+ALTER TABLE sticky_notes ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+ALTER TABLE sticky_notes ADD COLUMN IF NOT EXISTS deleted_by TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_sticky_notes_subject ON sticky_notes(subject_type, subject_id);
 

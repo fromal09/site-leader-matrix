@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { WriterCard } from "@/components/WriterCard";
 import { useStickyNotes } from "@/lib/stickyNotes";
-import { StickyNotesCluster } from "@/components/StickyNotesCluster";
+import { StickyBoard } from "@/components/StickyBoard";
 import { SiteCallouts } from "@/components/SiteCallouts";
 import { CondensedRoster } from "@/components/CondensedRoster";
 import { SiteHistoryChart } from "@/components/SiteHistoryChart";
@@ -60,10 +60,11 @@ export default function DepthChartSitePage() {
   const [statsPeriodKey, setStatsPeriodKey] = useState<string | null>(null);
   const [sitePeriods, setSitePeriods] = useState<{ key: string; label: string }[]>([]);
   const {
-    notesFor: siteNotesFor,
-    addNote: addSiteNote,
-    removeNote: removeSiteNote,
-  } = useStickyNotes("site", site ? [site.id] : []);
+    notesFor: pageNotesFor,
+    addNote: addPageNote,
+    removeNote: removePageNote,
+    updatePosition: updatePageNotePosition,
+  } = useStickyNotes("page", site ? [`roster-${site.id}`] : []);
   const {
     allNotesFor: writerNotesFor,
     addNote: addWriterNote,
@@ -232,7 +233,12 @@ export default function DepthChartSitePage() {
           <WriterHistoryChart writers={writers} />
         </div>
       ) : (
-        <>
+        <StickyBoard
+          notes={pageNotesFor(`roster-${site.id}`)}
+          onAdd={(body, color, x, y) => addPageNote(`roster-${site.id}`, body, color, null, x, y)}
+          onRemove={removePageNote}
+          onUpdatePosition={updatePageNotePosition}
+        >
           {siteTotals && (
             <div className="card relative mb-6 rounded-md p-4">
               <div className="mb-2 flex items-baseline justify-between">
@@ -283,12 +289,6 @@ export default function DepthChartSitePage() {
                   tint={rankTint(rankAmong(site.id, (s: AllSiteSummary) => s.pvPerPublishedArticle, allSummaries))}
                 />
               </div>
-              <StickyNotesCluster
-                notes={siteNotesFor(site.id)}
-                onAdd={(body, color) => addSiteNote(site.id, body, color)}
-                onRemove={removeSiteNote}
-                addButtonPosition="top-right"
-              />
             </div>
           )}
 
@@ -420,7 +420,7 @@ export default function DepthChartSitePage() {
               </div>
             ))}
           </div>
-        </>
+        </StickyBoard>
       )}
     </main>
   );

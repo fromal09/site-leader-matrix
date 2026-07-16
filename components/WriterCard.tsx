@@ -8,7 +8,6 @@ import { WriterNotesPanel } from "./WriterNotesPanel";
 import { formatCompactNumber, formatDuration, formatPercent } from "@/lib/trafficFormat";
 import { StatTile } from "./StatTile";
 import { FieldPinBadge } from "./FieldPinBadge";
-import { StickyNotesCluster } from "./StickyNotesCluster";
 import type { StickyNoteRecord, StickyColor } from "@/lib/stickyNotes";
 import { rankAmong, rankTier, rankTierColors } from "@/lib/rankColor";
 import {
@@ -393,12 +392,6 @@ export function WriterCard({
         )}
         <WriterTrafficPanel writerId={writer.id} siteTotals={siteTotals ?? null} />
         <WriterNotesPanel writerId={writer.id} />
-        <StickyNotesCluster
-          notes={writerNotes.filter((n) => n.field_label === null)}
-          onAdd={(body, color) => onAdd(null, body, color)}
-          onRemove={onRemove}
-          addButtonPosition="top-right"
-        />
       </div>
     );
   }

@@ -87,7 +87,7 @@ button {
   border-radius: 4px;
 }
 
-/* Sticky notes — post-it style quick notes, see components/StickyNotesCluster.tsx */
+/* Sticky notes — post-it style quick notes, see components/StickyBoard.tsx and components/FieldPinBadge.tsx */
 .sticky-note {
   position: absolute;
   width: 168px;
@@ -152,6 +152,22 @@ button {
 .sticky-note--pink { background: #fbd0dc; }
 .sticky-note--blue { background: #c9e4f7; }
 .sticky-note--green { background: #d7ecc7; }
+
+.sticky-note-compose {
+  cursor: default;
+}
+
+.sticky-note-textarea {
+  width: 100%;
+  resize: none;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-hand);
+  font-size: 17px;
+  line-height: 1.25;
+  color: #2b2610;
+}
 
 .sticky-pin-badge {
   position: absolute;
