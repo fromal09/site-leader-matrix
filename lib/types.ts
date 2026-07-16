@@ -18,6 +18,7 @@ export type Site = {
   sort_order: number;
   hostname: string | null;
   division: string;
+  excluded_from_aggregation: boolean;
   scores: ScoreRow[];
 };
 

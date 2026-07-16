@@ -49,11 +49,16 @@ export function RadarCard({
       onKeyDown={(e) => {
         if (e.key === "Enter") router.push(slmLeaderHref(site.id));
       }}
-      className="card group relative flex cursor-pointer flex-col rounded-md p-3 transition hover:-translate-y-0.5 hover:shadow-md"
+      className={`card group relative flex cursor-pointer flex-col rounded-md p-3 transition hover:-translate-y-0.5 hover:shadow-md${site.excluded_from_aggregation ? " opacity-70" : ""}`}
     >
       {anyPlaceholder && (
         <span className="absolute right-2 top-2 rounded-full bg-grease-red/10 px-2 py-0.5 text-[10px] font-medium tracking-wide text-grease-red">
           placeholder
+        </span>
+      )}
+      {site.excluded_from_aggregation && (
+        <span className="absolute left-2 top-2 rounded-full bg-ink-soft/15 px-2 py-0.5 text-[10px] font-medium tracking-wide text-ink-soft">
+          excluded
         </span>
       )}
       <div className="mb-1 flex items-start justify-between gap-2">

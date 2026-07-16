@@ -83,6 +83,31 @@ export default function LeaderPage() {
         />
       </div>
 
+      <label className="card mb-6 flex items-start gap-3 rounded-md p-3 text-sm">
+        <input
+          type="checkbox"
+          checked={site.excluded_from_aggregation}
+          onChange={async (e) => {
+            const excluded = e.target.checked;
+            setSite((prev) => (prev ? { ...prev, excluded_from_aggregation: excluded } : prev));
+            await fetch(`/api/sites/${site.id}/toggle-aggregation`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ excluded }),
+            });
+          }}
+          className="mt-0.5"
+        />
+        <span>
+          <span className="font-medium text-ink">Exclude from division-wide averages</span>
+          <span className="block text-xs text-ink-soft">
+            Use this for sites in a unique situation — a vacant leader seat, a non-team hobby
+            site, etc. This site&apos;s own grades stay fully editable and visible; it just
+            won&apos;t count toward the Division Average or standouts.
+          </span>
+        </span>
+      </label>
+
       <div className="card mb-6 rounded-md p-4">
         <RadarBig site={site} color={color} />
         <p className="mt-1 text-center text-xs text-ink-soft">

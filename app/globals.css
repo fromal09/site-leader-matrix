@@ -155,6 +155,7 @@ button {
 
 .highlighter-mark {
   position: relative;
+  z-index: 0;
   padding: 1px 6px;
   display: inline-block;
   white-space: nowrap;

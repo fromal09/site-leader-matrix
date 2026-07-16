@@ -47,7 +47,7 @@ export default function RootLayout({
       lang="en"
       className={`${oswald.variable} ${plexSans.variable} ${plexMono.variable} ${caveat.variable} h-full`}
     >
-      <body className="min-h-full pl-8">
+      <body className="min-h-full pl-9">
         <NotebookSpiral />
         <AuthProvider>
           <Gate>

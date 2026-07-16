@@ -20,8 +20,11 @@ function VertexDot(props: any) {
 }
 
 export function DivisionAverageRadar({ sites }: { sites: Site[] }) {
+  const includedSites = sites.filter((s) => !s.excluded_from_aggregation);
+  const excludedCount = sites.length - includedSites.length;
+
   const data = CATEGORIES.map((c) => {
-    const vals = sites
+    const vals = includedSites
       .map((s) => s.scores.find((sc) => sc.category === c.key)?.score)
       .filter((v): v is number => v !== undefined);
     const avg = vals.length ? vals.reduce((a, b) => a + Number(b), 0) / vals.length : 0;
@@ -33,7 +36,7 @@ export function DivisionAverageRadar({ sites }: { sites: Site[] }) {
   });
 
   const standouts = CATEGORIES.map((c) => {
-    const ranked = sites
+    const ranked = includedSites
       .map((s) => {
         const sc = s.scores.find((row) => row.category === c.key)?.score;
         return sc !== undefined ? { site: s, score: sc } : null;
@@ -48,7 +51,10 @@ export function DivisionAverageRadar({ sites }: { sites: Site[] }) {
     <div className="card rounded-md p-4">
       <div className="mb-2 flex items-baseline justify-between">
         <h2 className="font-display text-lg font-semibold text-navy">Division Average</h2>
-        <span className="font-data text-xs text-ink-soft">n = {sites.length} sites</span>
+        <span className="font-data text-xs text-ink-soft">
+          n = {includedSites.length} sites
+          {excludedCount > 0 ? ` (${excludedCount} excluded)` : ""}
+        </span>
       </div>
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
