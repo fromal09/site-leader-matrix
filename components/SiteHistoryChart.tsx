@@ -11,7 +11,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { HISTORY_METRICS, HistoryMetricKey } from "@/lib/historyMetrics";
+import { HISTORY_METRICS, HistoryMetricKey, computeImpliedContentDepth } from "@/lib/historyMetrics";
 import { filterByRange, distinctYears, pivotByYear, ChronoPoint } from "@/lib/historyChartUtils";
 
 const YEAR_COLORS = ["var(--navy)", "var(--grade-good)", "var(--grease-red)", "var(--grade-mid)"];
@@ -49,7 +49,17 @@ export function SiteHistoryChart({ siteId }: { siteId: number }) {
     setLoading(true);
     fetch(`/api/depth-chart-writers/site/${siteId}/history`)
       .then((r) => r.json())
-      .then((d) => setHistory(d.history ?? []))
+      .then((d) =>
+        setHistory(
+          (d.history ?? []).map((p: HistoryPoint) => ({
+            ...p,
+            impliedContentDepth: computeImpliedContentDepth(
+              p.weightedAvgScrollDepth,
+              p.weightedAvgTimeOnPage
+            ),
+          }))
+        )
+      )
       .finally(() => setLoading(false));
   }, [siteId]);
 

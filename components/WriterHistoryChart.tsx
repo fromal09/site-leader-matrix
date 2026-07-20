@@ -11,7 +11,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { HISTORY_METRICS, HistoryMetricKey } from "@/lib/historyMetrics";
+import { HISTORY_METRICS, HistoryMetricKey, computeImpliedContentDepth } from "@/lib/historyMetrics";
 import { filterByRange, distinctYears, ChronoPoint } from "@/lib/historyChartUtils";
 import type { DepthChartWriter } from "@/lib/depthCharts";
 
@@ -45,7 +45,20 @@ export function WriterHistoryChart({ writers }: { writers: DepthChartWriter[] })
     setLoading(true);
     fetch(`/api/depth-chart-writers/history-compare?writerIds=${idsKey}`)
       .then((r) => r.json())
-      .then((d) => setData(d.writers ?? []))
+      .then((d) =>
+        setData(
+          (d.writers ?? []).map((w: WriterHistory) => ({
+            ...w,
+            history: w.history.map((p) => ({
+              ...p,
+              impliedContentDepth: computeImpliedContentDepth(
+                p.weightedAvgScrollDepth,
+                p.weightedAvgTimeOnPage
+              ),
+            })),
+          }))
+        )
+      )
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idsKey]);
