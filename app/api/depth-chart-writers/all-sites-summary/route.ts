@@ -77,6 +77,45 @@ export async function GET(req: NextRequest) {
       GROUP BY mi.site_id, s.division
     `;
 
+    // If a site's raw article_traffic for this period has been archived
+    // (rolled up into site_traffic_archive and deleted to save storage —
+    // see /api/admin/archive-old-traffic), it won't show up in the live
+    // query above at all. Pull the archived rollups for the same period so
+    // those sites still show their topline numbers instead of "no data".
+    const archiveRows = await sql`
+      SELECT sa.site_id, s.division, sa.articles_published, sa.total_pageviews,
+        sa.evergreen_pageviews, sa.weighted_avg_scroll_depth, sa.weighted_avg_time_on_page
+      FROM site_traffic_archive sa
+      JOIN sites s ON s.id = sa.site_id
+      WHERE sa.period_key = ${selectedPeriodKey}
+    `;
+    const liveSiteIds = new Set((rows as any[]).map((r) => r.site_id));
+    const archiveOnlyRows = (archiveRows as any[])
+      .filter((r) => !liveSiteIds.has(r.site_id))
+      .map((r) => ({
+        site_id: r.site_id,
+        division: r.division,
+        articles_published: r.articles_published,
+        total_pageviews: r.total_pageviews,
+        published_pageviews: Number(r.total_pageviews) - Number(r.evergreen_pageviews),
+        scroll_weighted_sum:
+          r.weighted_avg_scroll_depth !== null
+            ? Number(r.weighted_avg_scroll_depth) * Number(r.total_pageviews)
+            : 0,
+        scroll_weight_denom: r.weighted_avg_scroll_depth !== null ? Number(r.total_pageviews) : 0,
+        time_weighted_sum:
+          r.weighted_avg_time_on_page !== null
+            ? Number(r.weighted_avg_time_on_page) * Number(r.total_pageviews)
+            : 0,
+        time_weight_denom: r.weighted_avg_time_on_page !== null ? Number(r.total_pageviews) : 0,
+        authors_published: 0, // not tracked in the archive rollup
+        pv_per_published_article:
+          Number(r.articles_published) > 0
+            ? (Number(r.total_pageviews) - Number(r.evergreen_pageviews)) / Number(r.articles_published)
+            : null,
+      }));
+    const combinedRows = [...(rows as any[]), ...archiveOnlyRows];
+
     const result: Record<
       number,
       {
@@ -112,7 +151,7 @@ export async function GET(req: NextRequest) {
     const byDivisionAccum = new Map<string, DivAccum>();
     const siteDivision = new Map<number, string>();
 
-    for (const r of rows as any[]) {
+    for (const r of combinedRows) {
       siteDivision.set(r.site_id, r.division);
       const totalPageviews = Number(r.total_pageviews);
       const publishedPageviews = Number(r.published_pageviews);
@@ -202,7 +241,7 @@ export async function GET(req: NextRequest) {
 
     const divisionTotals = {
       periodLabel: selectedPeriodLabel,
-      siteCount: rows.length,
+      siteCount: combinedRows.length,
       articlesPublished: divArticlesPublished,
       totalPageviews: divTotalPageviews,
       evergreenPageviews: divTotalPageviews - divPublishedPageviews,

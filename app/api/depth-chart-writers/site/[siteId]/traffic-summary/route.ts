@@ -67,47 +67,88 @@ export async function GET(
 
     const rowsArr = articleRows as any[];
 
-    const homepageRows = await sql`
-      SELECT at.article_title, at.pageviews::float8 AS pageviews,
-        at.scroll_depth::float8 AS scroll_depth, at.avg_time_on_page::float8 AS avg_time_on_page
-      FROM article_traffic at
-      JOIN traffic_imports ti ON ti.id = at.import_id
-      WHERE at.site_id = ${siteIdNum} AND ti.period_key = ${selectedPeriodKey}
-        AND at.article_author IS NULL
-      ORDER BY at.pageviews DESC
-      LIMIT 10
-    `;
-    const homepageAllRows = await sql`
-      SELECT COALESCE(SUM(at.pageviews), 0)::float8 AS total_pageviews, COUNT(*) AS page_count
-      FROM article_traffic at
-      JOIN traffic_imports ti ON ti.id = at.import_id
-      WHERE at.site_id = ${siteIdNum} AND ti.period_key = ${selectedPeriodKey}
-        AND at.article_author IS NULL
-    `;
+    // If this site's raw article_traffic for this period has been
+    // archived (see /api/admin/archive-old-traffic), rowsArr above will be
+    // empty even though real data exists — fall back to the rollup.
+    let archivedSite: any = null;
+    if (rowsArr.length === 0) {
+      const archiveRows = await sql`
+        SELECT * FROM site_traffic_archive WHERE site_id = ${siteIdNum} AND period_key = ${selectedPeriodKey}
+      `;
+      archivedSite = (archiveRows as any[])[0] ?? null;
+    }
+
+    const homepageRows = archivedSite
+      ? []
+      : await sql`
+          SELECT at.article_title, at.pageviews::float8 AS pageviews,
+            at.scroll_depth::float8 AS scroll_depth, at.avg_time_on_page::float8 AS avg_time_on_page
+          FROM article_traffic at
+          JOIN traffic_imports ti ON ti.id = at.import_id
+          WHERE at.site_id = ${siteIdNum} AND ti.period_key = ${selectedPeriodKey}
+            AND at.article_author IS NULL
+          ORDER BY at.pageviews DESC
+          LIMIT 10
+        `;
+    const homepageAllRows = archivedSite
+      ? []
+      : await sql`
+          SELECT COALESCE(SUM(at.pageviews), 0)::float8 AS total_pageviews, COUNT(*) AS page_count
+          FROM article_traffic at
+          JOIN traffic_imports ti ON ti.id = at.import_id
+          WHERE at.site_id = ${siteIdNum} AND ti.period_key = ${selectedPeriodKey}
+            AND at.article_author IS NULL
+        `;
     const homepageTotals = (homepageAllRows as any[])[0];
     const homepageTraffic = {
       pages: homepageRows as any[],
-      totalPageviews: Number(homepageTotals?.total_pageviews ?? 0),
+      totalPageviews: archivedSite ? Number(archivedSite.homepage_pageviews) : Number(homepageTotals?.total_pageviews ?? 0),
       pageCount: Number(homepageTotals?.page_count ?? 0),
     };
 
-    const publishedRows = dedupeArticles(rowsArr.filter((r) => r.published_month === selectedPeriodKey));
-    const totalPageviews = rowsArr.reduce((sum, r) => sum + r.pageviews, 0);
-    const publishedPageviews = publishedRows.reduce((sum, r) => sum + r.pageviews, 0);
-    const evergreenPageviews = totalPageviews - publishedPageviews;
-    const siteTotals = {
-      articlesPublished: publishedRows.length,
-      totalPageviews,
-      evergreenPageviews,
-      weightedAvgScrollDepth: pageviewWeightedAverage(
-        rowsArr.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews }))
-      ),
-      weightedAvgTimeOnPage: pageviewWeightedAverage(
-        rowsArr.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews }))
-      ),
-      pvPerPublishedArticle:
-        publishedRows.length > 0 ? publishedPageviews / publishedRows.length : null,
+    let siteTotals: {
+      articlesPublished: number;
+      totalPageviews: number;
+      evergreenPageviews: number;
+      weightedAvgScrollDepth: number | null;
+      weightedAvgTimeOnPage: number | null;
+      pvPerPublishedArticle: number | null;
     };
+    let publishedRows: any[] = [];
+    if (archivedSite) {
+      const totalPv = Number(archivedSite.total_pageviews);
+      const evergreenPv = Number(archivedSite.evergreen_pageviews);
+      const publishedPv = totalPv - evergreenPv;
+      const articlesPublished = Number(archivedSite.articles_published);
+      siteTotals = {
+        articlesPublished,
+        totalPageviews: totalPv,
+        evergreenPageviews: evergreenPv,
+        weightedAvgScrollDepth:
+          archivedSite.weighted_avg_scroll_depth !== null ? Number(archivedSite.weighted_avg_scroll_depth) : null,
+        weightedAvgTimeOnPage:
+          archivedSite.weighted_avg_time_on_page !== null ? Number(archivedSite.weighted_avg_time_on_page) : null,
+        pvPerPublishedArticle: articlesPublished > 0 ? publishedPv / articlesPublished : null,
+      };
+    } else {
+      publishedRows = dedupeArticles(rowsArr.filter((r) => r.published_month === selectedPeriodKey));
+      const totalPageviews = rowsArr.reduce((sum, r) => sum + r.pageviews, 0);
+      const publishedPageviews = publishedRows.reduce((sum, r) => sum + r.pageviews, 0);
+      const evergreenPageviews = totalPageviews - publishedPageviews;
+      siteTotals = {
+        articlesPublished: publishedRows.length,
+        totalPageviews,
+        evergreenPageviews,
+        weightedAvgScrollDepth: pageviewWeightedAverage(
+          rowsArr.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews }))
+        ),
+        weightedAvgTimeOnPage: pageviewWeightedAverage(
+          rowsArr.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews }))
+        ),
+        pvPerPublishedArticle:
+          publishedRows.length > 0 ? publishedPageviews / publishedRows.length : null,
+      };
+    }
 
     const byAuthor = new Map<string, any[]>();
     for (const r of rowsArr) {
@@ -115,6 +156,15 @@ export async function GET(
       if (!key) continue;
       if (!byAuthor.has(key)) byAuthor.set(key, []);
       byAuthor.get(key)!.push(r);
+    }
+
+    const writerArchiveById = new Map<number, any>();
+    if (archivedSite) {
+      const writerArchiveRows = await sql`
+        SELECT * FROM writer_traffic_archive
+        WHERE site_id = ${siteIdNum} AND period_key = ${selectedPeriodKey}
+      `;
+      for (const r of writerArchiveRows as any[]) writerArchiveById.set(r.writer_id, r);
     }
 
     const result: Record<
@@ -130,6 +180,24 @@ export async function GET(
     > = {};
 
     for (const w of writers as any[]) {
+      if (archivedSite) {
+        const archived = writerArchiveById.get(w.id);
+        if (!archived) continue;
+        const articlesPublished = Number(archived.articles_published);
+        const totalPageviews = Number(archived.total_pageviews);
+        result[w.id] = {
+          articlesPublished,
+          totalPageviews,
+          publishedPageviews: totalPageviews, // not separately tracked per-writer in the archive
+          pvPerPublishedArticle: articlesPublished > 0 ? totalPageviews / articlesPublished : null,
+          weightedAvgScrollDepth:
+            archived.weighted_avg_scroll_depth !== null ? Number(archived.weighted_avg_scroll_depth) : null,
+          weightedAvgTimeOnPage:
+            archived.weighted_avg_time_on_page !== null ? Number(archived.weighted_avg_time_on_page) : null,
+        };
+        continue;
+      }
+
       const matchNames = buildMatchNames(w.name, w.traffic_dashboard_name, w.aliases);
       const rows = matchNames.flatMap((mn) => byAuthor.get(mn) ?? []);
       if (rows.length === 0) continue;

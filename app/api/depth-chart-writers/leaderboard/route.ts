@@ -73,6 +73,25 @@ export async function GET(req: NextRequest) {
       byKey.get(key)!.push(r);
     }
 
+    // If a writer's raw article_traffic for their site's relevant period has
+    // been archived (see /api/admin/archive-old-traffic), they won't have
+    // any rows in byKey above. writer_traffic_archive is already keyed by
+    // writer_id directly (the author-name matching happened once, at
+    // archive time), so this is a simple lookup rather than a re-match.
+    const relevantPeriods = Array.from(new Set(Array.from(latestMap.values())));
+    const archiveRows =
+      relevantPeriods.length > 0
+        ? await sql`
+            SELECT writer_id, period_key, period_label, articles_published, total_pageviews,
+              weighted_avg_scroll_depth, weighted_avg_time_on_page
+            FROM writer_traffic_archive
+            WHERE period_key = ANY(${relevantPeriods}::text[])
+          `
+        : [];
+    const archiveByWriter = new Map<number, any>(
+      (archiveRows as any[]).map((r) => [r.writer_id, r])
+    );
+
     const result = [];
     const seenSitePerson = new Set<string>();
     const writersArr = writers as any[];
@@ -82,10 +101,34 @@ export async function GET(req: NextRequest) {
       const dedupeKey = `${w.site_id}::${normalizeNameKey(w.name)}`;
       if (seenSitePerson.has(dedupeKey)) continue;
       const rows = matchNames.flatMap((mn) => byKey.get(`${w.site_id}::${mn}`) ?? []);
-      if (rows.length === 0) continue;
+      const latestPeriodKey = latestMap.get(w.site_id)!;
+
+      if (rows.length === 0) {
+        const archived = archiveByWriter.get(w.id);
+        if (!archived || archived.period_key !== latestPeriodKey) continue;
+        seenSitePerson.add(dedupeKey);
+        result.push({
+          writerId: w.id,
+          name: w.name,
+          role: w.role,
+          siteId: w.site_id,
+          siteName: w.site_name,
+          periodLabel: archived.period_label,
+          articlesPublished: Number(archived.articles_published),
+          totalPageviews: Number(archived.total_pageviews),
+          pvPerPublishedArticle:
+            Number(archived.articles_published) > 0
+              ? Number(archived.total_pageviews) / Number(archived.articles_published)
+              : null,
+          weightedAvgScrollDepth:
+            archived.weighted_avg_scroll_depth !== null ? Number(archived.weighted_avg_scroll_depth) : null,
+          weightedAvgTimeOnPage:
+            archived.weighted_avg_time_on_page !== null ? Number(archived.weighted_avg_time_on_page) : null,
+        });
+        continue;
+      }
       seenSitePerson.add(dedupeKey);
 
-      const latestPeriodKey = latestMap.get(w.site_id)!;
       const publishedRows = rows.filter((r) => r.published_month === latestPeriodKey);
       const publishedPageviews = publishedRows.reduce((sum, r) => sum + r.pageviews, 0);
       const totalPageviews = rows.reduce((sum, r) => sum + r.pageviews, 0);
