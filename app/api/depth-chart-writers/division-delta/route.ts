@@ -12,6 +12,12 @@ type Metrics = {
   weightedAvgTimeOnPage: number | null;
 };
 
+type TodayMetrics = {
+  totalPageviews: number;
+  weightedAvgScrollDepth: number | null;
+  weightedAvgTimeOnPage: number | null;
+};
+
 function computeMetrics(rawRows: any[]): Metrics {
   const publishedRows = dedupeArticles(rawRows);
   const publishedPv = publishedRows.reduce((s, r) => s + r.pageviews, 0);
@@ -28,50 +34,21 @@ function computeMetrics(rawRows: any[]): Metrics {
   };
 }
 
-// Scopes to articles first published within the given date range — our
-// proxy for "the new content this upload added" specifically, since we
-// don't keep per-article history to isolate the exact upload-to-upload gap.
-function computeTodayMetrics(
-  monthRows: any[],
-  range: { start: string; end: string } | null
-): Metrics {
-  if (!range) return computeMetrics([]);
-  return computeMetrics(
-    monthRows.filter((r) => r.published_date && r.published_date >= range.start && r.published_date <= range.end)
-  );
-}
-
-function metricsFromSnapshot(snap: any): Metrics {
-  const publishedPv = Number(snap.published_pageviews ?? 0);
-  const articlesPublished = Number(snap.articles_published ?? 0);
+// The true incremental picture since the last upload: built at upload time
+// by matching every individual article (old vs new, across ALL authored
+// content, not just newly-published pieces) — see app/api/traffic/upload.
+// scroll/time here are absolute values (the weighted-average scroll depth
+// OF the incremental pageviews), not a difference of two averages, since
+// averages can't be subtracted that way.
+function todayFromDailyDelta(row: any | undefined): TodayMetrics {
+  if (!row) return { totalPageviews: 0, weightedAvgScrollDepth: null, weightedAvgTimeOnPage: null };
+  const pv = Number(row.pv_delta ?? 0);
+  const scrollSum = Number(row.scroll_weighted_sum_delta ?? 0);
+  const timeSum = Number(row.time_weighted_sum_delta ?? 0);
   return {
-    articlesPublished,
-    totalPageviews: publishedPv,
-    pvPerPublishedArticle: articlesPublished > 0 ? publishedPv / articlesPublished : null,
-    weightedAvgScrollDepth:
-      snap.weighted_avg_scroll_depth !== null ? Number(snap.weighted_avg_scroll_depth) : null,
-    weightedAvgTimeOnPage:
-      snap.weighted_avg_time_on_page !== null ? Number(snap.weighted_avg_time_on_page) : null,
-  };
-}
-
-function delta(current: Metrics, previous: Metrics | null) {
-  if (!previous) return null;
-  return {
-    articlesPublished: current.articlesPublished - previous.articlesPublished,
-    totalPageviews: current.totalPageviews - previous.totalPageviews,
-    pvPerPublishedArticle:
-      current.pvPerPublishedArticle !== null && previous.pvPerPublishedArticle !== null
-        ? current.pvPerPublishedArticle - previous.pvPerPublishedArticle
-        : null,
-    weightedAvgScrollDepth:
-      current.weightedAvgScrollDepth !== null && previous.weightedAvgScrollDepth !== null
-        ? current.weightedAvgScrollDepth - previous.weightedAvgScrollDepth
-        : null,
-    weightedAvgTimeOnPage:
-      current.weightedAvgTimeOnPage !== null && previous.weightedAvgTimeOnPage !== null
-        ? current.weightedAvgTimeOnPage - previous.weightedAvgTimeOnPage
-        : null,
+    totalPageviews: pv,
+    weightedAvgScrollDepth: pv > 0 ? scrollSum / pv : null,
+    weightedAvgTimeOnPage: pv > 0 ? timeSum / pv : null,
   };
 }
 
@@ -109,15 +86,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ hasData: false });
     }
 
-    // When each site in this division was actually uploaded — the "date of
-    // the new data" the report is showing.
     const importDates = await sql`
       SELECT site_id, imported_at FROM traffic_imports
       WHERE site_id = ANY(${siteIds}::int[]) AND period_key = ${periodKey}
     `;
-    const importedAtBySite = new Map<number, string>(
-      (importDates as any[]).map((r) => [r.site_id, r.imported_at])
-    );
     const allImportDates = (importDates as any[]).map((r) => new Date(r.imported_at).getTime());
     const currentDataAsOf = allImportDates.length
       ? new Date(Math.max(...allImportDates)).toISOString()
@@ -127,8 +99,7 @@ export async function GET(req: NextRequest) {
       SELECT at.site_id, at.article_author, at.article_url, at.article_title,
         at.pageviews::float8 AS pageviews,
         at.scroll_depth::float8 AS scroll_depth, at.avg_time_on_page::float8 AS avg_time_on_page,
-        TO_CHAR(at.first_published_date, 'YYYY-MM') AS published_month,
-        TO_CHAR(at.first_published_date, 'YYYY-MM-DD') AS published_date
+        TO_CHAR(at.first_published_date, 'YYYY-MM') AS published_month
       FROM article_traffic at
       JOIN traffic_imports ti ON ti.id = at.import_id
       WHERE at.site_id = ANY(${siteIds}::int[]) AND ti.period_key = ${periodKey}
@@ -178,47 +149,38 @@ export async function GET(req: NextRequest) {
       (prevWriterRows as any[]).map((r) => [r.writer_id, r])
     );
 
-    // Best-available estimate of which calendar dates the new content in
-    // this upload actually spans: take the N most-recently-published
-    // articles division-wide, where N is the exact article-count delta
-    // (computed here lightweight, ahead of the full per-site/writer
-    // metrics below, since those need this range to scope Scroll
-    // Depth/Time on Page consistently with it). Doesn't require
-    // per-article history — works from the same deduped rows already
-    // fetched.
-    let earlyDivDeltaArticles = 0;
-    for (const siteId of siteIds) {
-      const prevSnap = prevBySite.get(siteId);
-      if (!prevSnap) continue;
-      const currentCount = dedupeArticles(
-        (currentBySite.get(siteId) ?? []).filter((r) => r.published_month === periodKey)
-      ).length;
-      earlyDivDeltaArticles += currentCount - Number(prevSnap.articles_published ?? 0);
-    }
-    let newContentDateRange: { start: string; end: string } | null = null;
-    if (earlyDivDeltaArticles > 0) {
-      const allPublishedThisMonth = dedupeArticles(
-        (currentRows as any[]).filter((r) => r.published_month === periodKey)
-      );
-      const sortedByDateDesc = [...allPublishedThisMonth]
-        .filter((r) => r.published_date)
-        .sort((a, b) => (b.published_date as string).localeCompare(a.published_date as string));
-      const newest = sortedByDateDesc.slice(0, earlyDivDeltaArticles);
-      if (newest.length > 0) {
-        const dates = newest.map((r) => r.published_date as string).sort();
-        newContentDateRange = { start: dates[0], end: dates[dates.length - 1] };
-      }
-    }
+    // The true per-article-matched incremental deltas, captured once at
+    // upload time — see app/api/traffic/upload.
+    const siteDailyDeltaRows = await sql`
+      SELECT DISTINCT ON (site_id) *
+      FROM site_daily_deltas
+      WHERE site_id = ANY(${siteIds}::int[]) AND period_key = ${periodKey}
+      ORDER BY site_id, captured_at DESC
+    `;
+    const dailyDeltaBySite = new Map<number, any>(
+      (siteDailyDeltaRows as any[]).map((r) => [r.site_id, r])
+    );
+    const writerDailyDeltaRows = await sql`
+      SELECT DISTINCT ON (writer_id) *
+      FROM writer_daily_deltas
+      WHERE site_id = ANY(${siteIds}::int[]) AND period_key = ${periodKey}
+      ORDER BY writer_id, captured_at DESC
+    `;
+    const dailyDeltaByWriter = new Map<number, any>(
+      (writerDailyDeltaRows as any[]).map((r) => [r.writer_id, r])
+    );
 
-    // Per-writer current metrics + delta, division-wide.
+    // Per-writer current metrics + true incremental, division-wide.
     const writerResults = (writers as any[]).map((w) => {
       const matchNames = buildMatchNames(w.name, w.traffic_dashboard_name, w.aliases);
       const wRows = matchNames.flatMap((mn) => bySiteAuthorCurrent.get(`${w.site_id}::${mn}`) ?? []);
       const wPublished = wRows.filter((r) => r.published_month === periodKey);
       const current = computeMetrics(wPublished);
-      const today = computeTodayMetrics(wPublished, newContentDateRange);
+      const today = todayFromDailyDelta(dailyDeltaByWriter.get(w.id));
       const prevSnap = prevByWriter.get(w.id);
-      const prev = prevSnap ? metricsFromSnapshot(prevSnap) : null;
+      const articlesPublishedDelta = prevSnap
+        ? current.articlesPublished - Number(prevSnap.articles_published ?? 0)
+        : null;
       return {
         writerId: w.id,
         name: w.name,
@@ -228,46 +190,48 @@ export async function GET(req: NextRequest) {
         isSiteEditorOrExpert: w.is_site_editor_or_expert,
         current,
         today,
-        delta: delta(current, prev),
+        articlesPublishedDelta,
         hadPrevious: Boolean(prevSnap),
       };
     });
 
-    // Per-site current metrics + delta, with each site's writer breakdown nested.
+    // Per-site current metrics + true incremental, with each site's writer
+    // breakdown nested.
     const siteDeltas = siteIds
       .map((siteId) => {
         const rows = currentBySite.get(siteId) ?? [];
         const published = rows.filter((r) => r.published_month === periodKey);
         const current = computeMetrics(published);
-        const today = computeTodayMetrics(published, newContentDateRange);
+        const today = todayFromDailyDelta(dailyDeltaBySite.get(siteId));
         const prevSnap = prevBySite.get(siteId);
-        const prev = prevSnap ? metricsFromSnapshot(prevSnap) : null;
+        const articlesPublishedDelta = prevSnap
+          ? current.articlesPublished - Number(prevSnap.articles_published ?? 0)
+          : null;
         const siteWriters = writerResults
           .filter((w) => w.siteId === siteId && w.current.articlesPublished > 0)
           .sort((a, b) => b.current.totalPageviews - a.current.totalPageviews);
         return {
           siteId,
           siteName: siteNameById.get(siteId) ?? "",
-          importedAt: importedAtBySite.get(siteId) ?? null,
           current,
           today,
-          delta: delta(current, prev),
+          articlesPublishedDelta,
           hadPrevious: Boolean(prevSnap),
           writers: siteWriters,
         };
       })
       .filter((s) => (currentBySite.get(s.siteId) ?? []).length > 0)
-      .sort((a, b) => (b.delta?.totalPageviews ?? 0) - (a.delta?.totalPageviews ?? 0));
+      .sort((a, b) => b.today.totalPageviews - a.today.totalPageviews);
 
     const divCurrentArticles = siteDeltas.reduce((s, d) => s + d.current.articlesPublished, 0);
     const divCurrentPv = siteDeltas.reduce((s, d) => s + d.current.totalPageviews, 0);
     const sitesWithPrevious = siteDeltas.filter((d) => d.hadPrevious).length;
-    const divDeltaArticles = siteDeltas.reduce((s, d) => s + (d.delta?.articlesPublished ?? 0), 0);
-    const divDeltaPv = siteDeltas.reduce((s, d) => s + (d.delta?.totalPageviews ?? 0), 0);
+    const divDeltaArticles = siteDeltas.reduce((s, d) => s + (d.articlesPublishedDelta ?? 0), 0);
+    const divTodayPv = siteDeltas.reduce((s, d) => s + d.today.totalPageviews, 0);
 
     const standouts = writerResults
-      .filter((w) => w.hadPrevious && w.delta)
-      .sort((a, b) => (b.delta!.totalPageviews ?? 0) - (a.delta!.totalPageviews ?? 0))
+      .filter((w) => w.hadPrevious && w.today.totalPageviews > 0)
+      .sort((a, b) => b.today.totalPageviews - a.today.totalPageviews)
       .slice(0, 10);
 
     // Net-new articles per site leader since the last upload, best to worst
@@ -275,13 +239,13 @@ export async function GET(req: NextRequest) {
     // the first place, so they're already excluded without extra filtering.
     const siteLeaderArticles = writerResults
       .filter((w) => w.isSiteLeader && w.hadPrevious)
-      .sort((a, b) => (b.delta?.articlesPublished ?? 0) - (a.delta?.articlesPublished ?? 0));
+      .sort((a, b) => (b.articlesPublishedDelta ?? 0) - (a.articlesPublishedDelta ?? 0));
 
     // Narrower than the list above — just Site Editor/Site Expert (not
     // "Site No. 2") — and only the ones who published nothing NEW since
     // the last upload specifically, not just nothing all month.
     const quietEditorsAndExperts = writerResults
-      .filter((w) => w.isSiteEditorOrExpert && w.hadPrevious && (w.delta?.articlesPublished ?? 0) === 0)
+      .filter((w) => w.isSiteEditorOrExpert && w.hadPrevious && (w.articlesPublishedDelta ?? 0) === 0)
       .sort((a, b) => a.siteName.localeCompare(b.siteName));
 
     return NextResponse.json({
@@ -291,7 +255,6 @@ export async function GET(req: NextRequest) {
       periodLabel,
       currentDataAsOf,
       previousDataAsOf,
-      newContentDateRange,
       siteCount: siteIds.length,
       sitesWithPrevious,
       divisionTotals: {
@@ -300,7 +263,7 @@ export async function GET(req: NextRequest) {
           totalPageviews: divCurrentPv,
           pvPerPublishedArticle: divCurrentArticles > 0 ? divCurrentPv / divCurrentArticles : null,
         },
-        delta: { articlesPublished: divDeltaArticles, totalPageviews: divDeltaPv },
+        delta: { articlesPublished: divDeltaArticles, totalPageviews: divTodayPv },
       },
       siteDeltas,
       standouts,

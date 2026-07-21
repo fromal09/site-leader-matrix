@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import type { ParsedTrafficRow } from "@/lib/traffic";
-import { pageviewWeightedAverage, dedupeArticles } from "@/lib/trafficStats";
+import { pageviewWeightedAverage, dedupeArticles, articleKey } from "@/lib/trafficStats";
 import { buildMatchNames } from "@/lib/nameNormalize";
 
 export const maxDuration = 60;
@@ -102,6 +102,85 @@ export async function POST(req: NextRequest) {
               ${pageviewWeightedAverage(wPublished.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews })))},
               ${pageviewWeightedAverage(wPublished.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews })))}
             )
+          `;
+        }
+
+        // True day-over-day deltas: match every individual OLD (about to be
+        // replaced) article against its counterpart in the NEW incoming
+        // data by URL/title, across ALL authored content — not just
+        // articles published this period. A matched article contributes
+        // (new - old); an article with no old counterpart is brand new, so
+        // its entire value counts. This is the only point where both the
+        // outgoing and incoming states exist at once, so it's the only
+        // place this can be computed correctly — aggregate-only snapshots
+        // can't be diffed after the fact to recover this.
+        const oldByKey = new Map<string, any>();
+        for (const r of dedupeArticles(authored)) {
+          oldByKey.set(articleKey(r.article_url, r.article_title, oldByKey.size), r);
+        }
+        const newAuthoredNormalized = (rows as ParsedTrafficRow[])
+          .filter((r) => r.author && r.author.trim())
+          .map((r) => ({
+            article_url: r.url,
+            article_title: r.title,
+            article_author: r.author,
+            pageviews: r.pageviews,
+            scroll_depth: r.scrollDepth,
+            avg_time_on_page: r.avgTimeOnPage,
+          }));
+        const newByKey = new Map<string, (typeof newAuthoredNormalized)[number]>();
+        for (const r of dedupeArticles(newAuthoredNormalized)) {
+          newByKey.set(articleKey(r.article_url, r.article_title, newByKey.size), r);
+        }
+
+        type ArticleDelta = { author: string; pvDelta: number; scrollWeightedSumDelta: number; timeWeightedSumDelta: number };
+        const perArticleDeltas: ArticleDelta[] = [];
+        for (const [key, newRow] of newByKey) {
+          const oldRow = oldByKey.get(key);
+          const oldPv = oldRow ? oldRow.pageviews : 0;
+          const oldScrollSum = oldRow && oldRow.scroll_depth !== null ? oldRow.scroll_depth * oldRow.pageviews : 0;
+          const oldTimeSum = oldRow && oldRow.avg_time_on_page !== null ? oldRow.avg_time_on_page * oldRow.pageviews : 0;
+          const newScrollSum = newRow.scroll_depth !== null ? newRow.scroll_depth * newRow.pageviews : 0;
+          const newTimeSum = newRow.avg_time_on_page !== null ? newRow.avg_time_on_page * newRow.pageviews : 0;
+
+          const pvDelta = newRow.pageviews - oldPv;
+          // Cumulative data should only grow; skip the rare case of a
+          // decrease (a data revision, not "negative traffic") rather than
+          // let it pull the aggregate down artificially.
+          if (pvDelta <= 0) continue;
+          perArticleDeltas.push({
+            author: newRow.article_author as string,
+            pvDelta,
+            scrollWeightedSumDelta: newScrollSum - oldScrollSum,
+            timeWeightedSumDelta: newTimeSum - oldTimeSum,
+          });
+        }
+
+        const sitePvDelta = perArticleDeltas.reduce((s, d) => s + d.pvDelta, 0);
+        const siteScrollWeightedSumDelta = perArticleDeltas.reduce((s, d) => s + d.scrollWeightedSumDelta, 0);
+        const siteTimeWeightedSumDelta = perArticleDeltas.reduce((s, d) => s + d.timeWeightedSumDelta, 0);
+        await sql`
+          INSERT INTO site_daily_deltas (site_id, period_key, pv_delta, scroll_weighted_sum_delta, time_weighted_sum_delta)
+          VALUES (${siteIdNum}, ${periodKey}, ${sitePvDelta}, ${siteScrollWeightedSumDelta}, ${siteTimeWeightedSumDelta})
+        `;
+
+        const deltasByAuthor = new Map<string, ArticleDelta[]>();
+        for (const d of perArticleDeltas) {
+          const key = d.author.trim().toLowerCase();
+          if (!deltasByAuthor.has(key)) deltasByAuthor.set(key, []);
+          deltasByAuthor.get(key)!.push(d);
+        }
+        for (const w of writers as any[]) {
+          const matchNames = buildMatchNames(w.name, w.traffic_dashboard_name, w.aliases);
+          const wDeltas = matchNames.flatMap((mn) => deltasByAuthor.get(mn) ?? []);
+          if (wDeltas.length === 0) continue;
+          const wPvDelta = wDeltas.reduce((s, d) => s + d.pvDelta, 0);
+          const wScrollWeightedSumDelta = wDeltas.reduce((s, d) => s + d.scrollWeightedSumDelta, 0);
+          const wTimeWeightedSumDelta = wDeltas.reduce((s, d) => s + d.timeWeightedSumDelta, 0);
+          await sql`
+            INSERT INTO writer_daily_deltas
+              (writer_id, site_id, period_key, pv_delta, scroll_weighted_sum_delta, time_weighted_sum_delta)
+            VALUES (${w.id}, ${siteIdNum}, ${periodKey}, ${wPvDelta}, ${wScrollWeightedSumDelta}, ${wTimeWeightedSumDelta})
           `;
         }
       }

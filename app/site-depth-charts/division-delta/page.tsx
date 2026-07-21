@@ -16,7 +16,11 @@ type Metrics = {
   weightedAvgScrollDepth: number | null;
   weightedAvgTimeOnPage: number | null;
 };
-type MetricDelta = Metrics; // same shape, values are differences
+type TodayMetrics = {
+  totalPageviews: number;
+  weightedAvgScrollDepth: number | null;
+  weightedAvgTimeOnPage: number | null;
+};
 
 type WriterRow = {
   writerId: number;
@@ -26,18 +30,17 @@ type WriterRow = {
   isSiteLeader: boolean;
   isSiteEditorOrExpert: boolean;
   current: Metrics;
-  today: Metrics;
-  delta: MetricDelta | null;
+  today: TodayMetrics;
+  articlesPublishedDelta: number | null;
   hadPrevious: boolean;
 };
 
 type SiteRow = {
   siteId: number;
   siteName: string;
-  importedAt: string | null;
   current: Metrics;
-  today: Metrics;
-  delta: MetricDelta | null;
+  today: TodayMetrics;
+  articlesPublishedDelta: number | null;
   hadPrevious: boolean;
   writers: WriterRow[];
 };
@@ -48,7 +51,6 @@ type DeltaResponse = {
   periodLabel?: string;
   currentDataAsOf?: string | null;
   previousDataAsOf?: string | null;
-  newContentDateRange?: { start: string; end: string } | null;
   siteCount?: number;
   sitesWithPrevious?: number;
   divisionTotals?: {
@@ -72,21 +74,6 @@ function formatDate(iso: string | null | undefined) {
     day: "numeric",
     year: "numeric",
   });
-}
-
-function formatFocusRange(range: { start: string; end: string } | null | undefined) {
-  if (!range) return null;
-  const start = new Date(`${range.start}T00:00:00`);
-  const end = new Date(`${range.end}T00:00:00`);
-  if (range.start === range.end) {
-    return start.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-  }
-  const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
-  const startStr = start.toLocaleDateString("en-US", { month: "long", day: "numeric" });
-  const endStr = sameMonth
-    ? `${end.getDate()}, ${end.getFullYear()}`
-    : end.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-  return `${startStr}-${endStr}`;
 }
 
 function rankAmongSites(
@@ -144,12 +131,12 @@ function DivisionDeltaInner() {
         bv = b.siteName;
         return sortDesc ? (bv as string).localeCompare(av as string) : (av as string).localeCompare(bv as string);
       case "pvChange":
-        av = a.delta?.totalPageviews ?? -Infinity;
-        bv = b.delta?.totalPageviews ?? -Infinity;
+        av = a.today.totalPageviews;
+        bv = b.today.totalPageviews;
         break;
       case "articleChange":
-        av = a.delta?.articlesPublished ?? -Infinity;
-        bv = b.delta?.articlesPublished ?? -Infinity;
+        av = a.articlesPublishedDelta ?? -Infinity;
+        bv = b.articlesPublishedDelta ?? -Infinity;
         break;
       case "scrollDepth":
         av = a.today.weightedAvgScrollDepth ?? -Infinity;
@@ -190,9 +177,10 @@ function DivisionDeltaInner() {
           </h1>
           {data?.hasPrevious && (
             <p className="mt-1 text-sm text-ink-soft">
-              {data.newContentDateRange
-                ? `Focusing on data from ${formatFocusRange(data.newContentDateRange)}.`
-                : `Comparing data uploaded ${formatDate(data.currentDataAsOf)} against what was there as of ${formatDate(data.previousDataAsOf)}.`}
+              Comparing data uploaded {formatDate(data.currentDataAsOf)} against what was
+              there as of {formatDate(data.previousDataAsOf)}. Scroll Depth and Time on Page
+              reflect just the incremental pageviews since that upload, across every article
+              — not only newly-published ones.
             </p>
           )}
         </div>
@@ -293,7 +281,7 @@ function DivisionDeltaInner() {
                         </Link>
                         <div className="font-data text-[10px] text-ink-soft">{w.siteName}</div>
                       </div>
-                      <DeltaValue value={w.delta?.totalPageviews ?? 0} format={formatCompactNumber} />
+                      <DeltaValue value={w.today.totalPageviews} format={formatCompactNumber} />
                     </li>
                   ))}
                 </ul>
@@ -348,10 +336,10 @@ function DivisionDeltaInner() {
                         className="font-data text-sm font-semibold"
                         style={{
                           color:
-                            (w.delta?.articlesPublished ?? 0) === 0 ? "var(--grease-red)" : "var(--ink)",
+                            (w.articlesPublishedDelta ?? 0) === 0 ? "var(--grease-red)" : "var(--ink)",
                         }}
                       >
-                        +{w.delta?.articlesPublished ?? 0}
+                        +{w.articlesPublishedDelta ?? 0}
                       </span>
                     </li>
                   ))}
@@ -429,8 +417,8 @@ function DivisionDeltaInner() {
                         </td>
                         <td className="py-2 pr-4 text-right font-data">
                           {s.hadPrevious ? (
-                            <HighlightValue rank={rankAmongSites(s.siteId, (x) => x.delta?.totalPageviews ?? null, sites)}>
-                              <DeltaValue value={s.delta!.totalPageviews} format={formatCompactNumber} />
+                            <HighlightValue rank={rankAmongSites(s.siteId, (x) => x.today.totalPageviews, sites)}>
+                              <DeltaValue value={s.today.totalPageviews} format={formatCompactNumber} />
                             </HighlightValue>
                           ) : (
                             <span className="text-ink-soft">—</span>
@@ -438,8 +426,8 @@ function DivisionDeltaInner() {
                         </td>
                         <td className="py-2 pr-4 text-right font-data">
                           {s.hadPrevious ? (
-                            <HighlightValue rank={rankAmongSites(s.siteId, (x) => x.delta?.articlesPublished ?? null, sites)}>
-                              <DeltaValue value={s.delta!.articlesPublished} format={(v) => v.toLocaleString()} />
+                            <HighlightValue rank={rankAmongSites(s.siteId, (x) => x.articlesPublishedDelta, sites)}>
+                              <DeltaValue value={s.articlesPublishedDelta ?? 0} format={(v) => v.toLocaleString()} />
                             </HighlightValue>
                           ) : (
                             <span className="text-ink-soft">—</span>
@@ -483,7 +471,7 @@ function DivisionDeltaInner() {
                                     <td className="py-1.5 pr-4 text-right font-data">
                                       {w.hadPrevious ? (
                                         <DeltaValue
-                                          value={w.delta!.articlesPublished}
+                                          value={w.articlesPublishedDelta ?? 0}
                                           format={(v) => v.toLocaleString()}
                                         />
                                       ) : (
@@ -492,7 +480,7 @@ function DivisionDeltaInner() {
                                     </td>
                                     <td className="py-1.5 pr-4 text-right font-data">
                                       {w.hadPrevious ? (
-                                        <DeltaValue value={w.delta!.totalPageviews} format={formatCompactNumber} />
+                                        <DeltaValue value={w.today.totalPageviews} format={formatCompactNumber} />
                                       ) : (
                                         <span className="text-ink-soft">—</span>
                                       )}
