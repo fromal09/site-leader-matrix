@@ -24,7 +24,9 @@ type WriterRow = {
   siteId: number;
   siteName: string;
   isSiteLeader: boolean;
+  isSiteEditorOrExpert: boolean;
   current: Metrics;
+  today: Metrics;
   delta: MetricDelta | null;
   hadPrevious: boolean;
 };
@@ -34,6 +36,7 @@ type SiteRow = {
   siteName: string;
   importedAt: string | null;
   current: Metrics;
+  today: Metrics;
   delta: MetricDelta | null;
   hadPrevious: boolean;
   writers: WriterRow[];
@@ -45,6 +48,7 @@ type DeltaResponse = {
   periodLabel?: string;
   currentDataAsOf?: string | null;
   previousDataAsOf?: string | null;
+  latestPublishDate?: string | null;
   siteCount?: number;
   sitesWithPrevious?: number;
   divisionTotals?: {
@@ -54,11 +58,20 @@ type DeltaResponse = {
   siteDeltas?: SiteRow[];
   standouts?: WriterRow[];
   siteLeaderArticles?: WriterRow[];
+  quietEditorsAndExperts?: WriterRow[];
 };
 
 function formatDate(iso: string | null | undefined) {
   if (!iso) return null;
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  // Date-only strings (no time component) parse as UTC midnight, which can
+  // display as the previous day in timezones behind UTC — force local
+  // midnight instead so "2026-07-19" always shows as July 19.
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(iso);
+  return new Date(dateOnly ? `${iso}T00:00:00` : iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function rankAmongSites(
@@ -83,6 +96,10 @@ function DivisionDeltaInner() {
   const [data, setData] = useState<DeltaResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [sortKey, setSortKey] = useState<"name" | "pvChange" | "articleChange" | "scrollDepth" | "timeOnPage">(
+    "pvChange"
+  );
+  const [sortDesc, setSortDesc] = useState(true);
 
   useEffect(() => {
     setLoading(true);
@@ -102,7 +119,42 @@ function DivisionDeltaInner() {
   }
 
   const availableDivisions = DIVISIONS.filter((d) => d.status === "available");
-  const sites = data?.siteDeltas ?? [];
+  const rawSites = data?.siteDeltas ?? [];
+  const sites = [...rawSites].sort((a, b) => {
+    let av: number | string;
+    let bv: number | string;
+    switch (sortKey) {
+      case "name":
+        av = a.siteName;
+        bv = b.siteName;
+        return sortDesc ? (bv as string).localeCompare(av as string) : (av as string).localeCompare(bv as string);
+      case "pvChange":
+        av = a.delta?.totalPageviews ?? -Infinity;
+        bv = b.delta?.totalPageviews ?? -Infinity;
+        break;
+      case "articleChange":
+        av = a.delta?.articlesPublished ?? -Infinity;
+        bv = b.delta?.articlesPublished ?? -Infinity;
+        break;
+      case "scrollDepth":
+        av = a.today.weightedAvgScrollDepth ?? -Infinity;
+        bv = b.today.weightedAvgScrollDepth ?? -Infinity;
+        break;
+      case "timeOnPage":
+        av = a.today.weightedAvgTimeOnPage ?? -Infinity;
+        bv = b.today.weightedAvgTimeOnPage ?? -Infinity;
+        break;
+    }
+    return sortDesc ? (bv as number) - (av as number) : (av as number) - (bv as number);
+  });
+
+  function handleSort(key: typeof sortKey) {
+    if (key === sortKey) setSortDesc((d) => !d);
+    else {
+      setSortKey(key);
+      setSortDesc(true);
+    }
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
@@ -126,7 +178,13 @@ function DivisionDeltaInner() {
               Comparing data uploaded{" "}
               <strong className="text-ink">{formatDate(data.currentDataAsOf)}</strong> against
               what was there as of{" "}
-              <strong className="text-ink">{formatDate(data.previousDataAsOf)}</strong>.
+              <strong className="text-ink">{formatDate(data.previousDataAsOf)}</strong>. PV
+              and article changes reflect everything new since that upload; Scroll Depth and
+              Time on Page are scoped specifically to articles first published{" "}
+              <strong className="text-ink">
+                {data.latestPublishDate ? formatDate(data.latestPublishDate) : "the most recent day"}
+              </strong>
+              .
             </p>
           )}
         </div>
@@ -207,7 +265,7 @@ function DivisionDeltaInner() {
             </div>
           </div>
 
-          <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div>
               <h2 className="mb-2 font-display text-lg font-semibold text-navy">
                 Writers Who Stood Out
@@ -215,7 +273,7 @@ function DivisionDeltaInner() {
               {(data.standouts ?? []).length === 0 ? (
                 <p className="text-sm italic text-ink-soft">Nothing to compare yet.</p>
               ) : (
-                <ul className="card space-y-1.5 rounded-md p-4">
+                <ul className="card max-h-80 space-y-1.5 overflow-y-auto scroll-thin rounded-md p-4">
                   {(data.standouts ?? []).map((w) => (
                     <li key={w.writerId} className="flex items-center justify-between gap-2 text-sm">
                       <div className="min-w-0">
@@ -236,7 +294,32 @@ function DivisionDeltaInner() {
 
             <div>
               <h2 className="mb-2 font-display text-lg font-semibold text-navy">
-                Articles Published by Site Leader
+                Site Experts &amp; Editors With No Articles
+              </h2>
+              {(data.quietEditorsAndExperts ?? []).length === 0 ? (
+                <p className="text-sm italic text-ink-soft">
+                  Every Site Editor/Expert has published something new this period.
+                </p>
+              ) : (
+                <ul className="card max-h-80 space-y-1.5 overflow-y-auto scroll-thin rounded-md p-4">
+                  {(data.quietEditorsAndExperts ?? []).map((w) => (
+                    <li key={w.writerId} className="flex items-center justify-between gap-2 text-sm">
+                      <Link
+                        href={writerTrafficHref(w.writerId)}
+                        className="truncate font-medium uppercase text-navy hover:underline"
+                      >
+                        {w.name}
+                      </Link>
+                      <span className="font-data text-[10px] text-ink-soft">{w.siteName}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div>
+              <h2 className="mb-2 font-display text-lg font-semibold text-navy">
+                New Articles by Site Leader Since Last Upload
               </h2>
               {(data.siteLeaderArticles ?? []).length === 0 ? (
                 <p className="text-sm italic text-ink-soft">No site leaders on record.</p>
@@ -255,9 +338,12 @@ function DivisionDeltaInner() {
                       </div>
                       <span
                         className="font-data text-sm font-semibold"
-                        style={{ color: w.current.articlesPublished === 0 ? "var(--grease-red)" : "var(--ink)" }}
+                        style={{
+                          color:
+                            (w.delta?.articlesPublished ?? 0) === 0 ? "var(--grease-red)" : "var(--ink)",
+                        }}
                       >
-                        {w.current.articlesPublished}
+                        +{w.delta?.articlesPublished ?? 0}
                       </span>
                     </li>
                   ))}
@@ -274,11 +360,36 @@ function DivisionDeltaInner() {
               <thead>
                 <tr className="border-b border-rule-strong font-data text-[10px] uppercase tracking-wide text-ink-soft">
                   <th className="py-2 pr-4"></th>
-                  <th className="py-2 pr-4">Site</th>
-                  <th className="py-2 pr-4 text-right">PV Change</th>
-                  <th className="py-2 pr-4 text-right">Articles Published</th>
-                  <th className="py-2 pr-4 text-right">Scroll Depth</th>
-                  <th className="py-2 text-right">Time on Page</th>
+                  <th
+                    className="cursor-pointer select-none py-2 pr-4 hover:text-navy"
+                    onClick={() => handleSort("name")}
+                  >
+                    Site{sortKey === "name" && (sortDesc ? " ▼" : " ▲")}
+                  </th>
+                  <th
+                    className="cursor-pointer select-none py-2 pr-4 text-right hover:text-navy"
+                    onClick={() => handleSort("pvChange")}
+                  >
+                    PV Change{sortKey === "pvChange" && (sortDesc ? " ▼" : " ▲")}
+                  </th>
+                  <th
+                    className="cursor-pointer select-none py-2 pr-4 text-right hover:text-navy"
+                    onClick={() => handleSort("articleChange")}
+                  >
+                    Articles Published{sortKey === "articleChange" && (sortDesc ? " ▼" : " ▲")}
+                  </th>
+                  <th
+                    className="cursor-pointer select-none py-2 pr-4 text-right hover:text-navy"
+                    onClick={() => handleSort("scrollDepth")}
+                  >
+                    Scroll Depth{sortKey === "scrollDepth" && (sortDesc ? " ▼" : " ▲")}
+                  </th>
+                  <th
+                    className="cursor-pointer select-none py-2 text-right hover:text-navy"
+                    onClick={() => handleSort("timeOnPage")}
+                  >
+                    Time on Page{sortKey === "timeOnPage" && (sortDesc ? " ▼" : " ▲")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -327,13 +438,13 @@ function DivisionDeltaInner() {
                           )}
                         </td>
                         <td className="py-2 pr-4 text-right font-data">
-                          <HighlightValue rank={rankAmongSites(s.siteId, (x) => x.current.weightedAvgScrollDepth, sites)}>
-                            {formatPercent(s.current.weightedAvgScrollDepth)}
+                          <HighlightValue rank={rankAmongSites(s.siteId, (x) => x.today.weightedAvgScrollDepth, sites)}>
+                            {formatPercent(s.today.weightedAvgScrollDepth)}
                           </HighlightValue>
                         </td>
                         <td className="py-2 text-right font-data">
-                          <HighlightValue rank={rankAmongSites(s.siteId, (x) => x.current.weightedAvgTimeOnPage, sites)}>
-                            {formatDuration(s.current.weightedAvgTimeOnPage)}
+                          <HighlightValue rank={rankAmongSites(s.siteId, (x) => x.today.weightedAvgTimeOnPage, sites)}>
+                            {formatDuration(s.today.weightedAvgTimeOnPage)}
                           </HighlightValue>
                         </td>
                       </tr>
@@ -344,7 +455,7 @@ function DivisionDeltaInner() {
                               <thead>
                                 <tr className="font-data text-[9px] uppercase tracking-wide text-ink-soft">
                                   <th className="py-1 pr-4">Writer</th>
-                                  <th className="py-1 pr-4 text-right">Published</th>
+                                  <th className="py-1 pr-4 text-right">New Articles</th>
                                   <th className="py-1 pr-4 text-right">PV Change</th>
                                   <th className="py-1 pr-4 text-right">Scroll Depth</th>
                                   <th className="py-1 text-right">Time on Page</th>
@@ -362,7 +473,14 @@ function DivisionDeltaInner() {
                                       </Link>
                                     </td>
                                     <td className="py-1.5 pr-4 text-right font-data">
-                                      {w.current.articlesPublished}
+                                      {w.hadPrevious ? (
+                                        <DeltaValue
+                                          value={w.delta!.articlesPublished}
+                                          format={(v) => v.toLocaleString()}
+                                        />
+                                      ) : (
+                                        <span className="text-ink-soft">—</span>
+                                      )}
                                     </td>
                                     <td className="py-1.5 pr-4 text-right font-data">
                                       {w.hadPrevious ? (
@@ -372,10 +490,10 @@ function DivisionDeltaInner() {
                                       )}
                                     </td>
                                     <td className="py-1.5 pr-4 text-right font-data">
-                                      {formatPercent(w.current.weightedAvgScrollDepth)}
+                                      {formatPercent(w.today.weightedAvgScrollDepth)}
                                     </td>
                                     <td className="py-1.5 text-right font-data">
-                                      {formatDuration(w.current.weightedAvgTimeOnPage)}
+                                      {formatDuration(w.today.weightedAvgTimeOnPage)}
                                     </td>
                                   </tr>
                                 ))}

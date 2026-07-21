@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { pageviewWeightedAverage } from "@/lib/trafficStats";
+import { pageviewWeightedAverage, dedupeArticles } from "@/lib/trafficStats";
 import { buildMatchNames } from "@/lib/nameNormalize";
 
 type Metrics = {
@@ -12,7 +12,8 @@ type Metrics = {
   weightedAvgTimeOnPage: number | null;
 };
 
-function computeMetrics(publishedRows: any[]): Metrics {
+function computeMetrics(rawRows: any[]): Metrics {
+  const publishedRows = dedupeArticles(rawRows);
   const publishedPv = publishedRows.reduce((s, r) => s + r.pageviews, 0);
   return {
     articlesPublished: publishedRows.length,
@@ -25,6 +26,14 @@ function computeMetrics(publishedRows: any[]): Metrics {
       publishedRows.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews }))
     ),
   };
+}
+
+// Scopes to articles first published on the single most-recent date seen in
+// this batch — our proxy for "today's new content" specifically, since we
+// don't keep per-article history to isolate the exact upload-to-upload gap.
+function computeTodayMetrics(monthRows: any[], latestPublishDate: string | null): Metrics {
+  if (!latestPublishDate) return computeMetrics([]);
+  return computeMetrics(monthRows.filter((r) => r.published_date === latestPublishDate));
 }
 
 function metricsFromSnapshot(snap: any): Metrics {
@@ -110,9 +119,11 @@ export async function GET(req: NextRequest) {
       : null;
 
     const currentRows = await sql`
-      SELECT at.site_id, at.article_author, at.pageviews::float8 AS pageviews,
+      SELECT at.site_id, at.article_author, at.article_url, at.article_title,
+        at.pageviews::float8 AS pageviews,
         at.scroll_depth::float8 AS scroll_depth, at.avg_time_on_page::float8 AS avg_time_on_page,
-        TO_CHAR(at.first_published_date, 'YYYY-MM') AS published_month
+        TO_CHAR(at.first_published_date, 'YYYY-MM') AS published_month,
+        TO_CHAR(at.first_published_date, 'YYYY-MM-DD') AS published_date
       FROM article_traffic at
       JOIN traffic_imports ti ON ti.id = at.import_id
       WHERE at.site_id = ANY(${siteIds}::int[]) AND ti.period_key = ${periodKey}
@@ -120,21 +131,26 @@ export async function GET(req: NextRequest) {
     `;
     const bySiteAuthorCurrent = new Map<string, any[]>();
     const currentBySite = new Map<number, any[]>();
+    let latestPublishDate: string | null = null;
     for (const r of currentRows as any[]) {
       if (!currentBySite.has(r.site_id)) currentBySite.set(r.site_id, []);
       currentBySite.get(r.site_id)!.push(r);
       const key = `${r.site_id}::${String(r.article_author).trim().toLowerCase()}`;
       if (!bySiteAuthorCurrent.has(key)) bySiteAuthorCurrent.set(key, []);
       bySiteAuthorCurrent.get(key)!.push(r);
+      if (r.published_date && (!latestPublishDate || r.published_date > latestPublishDate)) {
+        latestPublishDate = r.published_date;
+      }
     }
 
     const writers = await sql`
       SELECT dcw.id, dcw.site_id, dcw.name, dcw.role, dcw.traffic_dashboard_name,
         COALESCE(array_agg(DISTINCT wa.alias) FILTER (WHERE wa.alias IS NOT NULL), '{}') AS aliases,
-        COALESCE(bool_or(dr.section = 'site_leaders'), FALSE) AS is_site_leader
+        COALESCE(bool_or(dr.section = 'site_leaders'), FALSE) AS is_site_leader,
+        COALESCE(bool_or(TRIM(LOWER(dcw.role)) IN ('site editor', 'site expert')), FALSE) AS is_site_editor_or_expert
       FROM depth_chart_writers dcw
       LEFT JOIN writer_aliases wa ON wa.writer_id = dcw.id
-      LEFT JOIN depth_chart_roles dr ON dr.label = dcw.role
+      LEFT JOIN depth_chart_roles dr ON TRIM(LOWER(dr.label)) = TRIM(LOWER(dcw.role))
       WHERE dcw.site_id = ANY(${siteIds}::int[]) AND dcw.archived = FALSE
       GROUP BY dcw.id
     `;
@@ -167,6 +183,7 @@ export async function GET(req: NextRequest) {
       const wRows = matchNames.flatMap((mn) => bySiteAuthorCurrent.get(`${w.site_id}::${mn}`) ?? []);
       const wPublished = wRows.filter((r) => r.published_month === periodKey);
       const current = computeMetrics(wPublished);
+      const today = computeTodayMetrics(wPublished, latestPublishDate);
       const prevSnap = prevByWriter.get(w.id);
       const prev = prevSnap ? metricsFromSnapshot(prevSnap) : null;
       return {
@@ -175,7 +192,9 @@ export async function GET(req: NextRequest) {
         siteId: w.site_id,
         siteName: siteNameById.get(w.site_id) ?? "",
         isSiteLeader: w.is_site_leader,
+        isSiteEditorOrExpert: w.is_site_editor_or_expert,
         current,
+        today,
         delta: delta(current, prev),
         hadPrevious: Boolean(prevSnap),
       };
@@ -187,6 +206,7 @@ export async function GET(req: NextRequest) {
         const rows = currentBySite.get(siteId) ?? [];
         const published = rows.filter((r) => r.published_month === periodKey);
         const current = computeMetrics(published);
+        const today = computeTodayMetrics(published, latestPublishDate);
         const prevSnap = prevBySite.get(siteId);
         const prev = prevSnap ? metricsFromSnapshot(prevSnap) : null;
         const siteWriters = writerResults
@@ -197,6 +217,7 @@ export async function GET(req: NextRequest) {
           siteName: siteNameById.get(siteId) ?? "",
           importedAt: importedAtBySite.get(siteId) ?? null,
           current,
+          today,
           delta: delta(current, prev),
           hadPrevious: Boolean(prevSnap),
           writers: siteWriters,
@@ -216,12 +237,19 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => (b.delta!.totalPageviews ?? 0) - (a.delta!.totalPageviews ?? 0))
       .slice(0, 10);
 
-    // Every site leader's article count this period — sites with a Vacant
-    // leader never got a writer card in that role in the first place, so
-    // they're already excluded here without any extra filtering.
+    // Net-new articles per site leader since the last upload, best to worst
+    // — sites with a Vacant leader never got a writer card in that role in
+    // the first place, so they're already excluded without extra filtering.
     const siteLeaderArticles = writerResults
-      .filter((w) => w.isSiteLeader)
-      .sort((a, b) => a.current.articlesPublished - b.current.articlesPublished);
+      .filter((w) => w.isSiteLeader && w.hadPrevious)
+      .sort((a, b) => (b.delta?.articlesPublished ?? 0) - (a.delta?.articlesPublished ?? 0));
+
+    // Narrower than the list above — just Site Editor/Site Expert (not
+    // "Site No. 2") — and only the ones who published nothing NEW since
+    // the last upload specifically, not just nothing all month.
+    const quietEditorsAndExperts = writerResults
+      .filter((w) => w.isSiteEditorOrExpert && w.hadPrevious && (w.delta?.articlesPublished ?? 0) === 0)
+      .sort((a, b) => a.siteName.localeCompare(b.siteName));
 
     return NextResponse.json({
       hasData: true,
@@ -230,6 +258,7 @@ export async function GET(req: NextRequest) {
       periodLabel,
       currentDataAsOf,
       previousDataAsOf,
+      latestPublishDate,
       siteCount: siteIds.length,
       sitesWithPrevious,
       divisionTotals: {
@@ -243,6 +272,7 @@ export async function GET(req: NextRequest) {
       siteDeltas,
       standouts,
       siteLeaderArticles,
+      quietEditorsAndExperts,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

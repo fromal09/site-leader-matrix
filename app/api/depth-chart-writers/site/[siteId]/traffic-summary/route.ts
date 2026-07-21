@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { pageviewWeightedAverage } from "@/lib/trafficStats";
+import { pageviewWeightedAverage, dedupeArticles } from "@/lib/trafficStats";
 import { buildMatchNames } from "@/lib/nameNormalize";
 
 export async function GET(
@@ -56,7 +56,7 @@ export async function GET(
     `;
 
     const articleRows = await sql`
-      SELECT at.article_author, at.pageviews::float8 AS pageviews,
+      SELECT at.article_author, at.article_url, at.article_title, at.pageviews::float8 AS pageviews,
         at.scroll_depth::float8 AS scroll_depth, at.avg_time_on_page::float8 AS avg_time_on_page,
         TO_CHAR(at.first_published_date, 'YYYY-MM') AS published_month
       FROM article_traffic at
@@ -91,7 +91,7 @@ export async function GET(
       pageCount: Number(homepageTotals?.page_count ?? 0),
     };
 
-    const publishedRows = rowsArr.filter((r) => r.published_month === selectedPeriodKey);
+    const publishedRows = dedupeArticles(rowsArr.filter((r) => r.published_month === selectedPeriodKey));
     const totalPageviews = rowsArr.reduce((sum, r) => sum + r.pageviews, 0);
     const publishedPageviews = publishedRows.reduce((sum, r) => sum + r.pageviews, 0);
     const evergreenPageviews = totalPageviews - publishedPageviews;
@@ -134,10 +134,11 @@ export async function GET(
       const rows = matchNames.flatMap((mn) => byAuthor.get(mn) ?? []);
       if (rows.length === 0) continue;
 
-      const articlesPublished = rows.filter((r) => r.published_month === selectedPeriodKey).length;
+      const writerPublishedRows = dedupeArticles(
+        rows.filter((r) => r.published_month === selectedPeriodKey)
+      );
+      const articlesPublished = writerPublishedRows.length;
       const writerTotalPageviews = rows.reduce((sum, r) => sum + r.pageviews, 0);
-
-      const writerPublishedRows = rows.filter((r) => r.published_month === selectedPeriodKey);
       const writerPublishedPageviews = writerPublishedRows.reduce((sum, r) => sum + r.pageviews, 0);
 
       result[w.id] = {

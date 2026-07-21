@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import type { ParsedTrafficRow } from "@/lib/traffic";
-import { pageviewWeightedAverage } from "@/lib/trafficStats";
+import { pageviewWeightedAverage, dedupeArticles } from "@/lib/trafficStats";
 import { buildMatchNames } from "@/lib/nameNormalize";
 
 export const maxDuration = 60;
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
       // "current vs. previous upload" deltas possible later, since the
       // detailed rows themselves are about to be deleted.
       const outgoingRows = await sql`
-        SELECT article_author, pageviews::float8 AS pageviews,
+        SELECT article_author, article_url, article_title, pageviews::float8 AS pageviews,
           scroll_depth::float8 AS scroll_depth, avg_time_on_page::float8 AS avg_time_on_page,
           TO_CHAR(first_published_date, 'YYYY-MM') AS published_month
         FROM article_traffic WHERE import_id = ${importId}
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       if (outgoing.length > 0) {
         const authored = outgoing.filter((r) => r.article_author !== null);
         const homepage = outgoing.filter((r) => r.article_author === null);
-        const published = authored.filter((r) => r.published_month === periodKey);
+        const published = dedupeArticles(authored.filter((r) => r.published_month === periodKey));
         const publishedPv = published.reduce((s, r) => s + r.pageviews, 0);
         const totalPv = authored.reduce((s, r) => s + r.pageviews, 0);
         const homepagePv = homepage.reduce((s, r) => s + r.pageviews, 0);
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
           const matchNames = buildMatchNames(w.name, w.traffic_dashboard_name, w.aliases);
           const wRows = matchNames.flatMap((mn) => byAuthor.get(mn) ?? []);
           if (wRows.length === 0) continue;
-          const wPublished = wRows.filter((r) => r.published_month === periodKey);
+          const wPublished = dedupeArticles(wRows.filter((r) => r.published_month === periodKey));
           const wPublishedPv = wPublished.reduce((s, r) => s + r.pageviews, 0);
           const wTotalPv = wRows.reduce((s, r) => s + r.pageviews, 0);
           await sql`
