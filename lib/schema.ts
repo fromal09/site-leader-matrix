@@ -257,6 +257,41 @@ CREATE TABLE IF NOT EXISTS sticky_note_mentions (
 
 CREATE INDEX IF NOT EXISTS idx_sticky_note_mentions_name ON sticky_note_mentions(mentioned_name);
 
+-- Captures site- and writer-level totals right before a re-upload replaces
+-- them, so "current vs. previous upload" deltas are possible even though
+-- the detailed article_traffic rows themselves get overwritten. Cheap to
+-- keep every generation of these (a handful of numbers per site/writer per
+-- upload), unlike keeping full raw article history.
+CREATE TABLE IF NOT EXISTS site_traffic_snapshots (
+  id SERIAL PRIMARY KEY,
+  site_id INT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  period_key TEXT NOT NULL,
+  period_label TEXT NOT NULL,
+  snapshot_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  articles_published INT NOT NULL DEFAULT 0,
+  total_pageviews BIGINT NOT NULL DEFAULT 0,
+  evergreen_pageviews BIGINT NOT NULL DEFAULT 0,
+  homepage_pageviews BIGINT NOT NULL DEFAULT 0,
+  weighted_avg_scroll_depth NUMERIC,
+  weighted_avg_time_on_page NUMERIC
+);
+CREATE INDEX IF NOT EXISTS idx_site_traffic_snapshots_lookup
+  ON site_traffic_snapshots(site_id, period_key, snapshot_at DESC);
+
+CREATE TABLE IF NOT EXISTS writer_traffic_snapshots (
+  id SERIAL PRIMARY KEY,
+  writer_id INT NOT NULL REFERENCES depth_chart_writers(id) ON DELETE CASCADE,
+  site_id INT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  period_key TEXT NOT NULL,
+  snapshot_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  articles_published INT NOT NULL DEFAULT 0,
+  total_pageviews BIGINT NOT NULL DEFAULT 0,
+  weighted_avg_scroll_depth NUMERIC,
+  weighted_avg_time_on_page NUMERIC
+);
+CREATE INDEX IF NOT EXISTS idx_writer_traffic_snapshots_lookup
+  ON writer_traffic_snapshots(writer_id, period_key, snapshot_at DESC);
+
 CREATE INDEX IF NOT EXISTS idx_sticky_notes_subject ON sticky_notes(subject_type, subject_id);
 
 -- Post-it style notes. Fully generic: subject_type + subject_id identify

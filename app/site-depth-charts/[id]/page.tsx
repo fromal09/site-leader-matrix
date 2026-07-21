@@ -11,7 +11,7 @@ import { SiteHistoryChart } from "@/components/SiteHistoryChart";
 import { HomepageHistoryChart } from "@/components/HomepageHistoryChart";
 import { WriterHistoryChart } from "@/components/WriterHistoryChart";
 import { useAuth } from "@/components/AuthProvider";
-import { DC_BASE } from "@/lib/routes";
+import { DC_BASE, dcSiteHref } from "@/lib/routes";
 import { SECTIONS } from "@/lib/depthCharts";
 import type { DepthChartRole, DepthChartWriter } from "@/lib/depthCharts";
 import type { Site } from "@/lib/types";
@@ -177,6 +177,12 @@ export default function DepthChartSitePage() {
               Ranked by {statsPeriodLabel} pageviews
             </p>
           )}
+          <Link
+            href={`${dcSiteHref(site.id)}/delta`}
+            className="mt-1.5 inline-block rounded border border-navy px-2.5 py-1 text-[11px] font-medium text-navy hover:bg-navy hover:text-white"
+          >
+            Since Last Upload →
+          </Link>
         </div>
         {!addingNew && (
           <div className="flex flex-wrap items-center gap-2">

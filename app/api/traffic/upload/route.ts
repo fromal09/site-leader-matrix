@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import type { ParsedTrafficRow } from "@/lib/traffic";
+import { pageviewWeightedAverage } from "@/lib/trafficStats";
+import { buildMatchNames } from "@/lib/nameNormalize";
 
 export const maxDuration = 60;
 
@@ -39,6 +41,71 @@ export async function POST(req: NextRequest) {
     let importId: number;
     if ((existing as any[])[0]) {
       importId = (existing as any[])[0].id;
+
+      // Snapshot what's about to be overwritten — this is what makes
+      // "current vs. previous upload" deltas possible later, since the
+      // detailed rows themselves are about to be deleted.
+      const outgoingRows = await sql`
+        SELECT article_author, pageviews::float8 AS pageviews,
+          scroll_depth::float8 AS scroll_depth, avg_time_on_page::float8 AS avg_time_on_page,
+          TO_CHAR(first_published_date, 'YYYY-MM') AS published_month
+        FROM article_traffic WHERE import_id = ${importId}
+      `;
+      const outgoing = outgoingRows as any[];
+      if (outgoing.length > 0) {
+        const authored = outgoing.filter((r) => r.article_author !== null);
+        const homepage = outgoing.filter((r) => r.article_author === null);
+        const published = authored.filter((r) => r.published_month === periodKey);
+        const publishedPv = published.reduce((s, r) => s + r.pageviews, 0);
+        const totalPv = authored.reduce((s, r) => s + r.pageviews, 0);
+        const homepagePv = homepage.reduce((s, r) => s + r.pageviews, 0);
+
+        await sql`
+          INSERT INTO site_traffic_snapshots
+            (site_id, period_key, period_label, articles_published, total_pageviews,
+             evergreen_pageviews, homepage_pageviews, weighted_avg_scroll_depth, weighted_avg_time_on_page)
+          VALUES (
+            ${siteIdNum}, ${periodKey}, ${periodLabel},
+            ${published.length}, ${totalPv}, ${totalPv - publishedPv}, ${homepagePv},
+            ${pageviewWeightedAverage(authored.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews })))},
+            ${pageviewWeightedAverage(authored.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews })))}
+          )
+        `;
+
+        const writers = await sql`
+          SELECT dcw.id, dcw.name, dcw.traffic_dashboard_name,
+            COALESCE(array_agg(wa.alias) FILTER (WHERE wa.alias IS NOT NULL), '{}') AS aliases
+          FROM depth_chart_writers dcw
+          LEFT JOIN writer_aliases wa ON wa.writer_id = dcw.id
+          WHERE dcw.site_id = ${siteIdNum}
+          GROUP BY dcw.id
+        `;
+        const byAuthor = new Map<string, any[]>();
+        for (const r of authored) {
+          const key = String(r.article_author).trim().toLowerCase();
+          if (!byAuthor.has(key)) byAuthor.set(key, []);
+          byAuthor.get(key)!.push(r);
+        }
+        for (const w of writers as any[]) {
+          const matchNames = buildMatchNames(w.name, w.traffic_dashboard_name, w.aliases);
+          const wRows = matchNames.flatMap((mn) => byAuthor.get(mn) ?? []);
+          if (wRows.length === 0) continue;
+          const wPublished = wRows.filter((r) => r.published_month === periodKey);
+          const wPublishedPv = wPublished.reduce((s, r) => s + r.pageviews, 0);
+          const wTotalPv = wRows.reduce((s, r) => s + r.pageviews, 0);
+          await sql`
+            INSERT INTO writer_traffic_snapshots
+              (writer_id, site_id, period_key, articles_published, total_pageviews,
+               weighted_avg_scroll_depth, weighted_avg_time_on_page)
+            VALUES (
+              ${w.id}, ${siteIdNum}, ${periodKey}, ${wPublished.length}, ${wTotalPv},
+              ${pageviewWeightedAverage(wRows.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews })))},
+              ${pageviewWeightedAverage(wRows.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews })))}
+            )
+          `;
+        }
+      }
+
       await sql`DELETE FROM article_traffic WHERE import_id = ${importId}`;
       await sql`
         UPDATE traffic_imports
