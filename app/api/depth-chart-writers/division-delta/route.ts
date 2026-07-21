@@ -28,12 +28,17 @@ function computeMetrics(rawRows: any[]): Metrics {
   };
 }
 
-// Scopes to articles first published on the single most-recent date seen in
-// this batch — our proxy for "today's new content" specifically, since we
+// Scopes to articles first published within the given date range — our
+// proxy for "the new content this upload added" specifically, since we
 // don't keep per-article history to isolate the exact upload-to-upload gap.
-function computeTodayMetrics(monthRows: any[], latestPublishDate: string | null): Metrics {
-  if (!latestPublishDate) return computeMetrics([]);
-  return computeMetrics(monthRows.filter((r) => r.published_date === latestPublishDate));
+function computeTodayMetrics(
+  monthRows: any[],
+  range: { start: string; end: string } | null
+): Metrics {
+  if (!range) return computeMetrics([]);
+  return computeMetrics(
+    monthRows.filter((r) => r.published_date && r.published_date >= range.start && r.published_date <= range.end)
+  );
 }
 
 function metricsFromSnapshot(snap: any): Metrics {
@@ -131,16 +136,12 @@ export async function GET(req: NextRequest) {
     `;
     const bySiteAuthorCurrent = new Map<string, any[]>();
     const currentBySite = new Map<number, any[]>();
-    let latestPublishDate: string | null = null;
     for (const r of currentRows as any[]) {
       if (!currentBySite.has(r.site_id)) currentBySite.set(r.site_id, []);
       currentBySite.get(r.site_id)!.push(r);
       const key = `${r.site_id}::${String(r.article_author).trim().toLowerCase()}`;
       if (!bySiteAuthorCurrent.has(key)) bySiteAuthorCurrent.set(key, []);
       bySiteAuthorCurrent.get(key)!.push(r);
-      if (r.published_date && (!latestPublishDate || r.published_date > latestPublishDate)) {
-        latestPublishDate = r.published_date;
-      }
     }
 
     const writers = await sql`
@@ -177,13 +178,45 @@ export async function GET(req: NextRequest) {
       (prevWriterRows as any[]).map((r) => [r.writer_id, r])
     );
 
+    // Best-available estimate of which calendar dates the new content in
+    // this upload actually spans: take the N most-recently-published
+    // articles division-wide, where N is the exact article-count delta
+    // (computed here lightweight, ahead of the full per-site/writer
+    // metrics below, since those need this range to scope Scroll
+    // Depth/Time on Page consistently with it). Doesn't require
+    // per-article history — works from the same deduped rows already
+    // fetched.
+    let earlyDivDeltaArticles = 0;
+    for (const siteId of siteIds) {
+      const prevSnap = prevBySite.get(siteId);
+      if (!prevSnap) continue;
+      const currentCount = dedupeArticles(
+        (currentBySite.get(siteId) ?? []).filter((r) => r.published_month === periodKey)
+      ).length;
+      earlyDivDeltaArticles += currentCount - Number(prevSnap.articles_published ?? 0);
+    }
+    let newContentDateRange: { start: string; end: string } | null = null;
+    if (earlyDivDeltaArticles > 0) {
+      const allPublishedThisMonth = dedupeArticles(
+        (currentRows as any[]).filter((r) => r.published_month === periodKey)
+      );
+      const sortedByDateDesc = [...allPublishedThisMonth]
+        .filter((r) => r.published_date)
+        .sort((a, b) => (b.published_date as string).localeCompare(a.published_date as string));
+      const newest = sortedByDateDesc.slice(0, earlyDivDeltaArticles);
+      if (newest.length > 0) {
+        const dates = newest.map((r) => r.published_date as string).sort();
+        newContentDateRange = { start: dates[0], end: dates[dates.length - 1] };
+      }
+    }
+
     // Per-writer current metrics + delta, division-wide.
     const writerResults = (writers as any[]).map((w) => {
       const matchNames = buildMatchNames(w.name, w.traffic_dashboard_name, w.aliases);
       const wRows = matchNames.flatMap((mn) => bySiteAuthorCurrent.get(`${w.site_id}::${mn}`) ?? []);
       const wPublished = wRows.filter((r) => r.published_month === periodKey);
       const current = computeMetrics(wPublished);
-      const today = computeTodayMetrics(wPublished, latestPublishDate);
+      const today = computeTodayMetrics(wPublished, newContentDateRange);
       const prevSnap = prevByWriter.get(w.id);
       const prev = prevSnap ? metricsFromSnapshot(prevSnap) : null;
       return {
@@ -206,7 +239,7 @@ export async function GET(req: NextRequest) {
         const rows = currentBySite.get(siteId) ?? [];
         const published = rows.filter((r) => r.published_month === periodKey);
         const current = computeMetrics(published);
-        const today = computeTodayMetrics(published, latestPublishDate);
+        const today = computeTodayMetrics(published, newContentDateRange);
         const prevSnap = prevBySite.get(siteId);
         const prev = prevSnap ? metricsFromSnapshot(prevSnap) : null;
         const siteWriters = writerResults
@@ -231,27 +264,6 @@ export async function GET(req: NextRequest) {
     const sitesWithPrevious = siteDeltas.filter((d) => d.hadPrevious).length;
     const divDeltaArticles = siteDeltas.reduce((s, d) => s + (d.delta?.articlesPublished ?? 0), 0);
     const divDeltaPv = siteDeltas.reduce((s, d) => s + (d.delta?.totalPageviews ?? 0), 0);
-
-    // Best-available estimate of which calendar dates the new content in
-    // this upload actually spans: take the N most-recently-published
-    // articles division-wide, where N is the exact article-count delta
-    // we already computed, and report the span of dates among them. This
-    // doesn't require per-article history — it works from the same
-    // deduped article rows already fetched.
-    let newContentDateRange: { start: string; end: string } | null = null;
-    if (divDeltaArticles > 0) {
-      const allPublishedThisMonth = dedupeArticles(
-        (currentRows as any[]).filter((r) => r.published_month === periodKey)
-      );
-      const sortedByDateDesc = [...allPublishedThisMonth]
-        .filter((r) => r.published_date)
-        .sort((a, b) => (b.published_date as string).localeCompare(a.published_date as string));
-      const newest = sortedByDateDesc.slice(0, divDeltaArticles);
-      if (newest.length > 0) {
-        const dates = newest.map((r) => r.published_date as string).sort();
-        newContentDateRange = { start: dates[0], end: dates[dates.length - 1] };
-      }
-    }
 
     const standouts = writerResults
       .filter((w) => w.hadPrevious && w.delta)
@@ -279,7 +291,6 @@ export async function GET(req: NextRequest) {
       periodLabel,
       currentDataAsOf,
       previousDataAsOf,
-      latestPublishDate,
       newContentDateRange,
       siteCount: siteIds.length,
       sitesWithPrevious,

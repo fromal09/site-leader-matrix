@@ -48,7 +48,6 @@ type DeltaResponse = {
   periodLabel?: string;
   currentDataAsOf?: string | null;
   previousDataAsOf?: string | null;
-  latestPublishDate?: string | null;
   newContentDateRange?: { start: string; end: string } | null;
   siteCount?: number;
   sitesWithPrevious?: number;
