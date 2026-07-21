@@ -232,6 +232,27 @@ export async function GET(req: NextRequest) {
     const divDeltaArticles = siteDeltas.reduce((s, d) => s + (d.delta?.articlesPublished ?? 0), 0);
     const divDeltaPv = siteDeltas.reduce((s, d) => s + (d.delta?.totalPageviews ?? 0), 0);
 
+    // Best-available estimate of which calendar dates the new content in
+    // this upload actually spans: take the N most-recently-published
+    // articles division-wide, where N is the exact article-count delta
+    // we already computed, and report the span of dates among them. This
+    // doesn't require per-article history — it works from the same
+    // deduped article rows already fetched.
+    let newContentDateRange: { start: string; end: string } | null = null;
+    if (divDeltaArticles > 0) {
+      const allPublishedThisMonth = dedupeArticles(
+        (currentRows as any[]).filter((r) => r.published_month === periodKey)
+      );
+      const sortedByDateDesc = [...allPublishedThisMonth]
+        .filter((r) => r.published_date)
+        .sort((a, b) => (b.published_date as string).localeCompare(a.published_date as string));
+      const newest = sortedByDateDesc.slice(0, divDeltaArticles);
+      if (newest.length > 0) {
+        const dates = newest.map((r) => r.published_date as string).sort();
+        newContentDateRange = { start: dates[0], end: dates[dates.length - 1] };
+      }
+    }
+
     const standouts = writerResults
       .filter((w) => w.hadPrevious && w.delta)
       .sort((a, b) => (b.delta!.totalPageviews ?? 0) - (a.delta!.totalPageviews ?? 0))
@@ -259,6 +280,7 @@ export async function GET(req: NextRequest) {
       currentDataAsOf,
       previousDataAsOf,
       latestPublishDate,
+      newContentDateRange,
       siteCount: siteIds.length,
       sitesWithPrevious,
       divisionTotals: {

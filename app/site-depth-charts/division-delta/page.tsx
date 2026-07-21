@@ -49,6 +49,7 @@ type DeltaResponse = {
   currentDataAsOf?: string | null;
   previousDataAsOf?: string | null;
   latestPublishDate?: string | null;
+  newContentDateRange?: { start: string; end: string } | null;
   siteCount?: number;
   sitesWithPrevious?: number;
   divisionTotals?: {
@@ -72,6 +73,21 @@ function formatDate(iso: string | null | undefined) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function formatFocusRange(range: { start: string; end: string } | null | undefined) {
+  if (!range) return null;
+  const start = new Date(`${range.start}T00:00:00`);
+  const end = new Date(`${range.end}T00:00:00`);
+  if (range.start === range.end) {
+    return start.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  }
+  const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
+  const startStr = start.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+  const endStr = sameMonth
+    ? `${end.getDate()}, ${end.getFullYear()}`
+    : end.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  return `${startStr}-${endStr}`;
 }
 
 function rankAmongSites(
@@ -175,16 +191,9 @@ function DivisionDeltaInner() {
           </h1>
           {data?.hasPrevious && (
             <p className="mt-1 text-sm text-ink-soft">
-              Comparing data uploaded{" "}
-              <strong className="text-ink">{formatDate(data.currentDataAsOf)}</strong> against
-              what was there as of{" "}
-              <strong className="text-ink">{formatDate(data.previousDataAsOf)}</strong>. PV
-              and article changes reflect everything new since that upload; Scroll Depth and
-              Time on Page are scoped specifically to articles first published{" "}
-              <strong className="text-ink">
-                {data.latestPublishDate ? formatDate(data.latestPublishDate) : "the most recent day"}
-              </strong>
-              .
+              {data.newContentDateRange
+                ? `Focusing on data from ${formatFocusRange(data.newContentDateRange)}.`
+                : `Comparing data uploaded ${formatDate(data.currentDataAsOf)} against what was there as of ${formatDate(data.previousDataAsOf)}.`}
             </p>
           )}
         </div>
