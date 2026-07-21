@@ -24,13 +24,14 @@ export function LoginScreen() {
       <div className="card w-full max-w-sm rounded-lg p-6">
         <div className="mb-4 text-center">
           <div className="font-display text-xs tracking-[0.2em] text-ink-soft uppercase">
-            Site Leader Matrix
+            Internal Tools
           </div>
           <h1 className="font-display text-2xl font-semibold text-navy">
             Manager Sign-In Required
           </h1>
           <p className="mt-1 text-xs text-ink-soft">
-            Site leader evaluations are internal. Sign in to continue.
+            Site leader tools are internal. Sign in to continue — your password
+            determines which network you land in.
           </p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">

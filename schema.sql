@@ -287,20 +287,178 @@ CREATE INDEX IF NOT EXISTS idx_writer_traffic_snapshots_lookup
 
 CREATE INDEX IF NOT EXISTS idx_sticky_notes_subject ON sticky_notes(subject_type, subject_id);
 
--- Post-it style notes. Fully generic: subject_type + subject_id identify
--- WHAT the note is about (a writer, a site, the home screen, a division —
--- anything), and field_label optionally narrows it to one specific field
--- within that subject (e.g. "Scroll Depth"). NULL field_label means the
--- note is about the subject as a whole.
-CREATE TABLE IF NOT EXISTS sticky_notes (
+-- ============================================================
+-- OnSI network — a second, fully separate product sharing this
+-- codebase. No Site Leader Matrix / grading here (that's a
+-- FanSided-only feature), so no scores/score_history/leader_changes
+-- equivalents. Every other onsi_* table mirrors its FanSided
+-- counterpart 1:1 so the same application code/patterns apply.
+--
+-- Sticky notes are deliberately NOT duplicated for OnSI — the
+-- existing sticky_notes/sticky_note_replies/sticky_note_mentions
+-- tables are already isolated by page URL path (subject_id is the
+-- path), and every OnSI page lives under /onsi/*, so notes on an
+-- OnSI page can never collide with a FanSided one.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS onsi_sites (
   id SERIAL PRIMARY KEY,
-  subject_type TEXT NOT NULL,
-  subject_id TEXT NOT NULL,
-  field_label TEXT,
-  content TEXT NOT NULL,
-  color TEXT NOT NULL DEFAULT 'yellow',
+  site_name TEXT NOT NULL UNIQUE,
+  site_topic TEXT NOT NULL,
+  leader_name TEXT NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  archived BOOLEAN NOT NULL DEFAULT FALSE,
+  division TEXT NOT NULL DEFAULT '',
+  hostname TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_onsi_sites_division ON onsi_sites(division);
+
+CREATE TABLE IF NOT EXISTS onsi_depth_chart_roles (
+  id SERIAL PRIMARY KEY,
+  label TEXT NOT NULL UNIQUE,
+  section TEXT NOT NULL DEFAULT 'contributors',
+  sort_order INT NOT NULL DEFAULT 0,
   created_by TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_sticky_notes_subject ON sticky_notes(subject_type, subject_id);
+INSERT INTO onsi_depth_chart_roles (label, section, sort_order) VALUES
+  ('Site Editor', 'site_leaders', 1),
+  ('Site Expert', 'site_leaders', 2),
+  ('Staff Writer', 'division_resources', 3),
+  ('Contributor', 'contributors', 4),
+  ('Copy Specialist', 'specialists', 5),
+  ('Site No. 2', 'site_leaders', 6),
+  ('Rover', 'division_resources', 7)
+ON CONFLICT (label) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS onsi_depth_chart_writers (
+  id SERIAL PRIMARY KEY,
+  site_id INT NOT NULL REFERENCES onsi_sites(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL,
+  traffic_dashboard_name TEXT NOT NULL DEFAULT '',
+  sort_order INT NOT NULL DEFAULT 0,
+  archived BOOLEAN NOT NULL DEFAULT FALSE,
+  created_by TEXT,
+  updated_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS onsi_writer_notes (
+  id SERIAL PRIMARY KEY,
+  writer_id INT NOT NULL REFERENCES onsi_depth_chart_writers(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  created_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_onsi_writer_notes_writer ON onsi_writer_notes(writer_id);
+
+CREATE TABLE IF NOT EXISTS onsi_ignored_traffic_authors (
+  id SERIAL PRIMARY KEY,
+  site_id INT NOT NULL REFERENCES onsi_sites(id) ON DELETE CASCADE,
+  author_name TEXT NOT NULL,
+  created_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(site_id, author_name)
+);
+
+CREATE TABLE IF NOT EXISTS onsi_writer_aliases (
+  id SERIAL PRIMARY KEY,
+  writer_id INT NOT NULL REFERENCES onsi_depth_chart_writers(id) ON DELETE CASCADE,
+  alias TEXT NOT NULL,
+  created_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(writer_id, alias)
+);
+CREATE INDEX IF NOT EXISTS idx_onsi_writer_aliases_writer ON onsi_writer_aliases(writer_id);
+
+CREATE TABLE IF NOT EXISTS onsi_traffic_imports (
+  id SERIAL PRIMARY KEY,
+  site_id INT NOT NULL REFERENCES onsi_sites(id) ON DELETE CASCADE,
+  period_key TEXT NOT NULL,
+  period_label TEXT NOT NULL,
+  row_count INT NOT NULL DEFAULT 0,
+  imported_by TEXT,
+  imported_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  archived BOOLEAN NOT NULL DEFAULT FALSE,
+  UNIQUE(site_id, period_key)
+);
+
+CREATE TABLE IF NOT EXISTS onsi_article_traffic (
+  id SERIAL PRIMARY KEY,
+  import_id INT NOT NULL REFERENCES onsi_traffic_imports(id) ON DELETE CASCADE,
+  site_id INT NOT NULL REFERENCES onsi_sites(id) ON DELETE CASCADE,
+  article_title TEXT NOT NULL,
+  article_author TEXT,
+  article_url TEXT,
+  first_published_date DATE,
+  pageviews INT NOT NULL DEFAULT 0,
+  scroll_depth NUMERIC,
+  avg_time_on_page NUMERIC
+);
+CREATE INDEX IF NOT EXISTS idx_onsi_article_traffic_import ON onsi_article_traffic(import_id);
+CREATE INDEX IF NOT EXISTS idx_onsi_article_traffic_site_pageviews ON onsi_article_traffic(site_id, pageviews DESC);
+CREATE INDEX IF NOT EXISTS idx_onsi_article_traffic_site_author ON onsi_article_traffic(site_id, article_author);
+
+CREATE TABLE IF NOT EXISTS onsi_site_traffic_archive (
+  id SERIAL PRIMARY KEY,
+  site_id INT NOT NULL REFERENCES onsi_sites(id) ON DELETE CASCADE,
+  period_key TEXT NOT NULL,
+  period_label TEXT NOT NULL,
+  articles_published INT NOT NULL DEFAULT 0,
+  total_pageviews BIGINT NOT NULL DEFAULT 0,
+  evergreen_pageviews BIGINT NOT NULL DEFAULT 0,
+  homepage_pageviews BIGINT NOT NULL DEFAULT 0,
+  weighted_avg_scroll_depth NUMERIC,
+  weighted_avg_time_on_page NUMERIC,
+  archived_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(site_id, period_key)
+);
+
+CREATE TABLE IF NOT EXISTS onsi_writer_traffic_archive (
+  id SERIAL PRIMARY KEY,
+  writer_id INT NOT NULL REFERENCES onsi_depth_chart_writers(id) ON DELETE CASCADE,
+  site_id INT NOT NULL REFERENCES onsi_sites(id) ON DELETE CASCADE,
+  period_key TEXT NOT NULL,
+  period_label TEXT NOT NULL,
+  articles_published INT NOT NULL DEFAULT 0,
+  total_pageviews BIGINT NOT NULL DEFAULT 0,
+  weighted_avg_scroll_depth NUMERIC,
+  weighted_avg_time_on_page NUMERIC,
+  archived_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(writer_id, period_key)
+);
+CREATE INDEX IF NOT EXISTS idx_onsi_site_traffic_archive_site ON onsi_site_traffic_archive(site_id);
+CREATE INDEX IF NOT EXISTS idx_onsi_writer_traffic_archive_writer ON onsi_writer_traffic_archive(writer_id);
+
+CREATE TABLE IF NOT EXISTS onsi_site_traffic_snapshots (
+  id SERIAL PRIMARY KEY,
+  site_id INT NOT NULL REFERENCES onsi_sites(id) ON DELETE CASCADE,
+  period_key TEXT NOT NULL,
+  period_label TEXT NOT NULL,
+  snapshot_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  articles_published INT NOT NULL DEFAULT 0,
+  total_pageviews BIGINT NOT NULL DEFAULT 0,
+  evergreen_pageviews BIGINT NOT NULL DEFAULT 0,
+  homepage_pageviews BIGINT NOT NULL DEFAULT 0,
+  weighted_avg_scroll_depth NUMERIC,
+  weighted_avg_time_on_page NUMERIC
+);
+CREATE INDEX IF NOT EXISTS idx_onsi_site_traffic_snapshots_lookup
+  ON onsi_site_traffic_snapshots(site_id, period_key, snapshot_at DESC);
+
+CREATE TABLE IF NOT EXISTS onsi_writer_traffic_snapshots (
+  id SERIAL PRIMARY KEY,
+  writer_id INT NOT NULL REFERENCES onsi_depth_chart_writers(id) ON DELETE CASCADE,
+  site_id INT NOT NULL REFERENCES onsi_sites(id) ON DELETE CASCADE,
+  period_key TEXT NOT NULL,
+  snapshot_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  articles_published INT NOT NULL DEFAULT 0,
+  total_pageviews BIGINT NOT NULL DEFAULT 0,
+  weighted_avg_scroll_depth NUMERIC,
+  weighted_avg_time_on_page NUMERIC
+);
+CREATE INDEX IF NOT EXISTS idx_onsi_writer_traffic_snapshots_lookup
+  ON onsi_writer_traffic_snapshots(writer_id, period_key, snapshot_at DESC);

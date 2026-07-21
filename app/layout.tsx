@@ -4,7 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import { LoginModal } from "@/components/LoginModal";
 import { Gate } from "@/components/Gate";
-import { Header } from "@/components/Header";
+import { AppShell } from "@/components/AppShell";
 import { GlobalStickyLayer } from "@/components/GlobalStickyLayer";
 import { NotebookSpiral } from "@/components/NotebookSpiral";
 
@@ -52,8 +52,7 @@ export default function RootLayout({
         <AuthProvider>
           <Gate>
             <GlobalStickyLayer>
-              <Header />
-              {children}
+              <AppShell>{children}</AppShell>
             </GlobalStickyLayer>
           </Gate>
           <LoginModal />

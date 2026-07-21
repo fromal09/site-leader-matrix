@@ -16,7 +16,7 @@ export function LoginModal() {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const err = await login(name, password);
+    const err = await login(name, password, false);
     setBusy(false);
     if (err) setError(err);
   }

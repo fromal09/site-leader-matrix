@@ -1,8 +1,10 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 
-type Session = { name: string } | null;
+type Network = "fansided" | "onsi";
+type Session = { name: string; network: Network } | null;
 
 type AuthContextType = {
   session: Session;
@@ -10,7 +12,7 @@ type AuthContextType = {
   loginOpen: boolean;
   openLogin: () => void;
   closeLogin: () => void;
-  login: (name: string, password: string) => Promise<string | null>;
+  login: (name: string, password: string, redirectOnSuccess?: boolean) => Promise<string | null>;
   logout: () => Promise<void>;
   requireAuth: () => boolean; // returns true if already authed, else opens modal and returns false
 };
@@ -21,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session>(null);
   const [loading, setLoading] = useState(true);
   const [loginOpen, setLoginOpen] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     fetch("/api/auth")
@@ -29,18 +32,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback(async (name: string, password: string) => {
-    const res = await fetch("/api/auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) return data.error ?? "Login failed.";
-    setSession({ name: data.name });
-    setLoginOpen(false);
-    return null;
-  }, []);
+  const login = useCallback(
+    async (name: string, password: string, redirectOnSuccess = true) => {
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) return data.error ?? "Login failed.";
+      setSession({ name: data.name, network: data.network });
+      setLoginOpen(false);
+      // Only a fresh (LoginScreen) login jumps to that network's home —
+      // a mid-session re-auth (the modal) should leave you where you were.
+      if (redirectOnSuccess) {
+        router.push(data.network === "onsi" ? "/onsi" : "/");
+      }
+      return null;
+    },
+    [router]
+  );
 
   const logout = useCallback(async () => {
     await fetch("/api/auth", { method: "DELETE" });

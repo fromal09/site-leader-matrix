@@ -9,10 +9,11 @@ function getSecret() {
   return new TextEncoder().encode(secret);
 }
 
-export type Session = { name: string };
+export type Network = "fansided" | "onsi";
+export type Session = { name: string; network: Network };
 
-export async function createSession(name: string) {
-  const token = await new SignJWT({ name })
+export async function createSession(name: string, network: Network) {
+  const token = await new SignJWT({ name, network })
     .setProtectedHeader({ alg: ALG })
     .setIssuedAt()
     .setExpirationTime("30d")
@@ -39,7 +40,10 @@ export async function getSession(): Promise<Session | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, getSecret());
-    if (typeof payload.name === "string") return { name: payload.name };
+    if (typeof payload.name === "string") {
+      const network: Network = payload.network === "onsi" ? "onsi" : "fansided";
+      return { name: payload.name, network };
+    }
     return null;
   } catch {
     return null;

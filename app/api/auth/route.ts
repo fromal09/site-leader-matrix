@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSession, clearSession, getSession } from "@/lib/auth";
+import { createSession, clearSession, getSession, type Network } from "@/lib/auth";
 
 export async function GET() {
   const session = await getSession();
@@ -13,12 +13,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Enter your name." }, { status: 400 });
   }
 
-  if (password !== process.env.SITE_PASSWORD) {
+  let network: Network | null = null;
+  if (password === process.env.SITE_PASSWORD) {
+    network = "fansided";
+  } else if (password === process.env.ONSI_SITE_PASSWORD) {
+    network = "onsi";
+  }
+
+  if (!network) {
     return NextResponse.json({ error: "Incorrect password." }, { status: 401 });
   }
 
-  await createSession(name.trim());
-  return NextResponse.json({ ok: true, name: name.trim() });
+  await createSession(name.trim(), network);
+  return NextResponse.json({ ok: true, name: name.trim(), network });
 }
 
 export async function DELETE() {
