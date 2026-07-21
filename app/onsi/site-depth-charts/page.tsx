@@ -29,7 +29,7 @@ function HubInner() {
 
   const allDivisions = Array.from(new Set(sites.map((s) => s.division))).sort();
   const activeDivision = division || allDivisions[0] || "";
-  const filtered = sites.filter((s) => s.division === activeDivision);
+  const filtered = activeDivision === "ALL" ? sites : sites.filter((s) => s.division === activeDivision);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
@@ -43,7 +43,7 @@ function HubInner() {
             Division Overview
           </p>
           <h1 className="font-display text-3xl font-bold text-navy">
-            {activeDivision || "OnSI"} Site Depth Charts and Performance
+            {activeDivision === "ALL" ? "All Divisions" : activeDivision || "OnSI"} Site Depth Charts and Performance
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-ink-soft">
             Click into any site to build out its writer roster.
@@ -62,6 +62,7 @@ function HubInner() {
                   {d}
                 </option>
               ))}
+              <option value="ALL">All Divisions</option>
             </select>
           </label>
         )}

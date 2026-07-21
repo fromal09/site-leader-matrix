@@ -11,6 +11,7 @@ import { StatTile } from "@/components/StatTile";
 import { DIVISIONS } from "@/lib/divisions";
 import { rankAmong } from "@/lib/rankColor";
 import { HighlightValue } from "@/components/HighlightValue";
+import { pageviewWeightedAverage } from "@/lib/trafficStats";
 import type { Site } from "@/lib/types";
 
 type SiteSummary = {
@@ -83,11 +84,40 @@ function DepthChartsHomeInner() {
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
   const sites = useMemo(
-    () => allSites.filter((s) => (s.division ?? "NFL") === division),
+    () =>
+      division === "ALL"
+        ? allSites
+        : allSites.filter((s) => (s.division ?? "NFL") === division),
     [allSites, division]
   );
   const availableDivisions = DIVISIONS.filter((d) => d.status === "available");
-  const divisionTotals = byDivision[division] ?? null;
+  const divisionTotals = useMemo<DivisionTotals | null>(() => {
+    if (division !== "ALL") return byDivision[division] ?? null;
+    const all = Object.values(byDivision);
+    if (all.length === 0) return null;
+    const scrollInputs = all
+      .filter((d) => d.weightedAvgScrollDepth !== null)
+      .map((d) => ({ value: d.weightedAvgScrollDepth, pageviews: d.totalPageviews }));
+    const timeInputs = all
+      .filter((d) => d.weightedAvgTimeOnPage !== null)
+      .map((d) => ({ value: d.weightedAvgTimeOnPage, pageviews: d.totalPageviews }));
+    const articlesPublished = all.reduce((s, d) => s + d.articlesPublished, 0);
+    const totalPageviews = all.reduce((s, d) => s + d.totalPageviews, 0);
+    const publishedPageviews = all.reduce(
+      (s, d) => s + (d.pvPerPublishedArticle ?? 0) * d.articlesPublished,
+      0
+    );
+    return {
+      periodLabel: all[0]?.periodLabel ?? "",
+      siteCount: all.reduce((s, d) => s + d.siteCount, 0),
+      articlesPublished,
+      totalPageviews,
+      evergreenPageviews: all.reduce((s, d) => s + d.evergreenPageviews, 0),
+      weightedAvgScrollDepth: pageviewWeightedAverage(scrollInputs),
+      weightedAvgTimeOnPage: pageviewWeightedAverage(timeInputs),
+      pvPerPublishedArticle: articlesPublished > 0 ? publishedPageviews / articlesPublished : null,
+    };
+  }, [byDivision, division]);
 
   async function loadSummary(periodKey?: string) {
     const url = periodKey
@@ -143,24 +173,35 @@ function DepthChartsHomeInner() {
             Division Overview
           </p>
           <h1 className="font-display text-3xl font-bold text-navy">
-            {division} Site Depth Charts and Performance
+            {division === "ALL" ? "All Divisions" : division} Site Depth Charts and Performance
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-ink-soft">
             Click into any site to build out its writer roster.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <Link
-              href={`${DC_BASE}/division-resources?division=${division}`}
-              className="inline-block rounded border border-navy px-3 py-1.5 text-xs font-medium text-navy hover:bg-navy hover:text-white"
-            >
-              View {division} Division Resources (Rovers &amp; Staff Writers) →
-            </Link>
-            <Link
-              href={`${DC_BASE}/division-delta?division=${division}`}
-              className="inline-block rounded border border-navy px-3 py-1.5 text-xs font-medium text-navy hover:bg-navy hover:text-white"
-            >
-              {division} Since Last Upload →
-            </Link>
+            {division === "ALL" ? (
+              <Link
+                href="/network-writers"
+                className="inline-block rounded border border-navy px-3 py-1.5 text-xs font-medium text-navy hover:bg-navy hover:text-white"
+              >
+                View Network Writers (Rovers &amp; Staff Writers, cross-division) →
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href={`${DC_BASE}/division-resources?division=${division}`}
+                  className="inline-block rounded border border-navy px-3 py-1.5 text-xs font-medium text-navy hover:bg-navy hover:text-white"
+                >
+                  View {division} Division Resources (Rovers &amp; Staff Writers) →
+                </Link>
+                <Link
+                  href={`${DC_BASE}/division-delta?division=${division}`}
+                  className="inline-block rounded border border-navy px-3 py-1.5 text-xs font-medium text-navy hover:bg-navy hover:text-white"
+                >
+                  {division} Since Last Upload →
+                </Link>
+              </>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -177,6 +218,7 @@ function DepthChartsHomeInner() {
                     {d.name}
                   </option>
                 ))}
+                <option value="ALL">All Divisions</option>
               </select>
             </label>
           )}

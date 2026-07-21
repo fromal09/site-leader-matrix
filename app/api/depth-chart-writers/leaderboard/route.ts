@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       FROM depth_chart_writers dcw
       JOIN sites s ON s.id = dcw.site_id
       LEFT JOIN writer_aliases wa ON wa.writer_id = dcw.id
-      WHERE dcw.archived = FALSE AND s.division = ${division}
+      WHERE dcw.archived = FALSE AND (${division} = 'ALL' OR s.division = ${division})
       GROUP BY dcw.id, s.site_name
     `;
 

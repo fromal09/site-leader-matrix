@@ -97,6 +97,65 @@ function DivisionCard({
   );
 }
 
+function FullNetworkCard({
+  label,
+  byDivision,
+  loading,
+}: {
+  label: string;
+  byDivision: Record<string, DivisionMetrics>;
+  loading: boolean;
+}) {
+  const router = useRouter();
+  const clickHandlers = useClickOrDoubleClick(() => router.push("/site-depth-charts?division=ALL"));
+
+  const totals = Object.values(byDivision).reduce(
+    (acc, m) => ({
+      articlesPublished: acc.articlesPublished + m.articlesPublished,
+      totalPageviews: acc.totalPageviews + m.totalPageviews,
+    }),
+    { articlesPublished: 0, totalPageviews: 0 }
+  );
+
+  return (
+    <div
+      {...clickHandlers}
+      role="link"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") router.push("/site-depth-charts?division=ALL");
+      }}
+      className="group flex cursor-pointer flex-col gap-3 rounded-md border-2 border-navy p-5 text-white transition hover:-translate-y-0.5 hover:shadow-lg sm:flex-row sm:items-center sm:justify-between"
+      style={{ background: "linear-gradient(135deg, var(--navy), var(--navy-soft))" }}
+    >
+      <div>
+        <div className="flex items-center gap-2">
+          <h2 className="font-display text-2xl font-bold">{label}</h2>
+          <span className="rounded-full bg-white/15 px-2 py-0.5 font-data text-[10px] uppercase tracking-wide">
+            Network-Wide
+          </span>
+        </div>
+        <p className="mt-1 max-w-xl text-sm text-white/80">
+          Every site, every division, in one combined view — same tools, no division filter.
+        </p>
+      </div>
+      {!loading && (
+        <div className="flex gap-6 font-data text-sm">
+          <div>
+            <div className="text-white/60">Published</div>
+            <div className="text-lg font-semibold">{totals.articlesPublished.toLocaleString()}</div>
+          </div>
+          <div>
+            <div className="text-white/60">Total PVs</div>
+            <div className="text-lg font-semibold">{formatCompactNumber(totals.totalPageviews)}</div>
+          </div>
+        </div>
+      )}
+      <span className="shrink-0 text-sm font-medium text-white group-hover:underline">Open →</span>
+    </div>
+  );
+}
+
 export default function HomePage() {
   const [byDivision, setByDivision] = useState<Record<string, DivisionMetrics>>({});
   const [periodLabel, setPeriodLabel] = useState<string | null>(null);
@@ -146,6 +205,10 @@ export default function HomePage() {
               FTE Report →
             </Link>
           </div>
+        </div>
+
+        <div className="mb-4">
+          <FullNetworkCard label="Full FanSided" byDivision={byDivision} loading={loading} />
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
