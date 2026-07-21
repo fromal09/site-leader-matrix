@@ -270,6 +270,7 @@ CREATE TABLE IF NOT EXISTS site_traffic_snapshots (
   snapshot_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   articles_published INT NOT NULL DEFAULT 0,
   total_pageviews BIGINT NOT NULL DEFAULT 0,
+  published_pageviews BIGINT NOT NULL DEFAULT 0,
   evergreen_pageviews BIGINT NOT NULL DEFAULT 0,
   homepage_pageviews BIGINT NOT NULL DEFAULT 0,
   weighted_avg_scroll_depth NUMERIC,
@@ -277,6 +278,7 @@ CREATE TABLE IF NOT EXISTS site_traffic_snapshots (
 );
 CREATE INDEX IF NOT EXISTS idx_site_traffic_snapshots_lookup
   ON site_traffic_snapshots(site_id, period_key, snapshot_at DESC);
+ALTER TABLE site_traffic_snapshots ADD COLUMN IF NOT EXISTS published_pageviews BIGINT NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS writer_traffic_snapshots (
   id SERIAL PRIMARY KEY,
@@ -286,11 +288,13 @@ CREATE TABLE IF NOT EXISTS writer_traffic_snapshots (
   snapshot_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   articles_published INT NOT NULL DEFAULT 0,
   total_pageviews BIGINT NOT NULL DEFAULT 0,
+  published_pageviews BIGINT NOT NULL DEFAULT 0,
   weighted_avg_scroll_depth NUMERIC,
   weighted_avg_time_on_page NUMERIC
 );
 CREATE INDEX IF NOT EXISTS idx_writer_traffic_snapshots_lookup
   ON writer_traffic_snapshots(writer_id, period_key, snapshot_at DESC);
+ALTER TABLE writer_traffic_snapshots ADD COLUMN IF NOT EXISTS published_pageviews BIGINT NOT NULL DEFAULT 0;
 
 CREATE INDEX IF NOT EXISTS idx_sticky_notes_subject ON sticky_notes(subject_type, subject_id);
 
@@ -448,6 +452,7 @@ CREATE TABLE IF NOT EXISTS onsi_site_traffic_snapshots (
   snapshot_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   articles_published INT NOT NULL DEFAULT 0,
   total_pageviews BIGINT NOT NULL DEFAULT 0,
+  published_pageviews BIGINT NOT NULL DEFAULT 0,
   evergreen_pageviews BIGINT NOT NULL DEFAULT 0,
   homepage_pageviews BIGINT NOT NULL DEFAULT 0,
   weighted_avg_scroll_depth NUMERIC,
@@ -455,6 +460,7 @@ CREATE TABLE IF NOT EXISTS onsi_site_traffic_snapshots (
 );
 CREATE INDEX IF NOT EXISTS idx_onsi_site_traffic_snapshots_lookup
   ON onsi_site_traffic_snapshots(site_id, period_key, snapshot_at DESC);
+ALTER TABLE onsi_site_traffic_snapshots ADD COLUMN IF NOT EXISTS published_pageviews BIGINT NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS onsi_writer_traffic_snapshots (
   id SERIAL PRIMARY KEY,
@@ -464,9 +470,11 @@ CREATE TABLE IF NOT EXISTS onsi_writer_traffic_snapshots (
   snapshot_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   articles_published INT NOT NULL DEFAULT 0,
   total_pageviews BIGINT NOT NULL DEFAULT 0,
+  published_pageviews BIGINT NOT NULL DEFAULT 0,
   weighted_avg_scroll_depth NUMERIC,
   weighted_avg_time_on_page NUMERIC
 );
 CREATE INDEX IF NOT EXISTS idx_onsi_writer_traffic_snapshots_lookup
   ON onsi_writer_traffic_snapshots(writer_id, period_key, snapshot_at DESC);
+ALTER TABLE onsi_writer_traffic_snapshots ADD COLUMN IF NOT EXISTS published_pageviews BIGINT NOT NULL DEFAULT 0;
 `;

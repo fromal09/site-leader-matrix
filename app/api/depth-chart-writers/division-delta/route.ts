@@ -1,7 +1,65 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { pageviewWeightedAverage } from "@/lib/trafficStats";
 import { buildMatchNames } from "@/lib/nameNormalize";
+
+type Metrics = {
+  articlesPublished: number;
+  totalPageviews: number;
+  pvPerPublishedArticle: number | null;
+  weightedAvgScrollDepth: number | null;
+  weightedAvgTimeOnPage: number | null;
+};
+
+function computeMetrics(publishedRows: any[]): Metrics {
+  const publishedPv = publishedRows.reduce((s, r) => s + r.pageviews, 0);
+  return {
+    articlesPublished: publishedRows.length,
+    totalPageviews: publishedPv,
+    pvPerPublishedArticle: publishedRows.length > 0 ? publishedPv / publishedRows.length : null,
+    weightedAvgScrollDepth: pageviewWeightedAverage(
+      publishedRows.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews }))
+    ),
+    weightedAvgTimeOnPage: pageviewWeightedAverage(
+      publishedRows.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews }))
+    ),
+  };
+}
+
+function metricsFromSnapshot(snap: any): Metrics {
+  const publishedPv = Number(snap.published_pageviews ?? 0);
+  const articlesPublished = Number(snap.articles_published ?? 0);
+  return {
+    articlesPublished,
+    totalPageviews: publishedPv,
+    pvPerPublishedArticle: articlesPublished > 0 ? publishedPv / articlesPublished : null,
+    weightedAvgScrollDepth:
+      snap.weighted_avg_scroll_depth !== null ? Number(snap.weighted_avg_scroll_depth) : null,
+    weightedAvgTimeOnPage:
+      snap.weighted_avg_time_on_page !== null ? Number(snap.weighted_avg_time_on_page) : null,
+  };
+}
+
+function delta(current: Metrics, previous: Metrics | null) {
+  if (!previous) return null;
+  return {
+    articlesPublished: current.articlesPublished - previous.articlesPublished,
+    totalPageviews: current.totalPageviews - previous.totalPageviews,
+    pvPerPublishedArticle:
+      current.pvPerPublishedArticle !== null && previous.pvPerPublishedArticle !== null
+        ? current.pvPerPublishedArticle - previous.pvPerPublishedArticle
+        : null,
+    weightedAvgScrollDepth:
+      current.weightedAvgScrollDepth !== null && previous.weightedAvgScrollDepth !== null
+        ? current.weightedAvgScrollDepth - previous.weightedAvgScrollDepth
+        : null,
+    weightedAvgTimeOnPage:
+      current.weightedAvgTimeOnPage !== null && previous.weightedAvgTimeOnPage !== null
+        ? current.weightedAvgTimeOnPage - previous.weightedAvgTimeOnPage
+        : null,
+  };
+}
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -27,7 +85,7 @@ export async function GET(req: NextRequest) {
     const periodLabel = latest.period_label;
 
     const sitesInDivision = await sql`
-      SELECT id, site_name FROM sites WHERE division = ${division}
+      SELECT id, site_name, leader_name FROM sites WHERE division = ${division}
     `;
     const siteIds = (sitesInDivision as any[]).map((s) => s.id);
     const siteNameById = new Map<number, string>(
@@ -37,6 +95,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ hasData: false });
     }
 
+    // When each site in this division was actually uploaded — the "date of
+    // the new data" the report is showing.
+    const importDates = await sql`
+      SELECT site_id, imported_at FROM traffic_imports
+      WHERE site_id = ANY(${siteIds}::int[]) AND period_key = ${periodKey}
+    `;
+    const importedAtBySite = new Map<number, string>(
+      (importDates as any[]).map((r) => [r.site_id, r.imported_at])
+    );
+    const allImportDates = (importDates as any[]).map((r) => new Date(r.imported_at).getTime());
+    const currentDataAsOf = allImportDates.length
+      ? new Date(Math.max(...allImportDates)).toISOString()
+      : null;
+
     const currentRows = await sql`
       SELECT at.site_id, at.article_author, at.pageviews::float8 AS pageviews,
         at.scroll_depth::float8 AS scroll_depth, at.avg_time_on_page::float8 AS avg_time_on_page,
@@ -44,17 +116,16 @@ export async function GET(req: NextRequest) {
       FROM article_traffic at
       JOIN traffic_imports ti ON ti.id = at.import_id
       WHERE at.site_id = ANY(${siteIds}::int[]) AND ti.period_key = ${periodKey}
+        AND at.article_author IS NOT NULL
     `;
     const bySiteAuthorCurrent = new Map<string, any[]>();
     const currentBySite = new Map<number, any[]>();
     for (const r of currentRows as any[]) {
       if (!currentBySite.has(r.site_id)) currentBySite.set(r.site_id, []);
       currentBySite.get(r.site_id)!.push(r);
-      if (r.article_author !== null) {
-        const key = `${r.site_id}::${String(r.article_author).trim().toLowerCase()}`;
-        if (!bySiteAuthorCurrent.has(key)) bySiteAuthorCurrent.set(key, []);
-        bySiteAuthorCurrent.get(key)!.push(r);
-      }
+      const key = `${r.site_id}::${String(r.article_author).trim().toLowerCase()}`;
+      if (!bySiteAuthorCurrent.has(key)) bySiteAuthorCurrent.set(key, []);
+      bySiteAuthorCurrent.get(key)!.push(r);
     }
 
     const writers = await sql`
@@ -69,16 +140,19 @@ export async function GET(req: NextRequest) {
     `;
 
     const prevSiteRows = await sql`
-      SELECT DISTINCT ON (site_id) site_id, articles_published, total_pageviews,
-        weighted_avg_scroll_depth, weighted_avg_time_on_page, snapshot_at
+      SELECT DISTINCT ON (site_id) *
       FROM site_traffic_snapshots
       WHERE site_id = ANY(${siteIds}::int[]) AND period_key = ${periodKey}
       ORDER BY site_id, snapshot_at DESC
     `;
     const prevBySite = new Map<number, any>((prevSiteRows as any[]).map((r) => [r.site_id, r]));
+    const allSnapshotDates = (prevSiteRows as any[]).map((r) => new Date(r.snapshot_at).getTime());
+    const previousDataAsOf = allSnapshotDates.length
+      ? new Date(Math.max(...allSnapshotDates)).toISOString()
+      : null;
 
     const prevWriterRows = await sql`
-      SELECT DISTINCT ON (writer_id) writer_id, articles_published, total_pageviews, snapshot_at
+      SELECT DISTINCT ON (writer_id) *
       FROM writer_traffic_snapshots
       WHERE site_id = ANY(${siteIds}::int[]) AND period_key = ${periodKey}
       ORDER BY writer_id, snapshot_at DESC
@@ -87,119 +161,88 @@ export async function GET(req: NextRequest) {
       (prevWriterRows as any[]).map((r) => [r.writer_id, r])
     );
 
-    type SiteDeltaRow = {
-      siteId: number;
-      siteName: string;
-      currentArticlesPublished: number;
-      currentTotalPageviews: number;
-      articlesPublishedDelta: number;
-      totalPageviewsDelta: number;
-      hadPrevious: boolean;
-    };
-    const siteDeltas: SiteDeltaRow[] = [];
-    let divCurrentArticles = 0;
-    let divCurrentPv = 0;
-    let divDeltaArticles = 0;
-    let divDeltaPv = 0;
-    let sitesWithPrevious = 0;
-
-    for (const siteId of siteIds) {
-      const rows = currentBySite.get(siteId) ?? [];
-      const authored = rows.filter((r) => r.article_author !== null);
-      const published = authored.filter((r) => r.published_month === periodKey);
-      const currentArticlesPublished = published.length;
-      const currentTotalPageviews = authored.reduce((s, r) => s + r.pageviews, 0);
-      const prev = prevBySite.get(siteId);
-
-      divCurrentArticles += currentArticlesPublished;
-      divCurrentPv += currentTotalPageviews;
-
-      if (prev) {
-        sitesWithPrevious += 1;
-        const articlesDelta = currentArticlesPublished - prev.articles_published;
-        const pvDelta = currentTotalPageviews - Number(prev.total_pageviews);
-        divDeltaArticles += articlesDelta;
-        divDeltaPv += pvDelta;
-        siteDeltas.push({
-          siteId,
-          siteName: siteNameById.get(siteId) ?? "",
-          currentArticlesPublished,
-          currentTotalPageviews,
-          articlesPublishedDelta: articlesDelta,
-          totalPageviewsDelta: pvDelta,
-          hadPrevious: true,
-        });
-      } else if (rows.length > 0) {
-        siteDeltas.push({
-          siteId,
-          siteName: siteNameById.get(siteId) ?? "",
-          currentArticlesPublished,
-          currentTotalPageviews,
-          articlesPublishedDelta: 0,
-          totalPageviewsDelta: 0,
-          hadPrevious: false,
-        });
-      }
-    }
-    siteDeltas.sort((a, b) => b.totalPageviewsDelta - a.totalPageviewsDelta);
-
-    type WriterDeltaRow = {
-      writerId: number;
-      name: string;
-      siteId: number;
-      siteName: string;
-      isSiteLeader: boolean;
-      currentArticlesPublished: number;
-      articlesPublishedDelta: number;
-      totalPageviewsDelta: number;
-      hadPrevious: boolean;
-    };
-    const writerDeltas: WriterDeltaRow[] = [];
-    for (const w of writers as any[]) {
+    // Per-writer current metrics + delta, division-wide.
+    const writerResults = (writers as any[]).map((w) => {
       const matchNames = buildMatchNames(w.name, w.traffic_dashboard_name, w.aliases);
       const wRows = matchNames.flatMap((mn) => bySiteAuthorCurrent.get(`${w.site_id}::${mn}`) ?? []);
       const wPublished = wRows.filter((r) => r.published_month === periodKey);
-      const currentArticlesPublished = wPublished.length;
-      const currentTotalPageviews = wRows.reduce((s, r) => s + r.pageviews, 0);
-      const prev = prevByWriter.get(w.id);
-      writerDeltas.push({
+      const current = computeMetrics(wPublished);
+      const prevSnap = prevByWriter.get(w.id);
+      const prev = prevSnap ? metricsFromSnapshot(prevSnap) : null;
+      return {
         writerId: w.id,
         name: w.name,
         siteId: w.site_id,
         siteName: siteNameById.get(w.site_id) ?? "",
         isSiteLeader: w.is_site_leader,
-        currentArticlesPublished,
-        articlesPublishedDelta: currentArticlesPublished - (prev ? prev.articles_published : 0),
-        totalPageviewsDelta: currentTotalPageviews - (prev ? Number(prev.total_pageviews) : 0),
-        hadPrevious: Boolean(prev),
-      });
-    }
+        current,
+        delta: delta(current, prev),
+        hadPrevious: Boolean(prevSnap),
+      };
+    });
 
-    const standouts = [...writerDeltas]
-      .filter((w) => w.hadPrevious)
-      .sort((a, b) => b.totalPageviewsDelta - a.totalPageviewsDelta)
+    // Per-site current metrics + delta, with each site's writer breakdown nested.
+    const siteDeltas = siteIds
+      .map((siteId) => {
+        const rows = currentBySite.get(siteId) ?? [];
+        const published = rows.filter((r) => r.published_month === periodKey);
+        const current = computeMetrics(published);
+        const prevSnap = prevBySite.get(siteId);
+        const prev = prevSnap ? metricsFromSnapshot(prevSnap) : null;
+        const siteWriters = writerResults
+          .filter((w) => w.siteId === siteId && w.current.articlesPublished > 0)
+          .sort((a, b) => b.current.totalPageviews - a.current.totalPageviews);
+        return {
+          siteId,
+          siteName: siteNameById.get(siteId) ?? "",
+          importedAt: importedAtBySite.get(siteId) ?? null,
+          current,
+          delta: delta(current, prev),
+          hadPrevious: Boolean(prevSnap),
+          writers: siteWriters,
+        };
+      })
+      .filter((s) => (currentBySite.get(s.siteId) ?? []).length > 0)
+      .sort((a, b) => (b.delta?.totalPageviews ?? 0) - (a.delta?.totalPageviews ?? 0));
+
+    const divCurrentArticles = siteDeltas.reduce((s, d) => s + d.current.articlesPublished, 0);
+    const divCurrentPv = siteDeltas.reduce((s, d) => s + d.current.totalPageviews, 0);
+    const sitesWithPrevious = siteDeltas.filter((d) => d.hadPrevious).length;
+    const divDeltaArticles = siteDeltas.reduce((s, d) => s + (d.delta?.articlesPublished ?? 0), 0);
+    const divDeltaPv = siteDeltas.reduce((s, d) => s + (d.delta?.totalPageviews ?? 0), 0);
+
+    const standouts = writerResults
+      .filter((w) => w.hadPrevious && w.delta)
+      .sort((a, b) => (b.delta!.totalPageviews ?? 0) - (a.delta!.totalPageviews ?? 0))
       .slice(0, 10);
 
-    const quietLeaders = writerDeltas.filter(
-      (w) => w.isSiteLeader && w.currentArticlesPublished === 0
-    );
+    // Every site leader's article count this period — sites with a Vacant
+    // leader never got a writer card in that role in the first place, so
+    // they're already excluded here without any extra filtering.
+    const siteLeaderArticles = writerResults
+      .filter((w) => w.isSiteLeader)
+      .sort((a, b) => a.current.articlesPublished - b.current.articlesPublished);
 
     return NextResponse.json({
       hasData: true,
       hasPrevious: sitesWithPrevious > 0,
       periodKey,
       periodLabel,
+      currentDataAsOf,
+      previousDataAsOf,
       siteCount: siteIds.length,
       sitesWithPrevious,
       divisionTotals: {
-        currentArticlesPublished: divCurrentArticles,
-        currentTotalPageviews: divCurrentPv,
-        articlesPublishedDelta: divDeltaArticles,
-        totalPageviewsDelta: divDeltaPv,
+        current: {
+          articlesPublished: divCurrentArticles,
+          totalPageviews: divCurrentPv,
+          pvPerPublishedArticle: divCurrentArticles > 0 ? divCurrentPv / divCurrentArticles : null,
+        },
+        delta: { articlesPublished: divDeltaArticles, totalPageviews: divDeltaPv },
       },
       siteDeltas,
       standouts,
-      quietLeaders,
+      siteLeaderArticles,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

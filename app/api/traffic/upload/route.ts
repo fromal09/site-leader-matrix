@@ -62,13 +62,13 @@ export async function POST(req: NextRequest) {
 
         await sql`
           INSERT INTO site_traffic_snapshots
-            (site_id, period_key, period_label, articles_published, total_pageviews,
+            (site_id, period_key, period_label, articles_published, total_pageviews, published_pageviews,
              evergreen_pageviews, homepage_pageviews, weighted_avg_scroll_depth, weighted_avg_time_on_page)
           VALUES (
             ${siteIdNum}, ${periodKey}, ${periodLabel},
-            ${published.length}, ${totalPv}, ${totalPv - publishedPv}, ${homepagePv},
-            ${pageviewWeightedAverage(authored.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews })))},
-            ${pageviewWeightedAverage(authored.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews })))}
+            ${published.length}, ${totalPv}, ${publishedPv}, ${totalPv - publishedPv}, ${homepagePv},
+            ${pageviewWeightedAverage(published.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews })))},
+            ${pageviewWeightedAverage(published.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews })))}
           )
         `;
 
@@ -95,12 +95,12 @@ export async function POST(req: NextRequest) {
           const wTotalPv = wRows.reduce((s, r) => s + r.pageviews, 0);
           await sql`
             INSERT INTO writer_traffic_snapshots
-              (writer_id, site_id, period_key, articles_published, total_pageviews,
+              (writer_id, site_id, period_key, articles_published, total_pageviews, published_pageviews,
                weighted_avg_scroll_depth, weighted_avg_time_on_page)
             VALUES (
-              ${w.id}, ${siteIdNum}, ${periodKey}, ${wPublished.length}, ${wTotalPv},
-              ${pageviewWeightedAverage(wRows.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews })))},
-              ${pageviewWeightedAverage(wRows.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews })))}
+              ${w.id}, ${siteIdNum}, ${periodKey}, ${wPublished.length}, ${wTotalPv}, ${wPublishedPv},
+              ${pageviewWeightedAverage(wPublished.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews })))},
+              ${pageviewWeightedAverage(wPublished.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews })))}
             )
           `;
         }
