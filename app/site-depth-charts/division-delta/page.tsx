@@ -55,7 +55,12 @@ type DeltaResponse = {
   sitesWithPrevious?: number;
   divisionTotals?: {
     current: { articlesPublished: number; totalPageviews: number; pvPerPublishedArticle: number | null };
-    delta: { articlesPublished: number; totalPageviews: number };
+    delta: {
+      articlesPublished: number;
+      totalPageviews: number;
+      weightedAvgScrollDepth: number | null;
+      weightedAvgTimeOnPage: number | null;
+    };
   };
   siteDeltas?: SiteRow[];
   standouts?: WriterRow[];
@@ -223,7 +228,7 @@ function DivisionDeltaInner() {
                 compare
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
               <div>
                 <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
                   Articles Published
@@ -256,6 +261,22 @@ function DivisionDeltaInner() {
                   {data.divisionTotals!.current.pvPerPublishedArticle !== null
                     ? formatCompactNumber(data.divisionTotals!.current.pvPerPublishedArticle)
                     : "—"}
+                </div>
+              </div>
+              <div>
+                <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
+                  Scroll Depth
+                </div>
+                <div className="font-data text-lg font-semibold text-ink">
+                  {formatPercent(data.divisionTotals!.delta.weightedAvgScrollDepth)}
+                </div>
+              </div>
+              <div>
+                <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
+                  Time on Page
+                </div>
+                <div className="font-data text-lg font-semibold text-ink">
+                  {formatDuration(data.divisionTotals!.delta.weightedAvgTimeOnPage)}
                 </div>
               </div>
             </div>

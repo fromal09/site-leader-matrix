@@ -229,6 +229,22 @@ export async function GET(req: NextRequest) {
     const divDeltaArticles = siteDeltas.reduce((s, d) => s + (d.articlesPublishedDelta ?? 0), 0);
     const divTodayPv = siteDeltas.reduce((s, d) => s + d.today.totalPageviews, 0);
 
+    // Built from the raw weighted sums (not by averaging each site's
+    // already-computed average) — averaging averages would silently
+    // over-weight low-traffic sites relative to high-traffic ones.
+    let divScrollWeightedSumDelta = 0;
+    let divTimeWeightedSumDelta = 0;
+    for (const siteId of siteIds) {
+      const row = dailyDeltaBySite.get(siteId);
+      if (!row) continue;
+      const pv = Number(row.pv_delta ?? 0);
+      if (pv <= 0) continue;
+      divScrollWeightedSumDelta += Number(row.scroll_weighted_sum_delta ?? 0);
+      divTimeWeightedSumDelta += Number(row.time_weighted_sum_delta ?? 0);
+    }
+    const divTodayScrollDepth = divTodayPv > 0 ? divScrollWeightedSumDelta / divTodayPv : null;
+    const divTodayTimeOnPage = divTodayPv > 0 ? divTimeWeightedSumDelta / divTodayPv : null;
+
     const standouts = writerResults
       .filter((w) => w.hadPrevious && w.today.totalPageviews > 0)
       .sort((a, b) => b.today.totalPageviews - a.today.totalPageviews)
@@ -263,7 +279,12 @@ export async function GET(req: NextRequest) {
           totalPageviews: divCurrentPv,
           pvPerPublishedArticle: divCurrentArticles > 0 ? divCurrentPv / divCurrentArticles : null,
         },
-        delta: { articlesPublished: divDeltaArticles, totalPageviews: divTodayPv },
+        delta: {
+          articlesPublished: divDeltaArticles,
+          totalPageviews: divTodayPv,
+          weightedAvgScrollDepth: divTodayScrollDepth,
+          weightedAvgTimeOnPage: divTodayTimeOnPage,
+        },
       },
       siteDeltas,
       standouts,
