@@ -8,6 +8,7 @@ import { DIVISIONS } from "@/lib/divisions";
 import { formatCompactNumber, formatDuration, formatPercent } from "@/lib/trafficFormat";
 import { DeltaValue } from "@/components/DeltaValue";
 import { HighlightValue } from "@/components/HighlightValue";
+import { MetricScatterPlot, type ScatterAxisOption, type ScatterPoint } from "@/components/MetricScatterPlot";
 
 type Metrics = {
   articlesPublished: number;
@@ -66,6 +67,7 @@ type DeltaResponse = {
   standouts?: WriterRow[];
   siteLeaderArticles?: WriterRow[];
   quietEditorsAndExperts?: WriterRow[];
+  allWriters?: WriterRow[];
 };
 
 function formatDate(iso: string | null | undefined) {
@@ -80,6 +82,54 @@ function formatDate(iso: string | null | undefined) {
     year: "numeric",
   });
 }
+
+// Shared by both scatterplots — sites and writers have the same current/
+// today/articlesPublishedDelta shape, so one set of axis definitions works
+// for either.
+const SCATTER_AXIS_OPTIONS: ScatterAxisOption[] = [
+  {
+    key: "articlesPublishedDelta",
+    label: "Articles Published",
+    accessor: (item) => item.articlesPublishedDelta ?? 0,
+    format: (v) => v.toLocaleString(),
+  },
+  {
+    key: "pvChange",
+    label: "PV Change",
+    accessor: (item) => item.today.totalPageviews,
+    format: formatCompactNumber,
+  },
+  {
+    key: "scrollDepth",
+    label: "Scroll Depth (New)",
+    accessor: (item) => item.today.weightedAvgScrollDepth,
+    format: (v) => formatPercent(v),
+  },
+  {
+    key: "timeOnPage",
+    label: "Time on Page (New)",
+    accessor: (item) => item.today.weightedAvgTimeOnPage,
+    format: (v) => formatDuration(v),
+  },
+  {
+    key: "articlesPublishedMtd",
+    label: "Articles Published (MTD)",
+    accessor: (item) => item.current.articlesPublished,
+    format: (v) => v.toLocaleString(),
+  },
+  {
+    key: "totalPvMtd",
+    label: "Total PVs (MTD)",
+    accessor: (item) => item.current.totalPageviews,
+    format: formatCompactNumber,
+  },
+  {
+    key: "pvPerArticleMtd",
+    label: "PVs / New Article (MTD)",
+    accessor: (item) => item.current.pvPerPublishedArticle,
+    format: formatCompactNumber,
+  },
+];
 
 function rankAmongSites(
   siteId: number,
@@ -162,6 +212,18 @@ function DivisionDeltaInner() {
       setSortDesc(true);
     }
   }
+
+  const sitePoints: ScatterPoint[] = rawSites.map((s) => ({
+    id: s.siteId,
+    name: s.siteName,
+    raw: s,
+  }));
+  const writerPoints: ScatterPoint[] = (data?.allWriters ?? []).map((w) => ({
+    id: w.writerId,
+    name: w.name,
+    subtitle: w.siteName,
+    raw: w,
+  }));
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
@@ -280,6 +342,23 @@ function DivisionDeltaInner() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <MetricScatterPlot
+              title="Sites"
+              points={sitePoints}
+              axisOptions={SCATTER_AXIS_OPTIONS}
+              defaultXKey="articlesPublishedDelta"
+              defaultYKey="pvChange"
+            />
+            <MetricScatterPlot
+              title="Writers"
+              points={writerPoints}
+              axisOptions={SCATTER_AXIS_OPTIONS}
+              defaultXKey="articlesPublishedDelta"
+              defaultYKey="pvChange"
+            />
           </div>
 
           <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">

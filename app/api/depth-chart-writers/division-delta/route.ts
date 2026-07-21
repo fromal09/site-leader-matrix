@@ -290,6 +290,7 @@ export async function GET(req: NextRequest) {
       standouts,
       siteLeaderArticles,
       quietEditorsAndExperts,
+      allWriters: writerResults.filter((w) => w.current.totalPageviews > 0),
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
