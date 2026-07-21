@@ -42,7 +42,8 @@ export default function WriterTrafficHistoryPage() {
 
   const [writer, setWriter] = useState<Writer | null>(null);
   const [matched, setMatched] = useState(true);
-  const [matchName, setMatchName] = useState<string | null>(null);
+  const [matchNames, setMatchNames] = useState<string[]>([]);
+  const [periodBreakdown, setPeriodBreakdown] = useState<{ periodKey: string; count: number }[]>([]);
   const [articles, setArticles] = useState<TrafficArticleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -57,7 +58,8 @@ export default function WriterTrafficHistoryPage() {
       .then((d) => {
         setWriter(d.writer ?? null);
         setMatched(d.matched);
-        setMatchName(d.matchName ?? null);
+        setMatchNames(d.matchNames ?? []);
+        setPeriodBreakdown(d.periodBreakdown ?? []);
         setArticles(d.articles ?? []);
       })
       .finally(() => setLoading(false));
@@ -122,10 +124,53 @@ export default function WriterTrafficHistoryPage() {
 
           {!matched ? (
             <p className="text-sm italic text-ink-soft">
-              No traffic data matched{matchName ? ` for "${matchName}"` : ""} yet.
+              No traffic data matched
+              {matchNames.length > 0 ? ` for "${matchNames.join('", "')}"` : ""} yet.
             </p>
           ) : (
             <>
+              <details className="mb-4 rounded border border-rule-strong bg-white p-3 text-xs">
+                <summary className="cursor-pointer font-data uppercase tracking-wide text-ink-soft">
+                  Matching against {matchNames.length} name{matchNames.length === 1 ? "" : "s"} — click
+                  to inspect
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <div>
+                    <span className="font-data text-[10px] uppercase text-ink-soft">
+                      Bylines this card matches (on this site only):
+                    </span>{" "}
+                    {matchNames.map((n) => (
+                      <span
+                        key={n}
+                        className="mr-1.5 inline-block rounded bg-paper px-1.5 py-0.5 font-data text-[11px]"
+                      >
+                        {n}
+                      </span>
+                    ))}
+                  </div>
+                  {periodBreakdown.length > 0 && (
+                    <div>
+                      <span className="font-data text-[10px] uppercase text-ink-soft">
+                        Articles per period — an unexpectedly large count in any one period, or a
+                        much higher total than this person could plausibly have written, usually
+                        means one of the names above is too broad and is matching someone else's
+                        bylines too:
+                      </span>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        {periodBreakdown.map((p) => (
+                          <span
+                            key={p.periodKey}
+                            className="rounded bg-paper px-1.5 py-0.5 font-data text-[11px]"
+                          >
+                            {p.periodKey}: {p.count.toLocaleString()}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </details>
+
               <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <p className="font-data text-xs text-ink-soft">
                   {filtered.length.toLocaleString()} article{filtered.length === 1 ? "" : "s"} ·{" "}

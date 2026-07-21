@@ -33,7 +33,7 @@ export async function GET(
       (aliasRows as any[]).map((a) => a.alias)
     );
     if (matchNames.length === 0) {
-      return NextResponse.json({ writer, matched: false, articles: [] });
+      return NextResponse.json({ writer, matchNames: [], matched: false, articles: [] });
     }
 
     const rows = await sql`
@@ -49,7 +49,21 @@ export async function GET(
       ORDER BY ti.period_key DESC, at.pageviews DESC
     `;
 
-    return NextResponse.json({ writer, matchName: matchNames[0], matched: true, articles: rows });
+    const periodCounts = new Map<string, number>();
+    for (const r of rows as any[]) {
+      periodCounts.set(r.period_key, (periodCounts.get(r.period_key) ?? 0) + 1);
+    }
+
+    return NextResponse.json({
+      writer,
+      matchNames,
+      periodBreakdown: Array.from(periodCounts.entries()).map(([periodKey, count]) => ({
+        periodKey,
+        count,
+      })),
+      matched: true,
+      articles: rows,
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
