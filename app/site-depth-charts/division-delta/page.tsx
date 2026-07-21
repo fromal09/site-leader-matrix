@@ -8,6 +8,7 @@ import { DIVISIONS } from "@/lib/divisions";
 import { formatCompactNumber, formatDuration, formatPercent } from "@/lib/trafficFormat";
 import { DeltaValue } from "@/components/DeltaValue";
 import { HighlightValue } from "@/components/HighlightValue";
+import { StatTile } from "@/components/StatTile";
 import { MetricScatterPlot, type ScatterAxisOption, type ScatterPoint } from "@/components/MetricScatterPlot";
 
 type Metrics = {
@@ -70,16 +71,18 @@ type DeltaResponse = {
   allWriters?: WriterRow[];
 };
 
-function formatDate(iso: string | null | undefined) {
+// Always includes time of day, not just the date — two uploads done back
+// to back (e.g. while testing) can land on the same calendar date, and
+// "Jul 20 vs Jul 20" reads as though nothing changed even though they're
+// genuinely different moments.
+function formatDateTime(iso: string | null | undefined) {
   if (!iso) return null;
-  // Date-only strings (no time component) parse as UTC midnight, which can
-  // display as the previous day in timezones behind UTC — force local
-  // midnight instead so "2026-07-19" always shows as July 19.
-  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(iso);
-  return new Date(dateOnly ? `${iso}T00:00:00` : iso).toLocaleDateString("en-US", {
+  return new Date(iso).toLocaleString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   });
 }
 
@@ -244,10 +247,10 @@ function DivisionDeltaInner() {
           </h1>
           {data?.hasPrevious && (
             <p className="mt-1 text-sm text-ink-soft">
-              Comparing data uploaded {formatDate(data.currentDataAsOf)} against what was
-              there as of {formatDate(data.previousDataAsOf)}. Scroll Depth and Time on Page
-              reflect just the incremental pageviews since that upload, across every article
-              — not only newly-published ones.
+              Comparing data uploaded {formatDateTime(data.currentDataAsOf)} against what was
+              there as of {formatDateTime(data.previousDataAsOf)}. Scroll Depth and Time on
+              Page reflect just the incremental pageviews since that upload, across every
+              article — not only newly-published ones.
             </p>
           )}
         </div>
@@ -283,64 +286,38 @@ function DivisionDeltaInner() {
           <div className="card mb-6 rounded-md p-4">
             <div className="mb-2 flex items-baseline justify-between">
               <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-navy">
-                Division Totals
+                Daily Changes — {formatDateTime(data.currentDataAsOf)}
               </h2>
               <span className="font-data text-[11px] text-ink-soft">
                 {data.sitesWithPrevious} of {data.siteCount} sites have a previous upload to
                 compare
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-              <div>
-                <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
-                  Articles Published
-                </div>
-                <div className="font-data text-lg font-semibold text-ink">
-                  {data.divisionTotals!.current.articlesPublished.toLocaleString()}
-                </div>
-                <DeltaValue
-                  value={data.divisionTotals!.delta.articlesPublished}
-                  format={(v) => v.toLocaleString()}
-                />
-              </div>
-              <div>
-                <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
-                  Total PVs
-                </div>
-                <div className="font-data text-lg font-semibold text-ink">
-                  {formatCompactNumber(data.divisionTotals!.current.totalPageviews)}
-                </div>
-                <DeltaValue
-                  value={data.divisionTotals!.delta.totalPageviews}
-                  format={formatCompactNumber}
-                />
-              </div>
-              <div>
-                <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
-                  PVs / New Article
-                </div>
-                <div className="font-data text-lg font-semibold text-ink">
-                  {data.divisionTotals!.current.pvPerPublishedArticle !== null
+            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+              <StatTile
+                label="Articles Published"
+                value={`+${data.divisionTotals!.delta.articlesPublished.toLocaleString()}`}
+              />
+              <StatTile
+                label="Total PVs"
+                value={`+${formatCompactNumber(data.divisionTotals!.delta.totalPageviews)}`}
+              />
+              <StatTile
+                label="PVs / New Article"
+                value={
+                  data.divisionTotals!.current.pvPerPublishedArticle !== null
                     ? formatCompactNumber(data.divisionTotals!.current.pvPerPublishedArticle)
-                    : "—"}
-                </div>
-              </div>
-              <div>
-                <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
-                  Scroll Depth
-                </div>
-                <div className="font-data text-lg font-semibold text-ink">
-                  {formatPercent(data.divisionTotals!.delta.weightedAvgScrollDepth)}
-                </div>
-              </div>
-              <div>
-                <div className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
-                  Time on Page
-                </div>
-                <div className="font-data text-lg font-semibold text-ink">
-                  {formatDuration(data.divisionTotals!.delta.weightedAvgTimeOnPage)}
-                </div>
-              </div>
+                    : "—"
+                }
+              />
+              <StatTile
+                label="Scroll Depth"
+                value={formatPercent(data.divisionTotals!.delta.weightedAvgScrollDepth)}
+              />
+              <StatTile
+                label="Time on Page"
+                value={formatDuration(data.divisionTotals!.delta.weightedAvgTimeOnPage)}
+              />
             </div>
           </div>
 
