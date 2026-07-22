@@ -44,12 +44,14 @@ type SiteRow = {
   today: TodayMetrics;
   articlesPublishedDelta: number | null;
   hadPrevious: boolean;
+  looksLikeEmptyBaseline: boolean;
   writers: WriterRow[];
 };
 
 type DeltaResponse = {
   hasData: boolean;
   hasPrevious?: boolean;
+  looksLikeEmptyBaseline?: boolean;
   periodLabel?: string;
   currentDataAsOf?: string | null;
   previousDataAsOf?: string | null;
@@ -283,6 +285,22 @@ function DivisionDeltaInner() {
         </p>
       ) : (
         <>
+          {data.looksLikeEmptyBaseline && (
+            <div
+              className="mb-4 rounded-md border-2 p-3 text-sm"
+              style={{ borderColor: "var(--grease-red)", backgroundColor: "var(--paper-raised)" }}
+            >
+              <strong style={{ color: "var(--grease-red)" }}>
+                These numbers look like a full month of data, not one day&apos;s change.
+              </strong>{" "}
+              Most of what&apos;s counted as &quot;new&quot; here likely didn&apos;t actually
+              publish since the last upload — it's more likely that the data being compared
+              against was empty, stale, or didn&apos;t share the same articles as this upload
+              (for example, after a reset or a gap between uploads). Re-uploading the previous
+              period&apos;s file again first, then this one, will usually regenerate a clean
+              comparison.
+            </div>
+          )}
           <div className="card mb-6 rounded-md p-4">
             <div className="mb-2 flex items-baseline justify-between">
               <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-navy">
@@ -489,6 +507,15 @@ function DivisionDeltaInner() {
                           {!s.hadPrevious && (
                             <span className="ml-1.5 font-data text-[10px] text-ink-soft">
                               (no previous upload)
+                            </span>
+                          )}
+                          {s.looksLikeEmptyBaseline && (
+                            <span
+                              className="ml-1.5 font-data text-[10px] font-semibold"
+                              style={{ color: "var(--grease-red)" }}
+                              title="Most of this site's 'new' count likely isn't real — probably compared against stale, empty, or mismatched data (check its hostname mapping)."
+                            >
+                              ⚠ check mapping
                             </span>
                           )}
                         </td>

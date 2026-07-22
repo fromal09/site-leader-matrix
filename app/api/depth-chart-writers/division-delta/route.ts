@@ -210,6 +210,10 @@ export async function GET(req: NextRequest) {
         const siteWriters = writerResults
           .filter((w) => w.siteId === siteId && w.current.articlesPublished > 0)
           .sort((a, b) => b.current.totalPageviews - a.current.totalPageviews);
+        const looksLikeEmptyBaseline =
+          prevSnap !== undefined &&
+          current.articlesPublished > 0 &&
+          (articlesPublishedDelta ?? 0) / current.articlesPublished >= 0.5;
         return {
           siteId,
           siteName: siteNameById.get(siteId) ?? "",
@@ -217,6 +221,7 @@ export async function GET(req: NextRequest) {
           today,
           articlesPublishedDelta,
           hadPrevious: Boolean(prevSnap),
+          looksLikeEmptyBaseline,
           writers: siteWriters,
         };
       })
@@ -227,6 +232,14 @@ export async function GET(req: NextRequest) {
     const divCurrentPv = siteDeltas.reduce((s, d) => s + d.current.totalPageviews, 0);
     const sitesWithPrevious = siteDeltas.filter((d) => d.hadPrevious).length;
     const divDeltaArticles = siteDeltas.reduce((s, d) => s + (d.articlesPublishedDelta ?? 0), 0);
+    // If "new" articles account for most of the whole month's published
+    // count, the per-article matching at upload time almost certainly
+    // found little or no overlap between the outgoing and incoming data
+    // (e.g. the previous state was empty, stale from an earlier test
+    // upload, or otherwise didn't share the same articles) — this isn't a
+    // real one-day change, it's the whole dataset being counted as new.
+    const looksLikeEmptyBaseline =
+      divCurrentArticles > 0 && divDeltaArticles / divCurrentArticles >= 0.5;
     const divTodayPv = siteDeltas.reduce((s, d) => s + d.today.totalPageviews, 0);
 
     // Built from the raw weighted sums (not by averaging each site's
@@ -267,6 +280,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       hasData: true,
       hasPrevious: sitesWithPrevious > 0,
+      looksLikeEmptyBaseline,
       periodKey,
       periodLabel,
       currentDataAsOf,
