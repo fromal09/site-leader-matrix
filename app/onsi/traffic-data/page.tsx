@@ -99,6 +99,12 @@ export default function OnsiTrafficPage() {
     setGroupStates((prev) => prev.map((g, i) => (i === index ? { ...g, siteId } : g)));
   }
 
+  function handleExcludeAllUnmatched() {
+    setGroupStates((prev) =>
+      prev.map((g) => (g.siteId === "" ? { ...g, siteId: DO_NOT_INCLUDE } : g))
+    );
+  }
+
   const allSitesChosen = useMemo(
     () => groupStates.length > 0 && groupStates.every((g) => g.siteId),
     [groupStates]
@@ -227,6 +233,7 @@ export default function OnsiTrafficPage() {
 
             <div className="space-y-2">
               {groupStates.map((g, i) => {
+                if (g.siteId === "") return null; // rendered in the unmatched section below
                 const matched = sites.find((s) => s.url_path === g.group.urlPath);
                 return (
                   <div
@@ -236,7 +243,7 @@ export default function OnsiTrafficPage() {
                     <div className="text-sm">
                       <div className="font-data text-xs text-ink-soft">{g.group.urlPath}</div>
                       <div>{g.group.rows.length.toLocaleString()} rows</div>
-                      {!matched && (
+                      {!matched && g.siteId !== DO_NOT_INCLUDE && (
                         <div className="text-xs text-ink-soft">
                           New URL path — we&apos;ll remember this mapping after upload.
                         </div>
@@ -278,6 +285,69 @@ export default function OnsiTrafficPage() {
                 );
               })}
             </div>
+
+            {groupStates.some((g) => g.siteId === "") && (
+              <div className="rounded border-2 border-dashed border-rule-strong bg-paper p-3">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-display text-sm font-semibold text-navy">
+                    Unmatched — {groupStates.filter((g) => g.siteId === "").length} URL path
+                    {groupStates.filter((g) => g.siteId === "").length === 1 ? "" : "s"}
+                  </h3>
+                  <button
+                    onClick={handleExcludeAllUnmatched}
+                    className="rounded border border-navy px-3 py-1 text-xs font-medium text-navy hover:bg-navy hover:text-white"
+                  >
+                    Mark All as Do Not Include
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {groupStates.map((g, i) => {
+                    if (g.siteId !== "") return null; // rendered above
+                    return (
+                      <div
+                        key={i}
+                        className="flex flex-col gap-2 rounded border border-rule-strong bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="text-sm">
+                          <div className="font-data text-xs text-ink-soft">{g.group.urlPath}</div>
+                          <div>{g.group.rows.length.toLocaleString()} rows</div>
+                          <div className="text-xs text-ink-soft">
+                            New URL path — we&apos;ll remember this mapping after upload.
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <select
+                            className="rounded border border-rule-strong bg-white px-2 py-1.5 text-sm outline-none focus:border-navy"
+                            value={g.siteId}
+                            onChange={(e) => updateGroupSite(i, e.target.value)}
+                          >
+                            <option value="" disabled>
+                              Choose a site…
+                            </option>
+                            {Object.entries(
+                              sites.reduce<Record<string, Site[]>>((acc, s) => {
+                                const div = s.division || "Unassigned";
+                                (acc[div] ??= []).push(s);
+                                return acc;
+                              }, {})
+                            ).map(([div, divSites]) => (
+                              <optgroup key={div} label={div}>
+                                {divSites.map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                    {s.site_name} ({s.site_topic})
+                                  </option>
+                                ))}
+                              </optgroup>
+                            ))}
+                            <option value={DO_NOT_INCLUDE}>Do Not Include</option>
+                          </select>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {formError && <p className="text-sm text-grade-low">{formError}</p>}
 

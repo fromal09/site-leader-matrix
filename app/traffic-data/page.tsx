@@ -102,6 +102,12 @@ export default function TrafficPage() {
     );
   }
 
+  function handleExcludeAllUnmatched() {
+    setGroupStates((prev) =>
+      prev.map((g) => (g.siteId === "" ? { ...g, siteId: DO_NOT_INCLUDE } : g))
+    );
+  }
+
   const allSitesChosen = useMemo(
     () => groupStates.length > 0 && groupStates.every((g) => g.siteId),
     [groupStates]
@@ -233,6 +239,7 @@ export default function TrafficPage() {
 
             <div className="space-y-2">
               {groupStates.map((g, i) => {
+                if (g.siteId === "") return null; // rendered in the unmatched section below
                 const matched = g.group.hostname
                   ? sites.find((s) => s.hostname === g.group.hostname)
                   : undefined;
@@ -246,7 +253,7 @@ export default function TrafficPage() {
                         {g.group.hostname ?? "No hostname column detected"}
                       </div>
                       <div>{g.group.rows.length.toLocaleString()} rows</div>
-                      {g.group.hostname && !matched && (
+                      {g.group.hostname && !matched && g.siteId !== DO_NOT_INCLUDE && (
                         <div className="text-xs text-ink-soft">
                           New hostname — we&apos;ll remember this mapping after upload.
                         </div>
@@ -296,6 +303,73 @@ export default function TrafficPage() {
                 );
               })}
             </div>
+
+            {groupStates.some((g) => g.siteId === "") && (
+              <div className="rounded border-2 border-dashed border-rule-strong bg-paper p-3">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-display text-sm font-semibold text-navy">
+                    Unmatched — {groupStates.filter((g) => g.siteId === "").length} hostname
+                    {groupStates.filter((g) => g.siteId === "").length === 1 ? "" : "s"}
+                  </h3>
+                  <button
+                    onClick={handleExcludeAllUnmatched}
+                    className="rounded border border-navy px-3 py-1 text-xs font-medium text-navy hover:bg-navy hover:text-white"
+                  >
+                    Mark All as Do Not Include
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {groupStates.map((g, i) => {
+                    if (g.siteId !== "") return null; // rendered above
+                    return (
+                      <div
+                        key={i}
+                        className="flex flex-col gap-2 rounded border border-rule-strong bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="text-sm">
+                          <div className="font-data text-xs text-ink-soft">
+                            {g.group.hostname ?? "No hostname column detected"}
+                          </div>
+                          <div>{g.group.rows.length.toLocaleString()} rows</div>
+                          {g.group.hostname && (
+                            <div className="text-xs text-ink-soft">
+                              New hostname — we&apos;ll remember this mapping after upload.
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <select
+                            className="rounded border border-rule-strong bg-white px-2 py-1.5 text-sm outline-none focus:border-navy"
+                            value={g.siteId}
+                            onChange={(e) => updateGroupSite(i, e.target.value)}
+                          >
+                            <option value="" disabled>
+                              Choose a site…
+                            </option>
+                            {Object.entries(
+                              sites.reduce<Record<string, typeof sites>>((acc, s) => {
+                                const div = s.division ?? "NFL";
+                                (acc[div] ??= []).push(s);
+                                return acc;
+                              }, {})
+                            ).map(([div, divSites]) => (
+                              <optgroup key={div} label={div}>
+                                {divSites.map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                    {s.site_name} ({s.site_topic})
+                                  </option>
+                                ))}
+                              </optgroup>
+                            ))}
+                            <option value={DO_NOT_INCLUDE}>Do Not Include</option>
+                          </select>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {formError && <p className="text-sm text-grade-low">{formError}</p>}
 
