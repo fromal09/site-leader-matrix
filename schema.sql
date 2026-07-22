@@ -347,9 +347,11 @@ CREATE TABLE IF NOT EXISTS onsi_sites (
   sort_order INT NOT NULL DEFAULT 0,
   archived BOOLEAN NOT NULL DEFAULT FALSE,
   division TEXT NOT NULL DEFAULT '',
-  hostname TEXT
+  hostname TEXT,
+  url_path TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_onsi_sites_division ON onsi_sites(division);
+ALTER TABLE onsi_sites ADD COLUMN IF NOT EXISTS url_path TEXT;
 
 CREATE TABLE IF NOT EXISTS onsi_depth_chart_roles (
   id SERIAL PRIMARY KEY,

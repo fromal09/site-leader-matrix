@@ -3,15 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
-import { parseTrafficCsv } from "@/lib/trafficCsv";
-import type { TrafficCsvGroup } from "@/lib/trafficCsv";
+import { parseOnsiTrafficCsv } from "@/lib/trafficCsv";
+import type { OnsiTrafficCsvGroup } from "@/lib/trafficCsv";
 
 type Site = {
   id: number;
   site_name: string;
   site_topic: string;
   division: string;
-  hostname: string | null;
+  url_path: string | null;
 };
 
 type ImportRow = {
@@ -31,7 +31,7 @@ type GroupStatus = "idle" | "uploading" | "done" | "error" | "skipped";
 const DO_NOT_INCLUDE = "__skip__";
 
 type GroupState = {
-  group: TrafficCsvGroup;
+  group: OnsiTrafficCsvGroup;
   siteId: string;
   status: GroupStatus;
   error: string | null;
@@ -53,6 +53,7 @@ export default function OnsiTrafficPage() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [groupStates, setGroupStates] = useState<GroupState[]>([]);
   const [skippedRows, setSkippedRows] = useState(0);
+  const [unclassifiedRows, setUnclassifiedRows] = useState(0);
   const [missingColumns, setMissingColumns] = useState<string[]>([]);
   const [monthKey, setMonthKey] = useState<string>("");
   const [uploading, setUploading] = useState(false);
@@ -77,14 +78,13 @@ export default function OnsiTrafficPage() {
     setFormError(null);
     setFileName(file.name);
     const text = await file.text();
-    const result = parseTrafficCsv(text);
+    const result = parseOnsiTrafficCsv(text);
     setSkippedRows(result.skippedRows);
+    setUnclassifiedRows(result.unclassifiedRows);
     setMissingColumns(result.missingColumns);
     setGroupStates(
       result.groups.map((group) => {
-        const matched = group.hostname
-          ? sites.find((s) => s.hostname === group.hostname)
-          : undefined;
+        const matched = sites.find((s) => s.url_path === group.urlPath);
         return {
           group,
           siteId: matched ? String(matched.id) : "",
@@ -132,7 +132,7 @@ export default function OnsiTrafficPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           siteId: Number(g.siteId),
-          hostname: g.group.hostname,
+          urlPath: g.group.urlPath,
           periodKey: monthKey,
           periodLabel: monthKeyToLabel(monthKey),
           rows: g.group.rows,
@@ -167,8 +167,9 @@ export default function OnsiTrafficPage() {
         <p className="font-data text-xs uppercase tracking-widest text-ink-soft">OnSI Network</p>
         <h1 className="font-display text-3xl font-bold text-navy">Traffic Data</h1>
         <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-          Upload a monthly article-performance export — single-site, multi-site, or mixed
-          across divisions in one file. Re-uploading the same site and month replaces what's
+          Upload a monthly article-performance export. Since every OnSI site shares the same
+          si.com hostname, sites are told apart by URL path instead — the export needs a URL
+          column for this to work. Re-uploading the same site and month replaces what's
           there, so a partial-month upload followed by a fuller one later just works.
         </p>
       </div>
@@ -198,6 +199,12 @@ export default function OnsiTrafficPage() {
                 {skippedRows > 0 && (
                   <span className="text-ink-soft"> ({skippedRows} skipped — no title)</span>
                 )}
+                {unclassifiedRows > 0 && (
+                  <span className="text-grade-low">
+                    {" "}
+                    ({unclassifiedRows} couldn&apos;t be matched to a URL path)
+                  </span>
+                )}
               </p>
               {missingColumns.length > 0 && (
                 <p className="mt-1 text-xs text-grade-low">
@@ -220,22 +227,18 @@ export default function OnsiTrafficPage() {
 
             <div className="space-y-2">
               {groupStates.map((g, i) => {
-                const matched = g.group.hostname
-                  ? sites.find((s) => s.hostname === g.group.hostname)
-                  : undefined;
+                const matched = sites.find((s) => s.url_path === g.group.urlPath);
                 return (
                   <div
                     key={i}
                     className="flex flex-col gap-2 rounded border border-rule-strong bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="text-sm">
-                      <div className="font-data text-xs text-ink-soft">
-                        {g.group.hostname ?? "No hostname column detected"}
-                      </div>
+                      <div className="font-data text-xs text-ink-soft">{g.group.urlPath}</div>
                       <div>{g.group.rows.length.toLocaleString()} rows</div>
-                      {g.group.hostname && !matched && (
+                      {!matched && (
                         <div className="text-xs text-ink-soft">
-                          New hostname — we&apos;ll remember this mapping after upload.
+                          New URL path — we&apos;ll remember this mapping after upload.
                         </div>
                       )}
                     </div>

@@ -35,11 +35,12 @@ async function main() {
   for (const row of onsiData as any[]) {
     order += 1;
     const siteRows = await sql`
-      INSERT INTO onsi_sites (site_name, site_topic, leader_name, sort_order, division)
-      VALUES (${row.site_name}, ${row.site_topic}, ${row.leader_name}, ${order}, ${row.division})
+      INSERT INTO onsi_sites (site_name, site_topic, leader_name, sort_order, division, url_path)
+      VALUES (${row.site_name}, ${row.site_topic}, ${row.leader_name}, ${order}, ${row.division}, ${row.url_path ?? null})
       ON CONFLICT (site_name) DO UPDATE SET
         leader_name = EXCLUDED.leader_name,
-        division = EXCLUDED.division
+        division = EXCLUDED.division,
+        url_path = COALESCE(EXCLUDED.url_path, onsi_sites.url_path)
       RETURNING id
     `;
     const siteId = (siteRows as any[])[0]?.id;

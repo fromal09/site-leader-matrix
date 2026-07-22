@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   }
 
-  const { siteId, hostname, periodKey, periodLabel, rows } = await req.json();
+  const { siteId, hostname, urlPath, periodKey, periodLabel, rows } = await req.json();
 
   if (!siteId || !periodKey || !periodLabel) {
     return NextResponse.json({ error: "Missing site or period." }, { status: 400 });
@@ -31,6 +31,12 @@ export async function POST(req: NextRequest) {
       await sql`
         UPDATE onsi_sites SET hostname = ${hostname}
         WHERE id = ${siteIdNum} AND (hostname IS NULL OR hostname <> ${hostname})
+      `;
+    }
+    if (urlPath) {
+      await sql`
+        UPDATE onsi_sites SET url_path = ${urlPath}
+        WHERE id = ${siteIdNum} AND (url_path IS NULL OR url_path <> ${urlPath})
       `;
     }
 

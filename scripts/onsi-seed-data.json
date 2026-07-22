@@ -3,1314 +3,1533 @@
     "site_name": "Athlete Lifestyle",
     "site_topic": "Athlete Lifestyle",
     "leader_name": "Chris Pirrone",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/onsi/athlete-lifestyle"
   },
   {
     "site_name": "KO",
     "site_topic": "KO",
     "leader_name": "Harris Freedman",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/fannation/boxing"
   },
   {
     "site_name": "CFBHQ",
     "site_topic": "CFBHQ",
     "leader_name": "Chris Pirrone",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/fannation/college"
   },
   {
     "site_name": "Collectibles",
     "site_topic": "Collectibles",
     "leader_name": "Chris Pirrone",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/collectibles"
   },
   {
     "site_name": "Fantasy",
     "site_topic": "Fantasy",
     "leader_name": "Matthew Brandon",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/onsi/fantasy"
   },
   {
     "site_name": "Fastball",
     "site_topic": "Fastball",
     "leader_name": "Scott Neville",
-    "division": "Other"
+    "division": "Other",
+    "url_path": null
   },
   {
     "site_name": "FCS Football Central",
     "site_topic": "FCS Football Central",
     "leader_name": "Zachary McKinnell",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/college/fcs"
   },
   {
     "site_name": "Fishing",
     "site_topic": "Fishing",
     "leader_name": "Ken Baldwin",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/onsi/fishing"
   },
   {
     "site_name": "Grand Prix",
     "site_topic": "Grand Prix",
     "leader_name": "Harris Freedman",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/onsi/f1"
   },
   {
     "site_name": "HBCU's",
     "site_topic": "HBCU's",
     "leader_name": "Kyle Mosley",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/college/hbcu"
   },
   {
     "site_name": "High School",
     "site_topic": "High School",
     "leader_name": "Dan Beach",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/high-school"
   },
   {
     "site_name": "Hockey",
     "site_topic": "Hockey",
     "leader_name": "Vacant",
-    "division": "Other"
+    "division": "Other",
+    "url_path": null
   },
   {
     "site_name": "Horse Racing",
     "site_topic": "Horse Racing",
     "leader_name": "Vacant",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/onsi/horse-racing"
   },
   {
     "site_name": "Kicks",
     "site_topic": "Kicks",
     "leader_name": "Pat Benson",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/fannation/sneakers"
   },
   {
     "site_name": "Minor League Baseball",
     "site_topic": "Minor League Baseball",
     "leader_name": "Scott Neville",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/onsi/minor-league-baseball"
   },
   {
     "site_name": "MMA Knockout",
     "site_topic": "MMA Knockout",
     "leader_name": "Logan Robinson",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/fannation/mma"
   },
   {
     "site_name": "Racing America",
     "site_topic": "Racing America",
     "leader_name": "Colin Smith",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/onsi/racing-america"
   },
   {
     "site_name": "Rodeo",
     "site_topic": "Rodeo",
     "leader_name": "Laura Lambert",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/fannation/rodeo"
   },
   {
     "site_name": "Savannah Bananas",
     "site_topic": "Savannah Bananas",
     "leader_name": "R. Kenner French",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/onsi/savannah-bananas"
   },
   {
     "site_name": "Serve",
     "site_topic": "Serve",
     "leader_name": "Pat Benson",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/onsi/serve"
   },
   {
     "site_name": "Softball",
     "site_topic": "Softball",
     "leader_name": "Maren Angus-Coombs",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/onsi/softball"
   },
   {
     "site_name": "Women's Fastbreak",
     "site_topic": "Women's Fastbreak",
     "leader_name": "Robin Lundberg",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/onsi/womens-fastbreak"
   },
   {
     "site_name": "Wrestling",
     "site_topic": "Wrestling",
     "leader_name": "Harris Freedman",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/fannation/wrestling"
   },
   {
     "site_name": "Prediction Markets On SI",
     "site_topic": "Prediction Markets On SI",
     "leader_name": "Vacant",
-    "division": "Other"
+    "division": "Other",
+    "url_path": null
   },
   {
     "site_name": "Jerseys On SI",
     "site_topic": "Jerseys On SI",
     "leader_name": "Pat Benson",
-    "division": "Other"
+    "division": "Other",
+    "url_path": "/onsi/jerseys"
   },
   {
     "site_name": "Volleyball On SI",
     "site_topic": "Volleyball On SI",
     "leader_name": "Maren Angus-Coombs",
-    "division": "Other"
+    "division": "Other",
+    "url_path": null
   },
   {
     "site_name": "Atlanta Dream",
     "site_topic": "Atlanta Dream",
     "leader_name": "Vacant",
-    "division": "WNBA"
+    "division": "WNBA",
+    "url_path": "/wnba/dream"
   },
   {
     "site_name": "Chicago Sky",
     "site_topic": "Chicago Sky",
     "leader_name": "Vacant",
-    "division": "WNBA"
+    "division": "WNBA",
+    "url_path": "/wnba/sky"
   },
   {
     "site_name": "Connecticut Sun",
     "site_topic": "Connecticut Sun",
     "leader_name": "Vacant",
-    "division": "WNBA"
+    "division": "WNBA",
+    "url_path": "/wnba/sun"
   },
   {
     "site_name": "Dallas Wings",
     "site_topic": "Dallas Wings",
     "leader_name": "Vacant",
-    "division": "WNBA"
+    "division": "WNBA",
+    "url_path": "/wnba/wings"
   },
   {
     "site_name": "Golden State Valkyries",
     "site_topic": "Golden State Valkyries",
     "leader_name": "Vacant",
-    "division": "WNBA"
+    "division": "WNBA",
+    "url_path": "/wnba/valkyries"
   },
   {
     "site_name": "Indiana Fever",
     "site_topic": "Indiana Fever",
     "leader_name": "Robin Lundberg",
-    "division": "WNBA"
+    "division": "WNBA",
+    "url_path": "/wnba/fever"
   },
   {
     "site_name": "Las Vegas Aces",
     "site_topic": "Las Vegas Aces",
     "leader_name": "Vacant",
-    "division": "WNBA"
+    "division": "WNBA",
+    "url_path": "/wnba/aces"
   },
   {
     "site_name": "Los Angeles Sparks",
     "site_topic": "Los Angeles Sparks",
     "leader_name": "Vacant",
-    "division": "WNBA"
+    "division": "WNBA",
+    "url_path": "/wnba/sparks"
   },
   {
     "site_name": "Minnesota Lynx",
     "site_topic": "Minnesota Lynx",
     "leader_name": "Vacant",
-    "division": "WNBA"
+    "division": "WNBA",
+    "url_path": "/wnba/lynx"
   },
   {
     "site_name": "New York Liberty",
     "site_topic": "New York Liberty",
     "leader_name": "Vacant",
-    "division": "WNBA"
+    "division": "WNBA",
+    "url_path": "/wnba/liberty"
   },
   {
     "site_name": "Phoenix Mercury",
     "site_topic": "Phoenix Mercury",
     "leader_name": "Vacant",
-    "division": "WNBA"
+    "division": "WNBA",
+    "url_path": "/wnba/mercury"
   },
   {
     "site_name": "Seattle Storm",
     "site_topic": "Seattle Storm",
     "leader_name": "Vacant",
-    "division": "WNBA"
+    "division": "WNBA",
+    "url_path": "/wnba/storm"
   },
   {
     "site_name": "Washington Mystics",
     "site_topic": "Washington Mystics",
     "leader_name": "Vacant",
-    "division": "WNBA"
+    "division": "WNBA",
+    "url_path": "/wnba/mystics"
   },
   {
     "site_name": "Florida Panthers",
     "site_topic": "Florida Panthers",
     "leader_name": "Ethan Skolnick",
-    "division": "NHL"
+    "division": "NHL",
+    "url_path": "/nhl/panthers"
   },
   {
     "site_name": "New York Rangers",
     "site_topic": "New York Rangers",
     "leader_name": "Nick Ziegler",
-    "division": "NHL"
+    "division": "NHL",
+    "url_path": "/nhl/rangers"
   },
   {
     "site_name": "Tampa Bay Lightning",
     "site_topic": "Tampa Bay Lightning",
     "leader_name": "Ethan Skolnick",
-    "division": "NHL"
+    "division": "NHL",
+    "url_path": "/nhl/lightning"
   },
   {
     "site_name": "Boston Bruins",
     "site_topic": "Boston Bruins",
     "leader_name": "Christopher Walsh",
-    "division": "NHL"
+    "division": "NHL",
+    "url_path": "/nhl/bruins"
   },
   {
     "site_name": "Nashville Predators",
     "site_topic": "Nashville Predators",
     "leader_name": "Christopher Walsh",
-    "division": "NHL"
+    "division": "NHL",
+    "url_path": "/nhl/predators"
   },
   {
     "site_name": "New York Islanders",
     "site_topic": "New York Islanders",
     "leader_name": "Nick Ziegler",
-    "division": "NHL"
+    "division": "NHL",
+    "url_path": null
   },
   {
     "site_name": "Colorado Avalanche",
     "site_topic": "Colorado Avalanche",
     "leader_name": "Laura Lambert",
-    "division": "NHL"
+    "division": "NHL",
+    "url_path": "/nhl/avalanche"
   },
   {
     "site_name": "Los Angeles Angels",
     "site_topic": "Los Angeles Angels",
     "leader_name": "Jeff Joiner",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/angels"
   },
   {
     "site_name": "Arizona Diamondbacks",
     "site_topic": "Arizona Diamondbacks",
     "leader_name": "Alex D'Agostino",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/diamondbacks"
   },
   {
     "site_name": "Atlanta Braves",
     "site_topic": "Atlanta Braves",
     "leader_name": "Scott Kennedy",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/braves"
   },
   {
     "site_name": "Baltimore Orioles",
     "site_topic": "Baltimore Orioles",
     "leader_name": "Dave McAllester",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/orioles"
   },
   {
     "site_name": "Boston Red Sox",
     "site_topic": "Boston Red Sox",
     "leader_name": "Scott Neville",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/red-sox"
   },
   {
     "site_name": "Chicago Cubs",
     "site_topic": "Chicago Cubs",
     "leader_name": "Elias Schuster",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/cubs"
   },
   {
     "site_name": "Chicago White Sox",
     "site_topic": "Chicago White Sox",
     "leader_name": "Elias Schuster",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/whitesox"
   },
   {
     "site_name": "Cincinati Reds",
     "site_topic": "Cincinati Reds",
     "leader_name": "James Rapien",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/reds"
   },
   {
     "site_name": "Cleveland Guardians",
     "site_topic": "Cleveland Guardians",
     "leader_name": "Dave McAllester",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/guardians"
   },
   {
     "site_name": "Colorado Rockies",
     "site_topic": "Colorado Rockies",
     "leader_name": "Laura Lambert",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/rockies"
   },
   {
     "site_name": "Detroit Tigers",
     "site_topic": "Detroit Tigers",
     "leader_name": "Laura Lambert",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/tigers"
   },
   {
     "site_name": "Houston Astros",
     "site_topic": "Houston Astros",
     "leader_name": "Laura Lambert",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/astros"
   },
   {
     "site_name": "Kansas City Royals",
     "site_topic": "Kansas City Royals",
     "leader_name": "BJ Kissel",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/royals"
   },
   {
     "site_name": "Los Angeles Dodgers",
     "site_topic": "Los Angeles Dodgers",
     "leader_name": "Noah Camras",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/dodgers"
   },
   {
     "site_name": "Miami Marlins",
     "site_topic": "Miami Marlins",
     "leader_name": "Laura Lambert",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/marlins"
   },
   {
     "site_name": "Milwaukee Brewers",
     "site_topic": "Milwaukee Brewers",
     "leader_name": "Scott Neville",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/brewers"
   },
   {
     "site_name": "Minnesota Twins",
     "site_topic": "Minnesota Twins",
     "leader_name": "Vacant",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/twins"
   },
   {
     "site_name": "New York Mets",
     "site_topic": "New York Mets",
     "leader_name": "Vacant",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/mets"
   },
   {
     "site_name": "New York Yankees",
     "site_topic": "New York Yankees",
     "leader_name": "Vacant",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/yankees"
   },
   {
     "site_name": "Oakland A's",
     "site_topic": "Oakland A's",
     "leader_name": "Jason Burke",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/athletics"
   },
   {
     "site_name": "Philadelphia Phillies",
     "site_topic": "Philadelphia Phillies",
     "leader_name": "Nick Ziegler",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/phillies"
   },
   {
     "site_name": "Pittsburgh Pirates",
     "site_topic": "Pittsburgh Pirates",
     "leader_name": "Noah Strackbein",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/pirates"
   },
   {
     "site_name": "San Diego Padres",
     "site_topic": "San Diego Padres",
     "leader_name": "Noah Camras",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/padres"
   },
   {
     "site_name": "San Francisco Giants",
     "site_topic": "San Francisco Giants",
     "leader_name": "Laura Lambert",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/giants"
   },
   {
     "site_name": "Seattle Mariners",
     "site_topic": "Seattle Mariners",
     "leader_name": "Tremayne Person",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/mariners"
   },
   {
     "site_name": "St. Louis Cardinals",
     "site_topic": "St. Louis Cardinals",
     "leader_name": "Scott Neville",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/cardinals"
   },
   {
     "site_name": "Tampa Bay Rays",
     "site_topic": "Tampa Bay Rays",
     "leader_name": "Nick Ziegler",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/rays"
   },
   {
     "site_name": "Texas Rangers",
     "site_topic": "Texas Rangers",
     "leader_name": "Laura Lambert",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/rangers"
   },
   {
     "site_name": "Toronto Blue Jays",
     "site_topic": "Toronto Blue Jays",
     "leader_name": "Laura Lambert",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/bluejays"
   },
   {
     "site_name": "Washington Nationals",
     "site_topic": "Washington Nationals",
     "leader_name": "Brad Wakai",
-    "division": "MLB"
+    "division": "MLB",
+    "url_path": "/mlb/nationals"
   },
   {
     "site_name": "Atlanta Hawks",
     "site_topic": "Atlanta Hawks",
     "leader_name": "Jackson Caudell",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/hawks"
   },
   {
     "site_name": "Boston Celtics",
     "site_topic": "Boston Celtics",
     "leader_name": "John Karalis",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/celtics"
   },
   {
     "site_name": "Brooklyn Nets",
     "site_topic": "Brooklyn Nets",
     "leader_name": "Derek Parker",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/nets"
   },
   {
     "site_name": "Charlotte Hornets",
     "site_topic": "Charlotte Hornets",
     "leader_name": "Schuyler Callihan",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/hornets"
   },
   {
     "site_name": "Chicago Bulls",
     "site_topic": "Chicago Bulls",
     "leader_name": "Elias Schuster",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/bulls"
   },
   {
     "site_name": "Cleveland Cavs",
     "site_topic": "Cleveland Cavs",
     "leader_name": "Dave McAllester",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/cavaliers"
   },
   {
     "site_name": "Dallas Mavericks",
     "site_topic": "Dallas Mavericks",
     "leader_name": "Logan Robinson",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/mavericks"
   },
   {
     "site_name": "Denver Nuggets",
     "site_topic": "Denver Nuggets",
     "leader_name": "Chad Jensen",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/nuggets"
   },
   {
     "site_name": "Detroit Pistons",
     "site_topic": "Detroit Pistons",
     "leader_name": "Dave McAllester",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/pistons"
   },
   {
     "site_name": "Golden State Warriors",
     "site_topic": "Golden State Warriors",
     "leader_name": "Joseph Akeley",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/warriors"
   },
   {
     "site_name": "Houston Rockets",
     "site_topic": "Houston Rockets",
     "leader_name": "Ethan Skolnick",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/rockets"
   },
   {
     "site_name": "Indiana Pacers",
     "site_topic": "Indiana Pacers",
     "leader_name": "Ethan Skolnick",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/pacers"
   },
   {
     "site_name": "L.A. Clippers",
     "site_topic": "L.A. Clippers",
     "leader_name": "Cem Yolbulan",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/clippers"
   },
   {
     "site_name": "L.A. Lakers",
     "site_topic": "L.A. Lakers",
     "leader_name": "Ryan Ward",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/lakers"
   },
   {
     "site_name": "Memphis Grizzlies",
     "site_topic": "Memphis Grizzlies",
     "leader_name": "Ethan Skolnick",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/grizzlies"
   },
   {
     "site_name": "Miami Heat",
     "site_topic": "Miami Heat",
     "leader_name": "Ethan Skolnick",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/heat"
   },
   {
     "site_name": "Milwaukee Bucks",
     "site_topic": "Milwaukee Bucks",
     "leader_name": "Ethan Skolnick",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/bucks"
   },
   {
     "site_name": "Minnesota Timberwolves",
     "site_topic": "Minnesota Timberwolves",
     "leader_name": "Vacant",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/timberwolves"
   },
   {
     "site_name": "New Orleans Pelicans",
     "site_topic": "New Orleans Pelicans",
     "leader_name": "Cem Yolbulan",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/pelicans"
   },
   {
     "site_name": "New York Knicks",
     "site_topic": "New York Knicks",
     "leader_name": "Vacant",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/knicks"
   },
   {
     "site_name": "Oklahoma City Thunder",
     "site_topic": "Oklahoma City Thunder",
     "leader_name": "Derek Parker",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/thunder"
   },
   {
     "site_name": "Orlando Magic",
     "site_topic": "Orlando Magic",
     "leader_name": "Ethan Skolnick",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/magic"
   },
   {
     "site_name": "Philadelphia 76ers",
     "site_topic": "Philadelphia 76ers",
     "leader_name": "Austin Krell",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/76ers"
   },
   {
     "site_name": "Phoenix Suns",
     "site_topic": "Phoenix Suns",
     "leader_name": "Donnie Druin",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/suns"
   },
   {
     "site_name": "Portland Trail Blazers",
     "site_topic": "Portland Trail Blazers",
     "leader_name": "Jeremy Brener",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/trailblazers"
   },
   {
     "site_name": "Sacramento Kings",
     "site_topic": "Sacramento Kings",
     "leader_name": "Chad Jensen",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/kings"
   },
   {
     "site_name": "San Antonio Spurs",
     "site_topic": "San Antonio Spurs",
     "leader_name": "Thomas Petrini",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/spurs"
   },
   {
     "site_name": "Toronto Raptors",
     "site_topic": "Toronto Raptors",
     "leader_name": "Jeremy Brener",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/raptors"
   },
   {
     "site_name": "Utah Jazz",
     "site_topic": "Utah Jazz",
     "leader_name": "Chad Jensen",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/jazz"
   },
   {
     "site_name": "Washington Wizards",
     "site_topic": "Washington Wizards",
     "leader_name": "Henry J. Brown",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/wizards"
   },
   {
     "site_name": "NBA Draft",
     "site_topic": "NBA Draft",
     "leader_name": "Derek Parker",
-    "division": "NBA"
+    "division": "NBA",
+    "url_path": "/nba/draft"
   },
   {
     "site_name": "Alabama",
     "site_topic": "Alabama",
     "leader_name": "Christopher Walsh",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/alabama"
   },
   {
     "site_name": "Arizona",
     "site_topic": "Arizona",
     "leader_name": "Hondo Carpenter",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/arizona"
   },
   {
     "site_name": "Arizona State",
     "site_topic": "Arizona State",
     "leader_name": "Hondo Carpenter",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/arizonastate"
   },
   {
     "site_name": "Arkansas",
     "site_topic": "Arkansas",
     "leader_name": "Jacob Davis",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/arkansas"
   },
   {
     "site_name": "Auburn",
     "site_topic": "Auburn",
     "leader_name": "Scott Kennedy",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/auburn"
   },
   {
     "site_name": "Baylor",
     "site_topic": "Baylor",
     "leader_name": "Trent Knoop",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/baylor"
   },
   {
     "site_name": "Boise State",
     "site_topic": "Boise State",
     "leader_name": "Regan Dickson",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/boise-state"
   },
   {
     "site_name": "Boston College",
     "site_topic": "Boston College",
     "leader_name": "Christopher Walsh",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/bostoncollege"
   },
   {
     "site_name": "BYU",
     "site_topic": "BYU",
     "leader_name": "Casey Lundquist",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/byu"
   },
   {
     "site_name": "California",
     "site_topic": "California",
     "leader_name": "Jake Curtis",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/cal"
   },
   {
     "site_name": "Cincinnati",
     "site_topic": "Cincinnati",
     "leader_name": "James Rapien",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/cincinnati"
   },
   {
     "site_name": "Clemson",
     "site_topic": "Clemson",
     "leader_name": "Scott Kennedy",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/clemson"
   },
   {
     "site_name": "Colorado",
     "site_topic": "Colorado",
     "leader_name": "Bri Amaranthus",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/colorado"
   },
   {
     "site_name": "Duke",
     "site_topic": "Duke",
     "leader_name": "Hondo Carpenter",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/duke"
   },
   {
     "site_name": "Florida",
     "site_topic": "Florida",
     "leader_name": "Scott Kennedy",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/florida"
   },
   {
     "site_name": "Florida State",
     "site_topic": "Florida State",
     "leader_name": "Logan Robinson",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/florida"
   },
   {
     "site_name": "Georgia",
     "site_topic": "Georgia",
     "leader_name": "Brooks Austin",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/georgia"
   },
   {
     "site_name": "Georgia Tech",
     "site_topic": "Georgia Tech",
     "leader_name": "Jackson Caudell",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/georgiatech"
   },
   {
     "site_name": "Gonzaga",
     "site_topic": "Gonzaga",
     "leader_name": "Regan Dickson",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/gonzaga"
   },
   {
     "site_name": "Houston",
     "site_topic": "Houston",
     "leader_name": "Matt Galatzan",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/houston"
   },
   {
     "site_name": "Illinois",
     "site_topic": "Illinois",
     "leader_name": "Pete Fiutak",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/illinois"
   },
   {
     "site_name": "Indiana",
     "site_topic": "Indiana",
     "leader_name": "Pete Fiutak",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/indiana"
   },
   {
     "site_name": "Iowa",
     "site_topic": "Iowa",
     "leader_name": "Pete Fiutak",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/iowa"
   },
   {
     "site_name": "Iowa State",
     "site_topic": "Iowa State",
     "leader_name": "Nick Ziegler",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/iowa-state"
   },
   {
     "site_name": "Kansas",
     "site_topic": "Kansas",
     "leader_name": "BJ Kissel",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/kansas"
   },
   {
     "site_name": "Kansas State",
     "site_topic": "Kansas State",
     "leader_name": "BJ Kissel",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/kansas"
   },
   {
     "site_name": "Kentucky",
     "site_topic": "Kentucky",
     "leader_name": "Andrew Stefaniak",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/kentucky"
   },
   {
     "site_name": "Louisville",
     "site_topic": "Louisville",
     "leader_name": "Matthew McGavic",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/louisville"
   },
   {
     "site_name": "LSU",
     "site_topic": "LSU",
     "leader_name": "Matt Galatzan",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/lsu"
   },
   {
     "site_name": "Maryland",
     "site_topic": "Maryland",
     "leader_name": "David Max",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/maryland"
   },
   {
     "site_name": "Miami",
     "site_topic": "Miami",
     "leader_name": "Christopher Walsh",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/miami"
   },
   {
     "site_name": "Michigan",
     "site_topic": "Michigan",
     "leader_name": "Chris Pirrone",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/michigan"
   },
   {
     "site_name": "Michigan State",
     "site_topic": "Michigan State",
     "leader_name": "Hondo Carpenter",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/michiganstate"
   },
   {
     "site_name": "Minnesota",
     "site_topic": "Minnesota",
     "leader_name": "Vacant",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/minnesota"
   },
   {
     "site_name": "Mississippi State",
     "site_topic": "Mississippi State",
     "leader_name": "Vacant",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/mississippistate"
   },
   {
     "site_name": "Missouri",
     "site_topic": "Missouri",
     "leader_name": "BJ Kissel",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/missouri"
   },
   {
     "site_name": "NC State",
     "site_topic": "NC State",
     "leader_name": "Vacant",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/ncstate"
   },
   {
     "site_name": "Nebraska",
     "site_topic": "Nebraska",
     "leader_name": "David Max",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/nebraska"
   },
   {
     "site_name": "North Carolina",
     "site_topic": "North Carolina",
     "leader_name": "Hondo Carpenter",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/unc"
   },
   {
     "site_name": "Northwestern",
     "site_topic": "Northwestern",
     "leader_name": "David Max",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/northwestern"
   },
   {
     "site_name": "Notre Dame",
     "site_topic": "Notre Dame",
     "leader_name": "Pete Fiutak",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/notredame"
   },
   {
     "site_name": "Ohio State",
     "site_topic": "Ohio State",
     "leader_name": "Dave McAllester",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/ohiostate"
   },
   {
     "site_name": "Oklahoma",
     "site_topic": "Oklahoma",
     "leader_name": "John Hoover",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/oklahoma"
   },
   {
     "site_name": "Oklahoma State",
     "site_topic": "Oklahoma State",
     "leader_name": "Matthew Postins",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/oklahomastate"
   },
   {
     "site_name": "Ole Miss",
     "site_topic": "Ole Miss",
     "leader_name": "Matt Galatzan",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/olemiss"
   },
   {
     "site_name": "Oregon",
     "site_topic": "Oregon",
     "leader_name": "Bri Amaranthus",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/oregon"
   },
   {
     "site_name": "Oregon State",
     "site_topic": "Oregon State",
     "leader_name": "Joe Londergan",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/oregon-state"
   },
   {
     "site_name": "Penn State",
     "site_topic": "Penn State",
     "leader_name": "Mark Wogenrich",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/pennstate"
   },
   {
     "site_name": "Pittsburgh",
     "site_topic": "Pittsburgh",
     "leader_name": "Noah Strackbein",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/pittsburgh"
   },
   {
     "site_name": "Purdue",
     "site_topic": "Purdue",
     "leader_name": "Dustin Schutte",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/purdue"
   },
   {
     "site_name": "Rutgers",
     "site_topic": "Rutgers",
     "leader_name": "David Max",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/rutgers"
   },
   {
     "site_name": "San Diego State",
     "site_topic": "San Diego State",
     "leader_name": "Regan Dickson",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/san-diego-state"
   },
   {
     "site_name": "South Carolina",
     "site_topic": "South Carolina",
     "leader_name": "Brooks Austin",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/southcarolina"
   },
   {
     "site_name": "Stanford",
     "site_topic": "Stanford",
     "leader_name": "Jason Burke",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/stanford"
   },
   {
     "site_name": "Syracuse",
     "site_topic": "Syracuse",
     "leader_name": "Wesley Chen",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/syracuse"
   },
   {
     "site_name": "TAMU",
     "site_topic": "TAMU",
     "leader_name": "Matt Galatzan",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/tamu"
   },
   {
     "site_name": "TCU",
     "site_topic": "TCU",
     "leader_name": "Ryann Zeller",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/tcu"
   },
   {
     "site_name": "Tennessee",
     "site_topic": "Tennessee",
     "leader_name": "Brooks Austin",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/tennessee"
   },
   {
     "site_name": "Texas",
     "site_topic": "Texas",
     "leader_name": "Matt Galatzan",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/texas"
   },
   {
     "site_name": "Texas Tech",
     "site_topic": "Texas Tech",
     "leader_name": "David Max",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/texas-tech"
   },
   {
     "site_name": "Tulane",
     "site_topic": "Tulane",
     "leader_name": "Doug Joubert",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/tulane"
   },
   {
     "site_name": "UCF",
     "site_topic": "UCF",
     "leader_name": "Bryson Turner",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/ucf"
   },
   {
     "site_name": "UCLA",
     "site_topic": "UCLA",
     "leader_name": "Hondo Carpenter",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/ucla"
   },
   {
     "site_name": "UConn",
     "site_topic": "UConn",
     "leader_name": "Mitchell Corcoran",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/uconn"
   },
   {
     "site_name": "UNLV",
     "site_topic": "UNLV",
     "leader_name": "Vacant",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/unlv"
   },
   {
     "site_name": "USC",
     "site_topic": "USC",
     "leader_name": "Bri Amaranthus",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/usc"
   },
   {
     "site_name": "Utah",
     "site_topic": "Utah",
     "leader_name": "Regan Dickson",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/utah"
   },
   {
     "site_name": "Vanderbilt",
     "site_topic": "Vanderbilt",
     "leader_name": "Christopher Walsh",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/vanderbilt"
   },
   {
     "site_name": "Virginia",
     "site_topic": "Virginia",
     "leader_name": "Jackson Caudell",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/virginia"
   },
   {
     "site_name": "Virginia Tech",
     "site_topic": "Virginia Tech",
     "leader_name": "Jackson Caudell",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/virginiatech"
   },
   {
     "site_name": "Washington",
     "site_topic": "Washington",
     "leader_name": "Dan Raley",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/washington"
   },
   {
     "site_name": "Washington State",
     "site_topic": "Washington State",
     "leader_name": "Joe Londergan",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/washington-state"
   },
   {
     "site_name": "West Virginia",
     "site_topic": "West Virginia",
     "leader_name": "Schuyler Callihan",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/virginia"
   },
   {
     "site_name": "Wisconsin",
     "site_topic": "Wisconsin",
     "leader_name": "Chris Pirrone",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/wisconsin"
   },
   {
     "site_name": "SMU Mustangs",
     "site_topic": "SMU Mustangs",
     "leader_name": "David Max",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/smu"
   },
   {
     "site_name": "Wake Forest",
     "site_topic": "Wake Forest",
     "leader_name": "Barry Lewis",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/wake-forest"
   },
   {
     "site_name": "Creighton",
     "site_topic": "Creighton",
     "leader_name": "David Max",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/creighton"
   },
   {
     "site_name": "Southern Miss",
     "site_topic": "Southern Miss",
     "leader_name": "Dalton Trigg",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/southernmiss"
   },
   {
     "site_name": "College Basketball HQ",
     "site_topic": "College Basketball HQ",
     "leader_name": "Kevin Connelly",
-    "division": "NCAA"
+    "division": "NCAA",
+    "url_path": "/college/cbb-hq"
   },
   {
     "site_name": "Arizona Cardinals",
     "site_topic": "Arizona Cardinals",
     "leader_name": "Donnie Druin",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/cardinals"
   },
   {
     "site_name": "Atlanta Falcons",
     "site_topic": "Atlanta Falcons",
     "leader_name": "Scott Kennedy",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/falcons"
   },
   {
     "site_name": "Baltimore Ravens",
     "site_topic": "Baltimore Ravens",
     "leader_name": "Dave McAllester",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/ravens"
   },
   {
     "site_name": "Buffalo Bills",
     "site_topic": "Buffalo Bills",
     "leader_name": "Chris Pirrone",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/bills"
   },
   {
     "site_name": "Carolina Panthers",
     "site_topic": "Carolina Panthers",
     "leader_name": "Chris Pirrone",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/panthers"
   },
   {
     "site_name": "Chicago Bears",
     "site_topic": "Chicago Bears",
     "leader_name": "Chris Pirrone",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/bears"
   },
   {
     "site_name": "Cincinnati Bengals",
     "site_topic": "Cincinnati Bengals",
     "leader_name": "James Rapien",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/bengals"
   },
   {
     "site_name": "Cleveland Browns",
     "site_topic": "Cleveland Browns",
     "leader_name": "Dave McAllester",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/browns"
   },
   {
     "site_name": "Dallas Cowboys",
     "site_topic": "Dallas Cowboys",
     "leader_name": "Chris Pirrone",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/cowboys"
   },
   {
     "site_name": "Denver Broncos",
     "site_topic": "Denver Broncos",
     "leader_name": "Chad Jensen",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/broncos"
   },
   {
     "site_name": "Detroit Lions",
     "site_topic": "Detroit Lions",
     "leader_name": "John Maakaron",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/lions"
   },
   {
     "site_name": "Green Bay Packers",
     "site_topic": "Green Bay Packers",
     "leader_name": "Bill Huber",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/packers"
   },
   {
     "site_name": "Houston Texans",
     "site_topic": "Houston Texans",
     "leader_name": "Jared Koch",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/texans"
   },
   {
     "site_name": "Indianapolis Colts",
     "site_topic": "Indianapolis Colts",
     "leader_name": "Noah Compton",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/colts"
   },
   {
     "site_name": "Jacksonville Jaguars",
     "site_topic": "Jacksonville Jaguars",
     "leader_name": "John Shipley",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/jaguars"
   },
   {
     "site_name": "Kansas City Chiefs",
     "site_topic": "Kansas City Chiefs",
     "leader_name": "BJ Kissel",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/chiefs"
   },
   {
     "site_name": "Los Angeles Chargers",
     "site_topic": "Los Angeles Chargers",
     "leader_name": "Chris Pirrone",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/chargers"
   },
   {
     "site_name": "Los Angeles Rams",
     "site_topic": "Los Angeles Rams",
     "leader_name": "Blaine Grisak",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/rams"
   },
   {
     "site_name": "Las Vegas Raiders",
     "site_topic": "Las Vegas Raiders",
     "leader_name": "Hondo Carpenter",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/raiders"
   },
   {
     "site_name": "Miami Dolphins",
     "site_topic": "Miami Dolphins",
     "leader_name": "Alain Poupart",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/dolphins"
   },
   {
     "site_name": "Minnesota Vikings",
     "site_topic": "Minnesota Vikings",
     "leader_name": "Vacant",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/vikings"
   },
   {
     "site_name": "New England Patriots",
     "site_topic": "New England Patriots",
     "leader_name": "Ethan Hurwitz",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/patriots"
   },
   {
     "site_name": "New Orleans Saints",
     "site_topic": "New Orleans Saints",
     "leader_name": "Vacant",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/saints"
   },
   {
     "site_name": "New York Giants",
     "site_topic": "New York Giants",
     "leader_name": "Patricia Traina",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/giants"
   },
   {
     "site_name": "New York Jets",
     "site_topic": "New York Jets",
     "leader_name": "Vacant",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/jets"
   },
   {
     "site_name": "Philadelphia Eagles",
     "site_topic": "Philadelphia Eagles",
     "leader_name": "Jeff Kerr",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/eagles"
   },
   {
     "site_name": "Pittsburgh Steelers",
     "site_topic": "Pittsburgh Steelers",
     "leader_name": "Noah Strackbein",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/steelers"
   },
   {
     "site_name": "San Francisco 49ers",
     "site_topic": "San Francisco 49ers",
     "leader_name": "Grant Cohn",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/49ers"
   },
   {
     "site_name": "Seattle Seahawks",
     "site_topic": "Seattle Seahawks",
     "leader_name": "Chris Pirrone",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/seahawks"
   },
   {
     "site_name": "Tampa Bay Buccaneers",
     "site_topic": "Tampa Bay Buccaneers",
     "leader_name": "Logan Robinson",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/buccaneers"
   },
   {
     "site_name": "Tennessee Titans",
     "site_topic": "Tennessee Titans",
     "leader_name": "Bryce Lazenby",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/titans"
   },
   {
     "site_name": "Washington Commanders",
     "site_topic": "Washington Commanders",
     "leader_name": "Philip Hughes",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/commanders"
   },
   {
     "site_name": "NFL Draft On SI",
     "site_topic": "NFL Draft On SI",
     "leader_name": "Justin Melo",
-    "division": "NFL"
+    "division": "NFL",
+    "url_path": "/nfl/draft"
   }
 ]

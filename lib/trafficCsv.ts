@@ -31,25 +31,22 @@ function parseNumber(value: string | undefined | null): number | null {
   return isNaN(n) ? null : n;
 }
 
-export type TrafficCsvGroup = {
-  hostname: string | null; // null only when the file has no hostname column at all
-  rows: ParsedTrafficRow[];
-};
+type ParsedRowWithSource = ParsedTrafficRow & { hostname: string | null };
 
-export type TrafficCsvResult = {
-  groups: TrafficCsvGroup[];
+/**
+ * Shared row-level parsing: detects columns by flexible header matching
+ * (works regardless of column order, and tolerates extra columns like a
+ * new "hyperlink" URL field being added to an export without breaking
+ * anything that doesn't look for it) and returns one row per CSV line —
+ * ungrouped. Both hostname-based (FanSided) and URL-path-based (OnSI)
+ * grouping build on top of this.
+ */
+function parseRows(csvText: string): {
+  rows: ParsedRowWithSource[];
   totalRows: number;
   skippedRows: number;
   missingColumns: string[];
-};
-
-/**
- * Parses a traffic export. If the file contains multiple distinct hostnames
- * (a multi-site export), rows are split into one group per hostname so each
- * can be mapped to its own site and uploaded independently. A single-site
- * file just produces one group, same as before.
- */
-export function parseTrafficCsv(csvText: string): TrafficCsvResult {
+} {
   const parsed = Papa.parse<Record<string, string>>(csvText, {
     header: true,
     skipEmptyLines: true,
@@ -72,7 +69,7 @@ export function parseTrafficCsv(csvText: string): TrafficCsvResult {
   if (!titleKey) missingColumns.push("Article Title");
   if (!pageviewsKey) missingColumns.push("PageViews");
 
-  const rowsByHostname = new Map<string | null, ParsedTrafficRow[]>();
+  const rows: ParsedRowWithSource[] = [];
   let skippedRows = 0;
 
   for (const record of parsed.data) {
@@ -84,7 +81,7 @@ export function parseTrafficCsv(csvText: string): TrafficCsvResult {
     const hostname = hostnameKey ? record[hostnameKey]?.trim() || null : null;
     const author = authorKey ? record[authorKey]?.trim() : null;
     const url = urlKey ? record[urlKey]?.trim() : null;
-    const row: ParsedTrafficRow = {
+    rows.push({
       title,
       author: author && author.toLowerCase() !== "null" ? author : null,
       url: url && url.toLowerCase() !== "null" ? url : null,
@@ -92,19 +89,108 @@ export function parseTrafficCsv(csvText: string): TrafficCsvResult {
       pageviews: pageviewsKey ? parseNumber(record[pageviewsKey]) ?? 0 : 0,
       scrollDepth: scrollDepthKey ? parseNumber(record[scrollDepthKey]) : null,
       avgTimeOnPage: avgTimeKey ? parseNumber(record[avgTimeKey]) : null,
-    };
+      hostname,
+    });
+  }
+
+  return { rows, totalRows: parsed.data.length, skippedRows, missingColumns };
+}
+
+export type TrafficCsvGroup = {
+  hostname: string | null; // null only when the file has no hostname column at all
+  rows: ParsedTrafficRow[];
+};
+
+export type TrafficCsvResult = {
+  groups: TrafficCsvGroup[];
+  totalRows: number;
+  skippedRows: number;
+  missingColumns: string[];
+};
+
+/**
+ * Parses a traffic export. If the file contains multiple distinct hostnames
+ * (a multi-site export), rows are split into one group per hostname so each
+ * can be mapped to its own site and uploaded independently. A single-site
+ * file just produces one group, same as before.
+ */
+export function parseTrafficCsv(csvText: string): TrafficCsvResult {
+  const { rows, totalRows, skippedRows, missingColumns } = parseRows(csvText);
+  const rowsByHostname = new Map<string | null, ParsedTrafficRow[]>();
+  for (const { hostname, ...row } of rows) {
     if (!rowsByHostname.has(hostname)) rowsByHostname.set(hostname, []);
     rowsByHostname.get(hostname)!.push(row);
   }
-
   const groups: TrafficCsvGroup[] = Array.from(rowsByHostname.entries()).map(
-    ([hostname, rows]) => ({ hostname, rows })
+    ([hostname, groupRows]) => ({ hostname, rows: groupRows })
+  );
+  return { groups, totalRows, skippedRows, missingColumns };
+}
+
+// OnSI verticals that contain multiple distinct sub-sites (one per team or
+// topic) — grouped two path segments deep, e.g. /nfl/cowboys,
+// /college/alabama, /onsi/fantasy. Anything else observed in real OnSI
+// traffic (like /collectibles/<article-slug> or /high-school/<state>/...)
+// is a single flat site with no sub-grouping, so it's grouped one segment
+// deep instead — otherwise every article's unique slug would look like its
+// own "site".
+const ONSI_HUB_VERTICALS = new Set([
+  "nfl", "nba", "mlb", "nhl", "wnba", "college", "onsi", "fannation",
+]);
+
+export type OnsiTrafficCsvGroup = {
+  urlPath: string; // e.g. "/nfl/cowboys" or "/collectibles"
+  rows: ParsedTrafficRow[];
+};
+
+export type OnsiTrafficCsvResult = {
+  groups: OnsiTrafficCsvGroup[];
+  totalRows: number;
+  skippedRows: number;
+  unclassifiedRows: number; // rows whose URL didn't parse into any path at all
+  missingColumns: string[];
+};
+
+function extractOnsiUrlPath(rawUrl: string): string | null {
+  let path = rawUrl.trim();
+  path = path.replace(/^https?:\/\//i, "");
+  const firstSlash = path.indexOf("/");
+  if (firstSlash === -1) return null; // no path at all, just a bare hostname
+  path = path.slice(firstSlash + 1);
+  const segments = path.split("/").filter(Boolean);
+  if (segments.length === 0) return null;
+  const vertical = segments[0].toLowerCase();
+  if (ONSI_HUB_VERTICALS.has(vertical) && segments.length >= 2) {
+    return `/${vertical}/${segments[1].toLowerCase()}`;
+  }
+  return `/${vertical}`;
+}
+
+/**
+ * Parses an OnSI traffic export. Unlike FanSided, OnSI sites share one
+ * hostname (si.com) and can only be told apart by URL path — so rows are
+ * grouped by a path prefix derived from each article's URL instead of by
+ * hostname. Requires a URL column; rows without one can't be classified.
+ */
+export function parseOnsiTrafficCsv(csvText: string): OnsiTrafficCsvResult {
+  const { rows, totalRows, skippedRows, missingColumns } = parseRows(csvText);
+  if (!rows.some((r) => r.url)) missingColumns.push("Article URL");
+
+  const rowsByPath = new Map<string, ParsedTrafficRow[]>();
+  let unclassifiedRows = 0;
+  for (const { hostname: _hostname, url, ...row } of rows) {
+    const path = url ? extractOnsiUrlPath(url) : null;
+    if (!path) {
+      unclassifiedRows++;
+      continue;
+    }
+    if (!rowsByPath.has(path)) rowsByPath.set(path, []);
+    rowsByPath.get(path)!.push({ ...row, url });
+  }
+
+  const groups: OnsiTrafficCsvGroup[] = Array.from(rowsByPath.entries()).map(
+    ([urlPath, groupRows]) => ({ urlPath, rows: groupRows })
   );
 
-  return {
-    groups,
-    totalRows: parsed.data.length,
-    skippedRows,
-    missingColumns,
-  };
+  return { groups, totalRows, skippedRows, unclassifiedRows, missingColumns };
 }
