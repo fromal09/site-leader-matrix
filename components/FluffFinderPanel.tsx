@@ -32,6 +32,8 @@ type FluffResult = {
   writerId: number;
   writerName: string;
   periodKey: string | null;
+  periodLabel: string | null;
+  availablePeriods: { key: string; label: string }[];
   totalPageviews: number;
   articles: FluffArticle[];
 };
@@ -63,6 +65,7 @@ export function FluffFinderPanel({
     [writerOptions]
   );
   const [selectedKey, setSelectedKey] = useState<string>("");
+  const [periodKey, setPeriodKey] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<FluffResult | null>(null);
 
@@ -73,15 +76,28 @@ export function FluffFinderPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortedOptions]);
 
+  // A different writer usually means a different site, which can have a
+  // different set of available periods — don't carry over a selection
+  // that might not exist there.
+  useEffect(() => {
+    setPeriodKey("");
+  }, [selectedKey]);
+
   useEffect(() => {
     if (!selectedKey) return;
     const [siteId, writerId] = selectedKey.split("::");
     setLoading(true);
-    fetch(`/api${apiPrefix}/depth-chart-writers/site/${siteId}/fluff-finder?writerId=${writerId}`)
+    const periodQuery = periodKey ? `&period=${encodeURIComponent(periodKey)}` : "";
+    fetch(`/api${apiPrefix}/depth-chart-writers/site/${siteId}/fluff-finder?writerId=${writerId}${periodQuery}`)
       .then((r) => r.json())
-      .then(setResult)
+      .then((d) => {
+        setResult(d);
+        // Sync the dropdown to whatever period the backend actually used
+        // (e.g. the default "most recent" pick on first load).
+        if (d.periodKey) setPeriodKey(d.periodKey);
+      })
       .finally(() => setLoading(false));
-  }, [selectedKey, apiPrefix]);
+  }, [selectedKey, periodKey, apiPrefix]);
 
   if (sortedOptions.length === 0) {
     return (
@@ -99,22 +115,37 @@ export function FluffFinderPanel({
         <div>
           <h2 className="font-display text-lg font-semibold text-navy">Fluff Finder</h2>
           <p className="text-xs text-ink-soft">
-            Ranks a writer&apos;s current-month articles by pageviews and shows the running
-            share of their total traffic — helps spot where new content stops meaningfully
-            adding to the total.
+            Ranks a writer&apos;s articles for the selected month by pageviews and shows the
+            running share of their total traffic — helps spot where new content stops
+            meaningfully adding to the total.
           </p>
         </div>
-        <select
-          value={selectedKey}
-          onChange={(e) => setSelectedKey(e.target.value)}
-          className="rounded border border-rule-strong bg-white px-2 py-1.5 text-sm outline-none focus:border-navy"
-        >
-          {sortedOptions.map((o) => (
-            <option key={`${o.siteId}::${o.writerId}`} value={`${o.siteId}::${o.writerId}`}>
-              {o.label} ({o.articlesPublished})
-            </option>
-          ))}
-        </select>
+        <div className="flex flex-wrap gap-2">
+          <select
+            value={selectedKey}
+            onChange={(e) => setSelectedKey(e.target.value)}
+            className="rounded border border-rule-strong bg-white px-2 py-1.5 text-sm outline-none focus:border-navy"
+          >
+            {sortedOptions.map((o) => (
+              <option key={`${o.siteId}::${o.writerId}`} value={`${o.siteId}::${o.writerId}`}>
+                {o.label} ({o.articlesPublished})
+              </option>
+            ))}
+          </select>
+          {result && result.availablePeriods.length > 1 && (
+            <select
+              value={periodKey}
+              onChange={(e) => setPeriodKey(e.target.value)}
+              className="rounded border border-rule-strong bg-white px-2 py-1.5 text-sm outline-none focus:border-navy"
+            >
+              {result.availablePeriods.map((p) => (
+                <option key={p.key} value={p.key}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -125,6 +156,11 @@ export function FluffFinderPanel({
         </p>
       ) : (
         <>
+          {result.periodLabel && (
+            <p className="mb-2 font-data text-[11px] uppercase tracking-wide text-ink-soft">
+              {result.periodLabel}
+            </p>
+          )}
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={result.articles} margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
               <CartesianGrid stroke="var(--rule)" strokeDasharray="3 3" />

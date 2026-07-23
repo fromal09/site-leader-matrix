@@ -38,16 +38,32 @@ export async function GET(
       return NextResponse.json({ error: "Writer not found on this site." }, { status: 404 });
     }
 
-    const periodRows = requestedPeriod
-      ? [{ period_key: requestedPeriod }]
-      : await sql`
-          SELECT period_key FROM onsi_traffic_imports
-          WHERE site_id = ${siteIdNum} ORDER BY period_key DESC LIMIT 1
-        `;
-    const periodKey = (periodRows as any[])[0]?.period_key ?? null;
+    const allPeriodRows = await sql`
+      SELECT DISTINCT period_key, period_label FROM onsi_traffic_imports
+      WHERE site_id = ${siteIdNum}
+      ORDER BY period_key DESC
+    `;
+    const availablePeriods = (allPeriodRows as any[]).map((r) => ({
+      key: r.period_key,
+      label: r.period_label,
+    }));
+
+    const periodKey =
+      requestedPeriod && availablePeriods.some((p) => p.key === requestedPeriod)
+        ? requestedPeriod
+        : availablePeriods[0]?.key ?? null;
     if (!periodKey) {
-      return NextResponse.json({ writerId: writer.id, writerName: writer.name, periodKey: null, articles: [], totalPageviews: 0 });
+      return NextResponse.json({
+        writerId: writer.id,
+        writerName: writer.name,
+        periodKey: null,
+        periodLabel: null,
+        availablePeriods,
+        articles: [],
+        totalPageviews: 0,
+      });
     }
+    const periodLabel = availablePeriods.find((p) => p.key === periodKey)?.label ?? periodKey;
 
     const matchNames = buildMatchNames(writer.name, writer.traffic_dashboard_name, writer.aliases);
     const rows =
@@ -82,6 +98,8 @@ export async function GET(
       writerId: writer.id,
       writerName: writer.name,
       periodKey,
+      periodLabel,
+      availablePeriods,
       totalPageviews,
       articles,
     });
