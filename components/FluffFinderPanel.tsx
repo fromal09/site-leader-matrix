@@ -141,6 +141,7 @@ export function FluffFinderPanel({
   // that might not exist there.
   useEffect(() => {
     setPeriodKey("");
+    setExcludeTopN(0);
   }, [selectedKey]);
 
   useEffect(() => {
@@ -192,9 +193,36 @@ export function FluffFinderPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [periodKey, divisionKey, apiPrefix]);
 
+  // Excluding the top N articles re-bases both axes to "of the remaining
+  // articles" and "of the remaining traffic" — mathematically the same as
+  // drawing the reference line from the top dot to the endpoint instead of
+  // from the origin. Answers "excluding the outlier hit(s), how
+  // efficiently does the rest of this writer's output perform?" as a
+  // distinct question from "how top-heavy is everything," which the
+  // un-excluded score still answers.
+  const [excludeTopN, setExcludeTopN] = useState(0);
+
+  const displayArticles = useMemo(() => {
+    if (!result) return [];
+    const n = Math.max(0, Math.min(excludeTopN, result.articles.length - 1));
+    if (n === 0) return result.articles;
+    const excluded = result.articles.slice(0, n);
+    const excludedPv = excluded.reduce((s, a) => s + a.pageviews, 0);
+    const remaining = result.articles.slice(n);
+    const remainingTotalPv = result.totalPageviews - excludedPv;
+    const remainingCount = remaining.length;
+    return remaining.map((a, i) => ({
+      ...a,
+      rank: i + 1,
+      cumulativePageviews: a.cumulativePageviews - excludedPv,
+      cumulativePct: remainingTotalPv > 0 ? (a.cumulativePageviews - excludedPv) / remainingTotalPv : 0,
+      cumulativeArticlePct: remainingCount > 0 ? (i + 1) / remainingCount : 0,
+    }));
+  }, [result, excludeTopN]);
+
   const stats = useMemo(() => {
-    if (!result || result.articles.length === 0) return null;
-    const points = [{ x: 0, y: 0 }, ...result.articles.map((a) => ({ x: a.cumulativeArticlePct, y: a.cumulativePct }))];
+    if (displayArticles.length === 0) return null;
+    const points = [{ x: 0, y: 0 }, ...displayArticles.map((a) => ({ x: a.cumulativeArticlePct, y: a.cumulativePct }))];
     let area = 0;
     for (let i = 1; i < points.length; i++) {
       const { x: x1, y: y1 } = points[i - 1];
@@ -203,9 +231,9 @@ export function FluffFinderPanel({
     }
     const concentrationScore = Math.max(0, Math.min(1, 2 * area - 1));
 
-    let peak = result.articles[0];
+    let peak = displayArticles[0];
     let peakGap = -Infinity;
-    for (const a of result.articles) {
+    for (const a of displayArticles) {
       const gap = a.cumulativePct - a.cumulativeArticlePct;
       if (gap > peakGap) {
         peakGap = gap;
@@ -213,7 +241,7 @@ export function FluffFinderPanel({
       }
     }
     return { concentrationScore, peak, peakGap };
-  }, [result]);
+  }, [displayArticles]);
 
   const boxColor = useMemo(() => {
     if (!stats || !populationScores || populationScores.length < 2) return null;
@@ -301,12 +329,27 @@ export function FluffFinderPanel({
               ))}
             </select>
           )}
+          {result && result.articles.length > 1 && (
+            <label className="flex items-center gap-1.5 rounded border border-rule-strong bg-white px-2 py-1.5 text-xs">
+              <span className="text-ink-soft uppercase tracking-wide">Exclude top</span>
+              <input
+                type="number"
+                min={0}
+                max={result.articles.length - 1}
+                value={excludeTopN}
+                onChange={(e) =>
+                  setExcludeTopN(Math.max(0, Math.min(result.articles.length - 1, Number(e.target.value) || 0)))
+                }
+                className="w-10 rounded border border-rule-strong bg-white px-1 py-0.5 text-center font-data outline-none focus:border-navy"
+              />
+            </label>
+          )}
         </div>
       </div>
 
       {loading ? (
         <p className="py-8 text-center text-sm text-ink-soft">Loading…</p>
-      ) : !result || result.articles.length === 0 ? (
+      ) : !result || displayArticles.length === 0 ? (
         <p className="py-8 text-center text-sm italic text-ink-soft">
           No published articles this period for this writer.
         </p>
@@ -315,6 +358,18 @@ export function FluffFinderPanel({
           {result.periodLabel && (
             <p className="mb-2 font-data text-[11px] uppercase tracking-wide text-ink-soft">
               {result.periodLabel}
+            </p>
+          )}
+
+          {excludeTopN > 0 && result.totalPageviews > 0 && (
+            <p className="mb-2 rounded border border-rule-strong bg-paper px-2 py-1.5 text-[11px] text-ink-soft">
+              Excluding top {excludeTopN} article{excludeTopN === 1 ? "" : "s"} (
+              {formatCompactNumber(result.articles.slice(0, excludeTopN).reduce((s, a) => s + a.pageviews, 0))} PVs,{" "}
+              {formatPercent(
+                result.articles.slice(0, excludeTopN).reduce((s, a) => s + a.pageviews, 0) / result.totalPageviews
+              )}{" "}
+              of total traffic) — everything below reflects the remaining {displayArticles.length} article
+              {displayArticles.length === 1 ? "" : "s"} only.
             </p>
           )}
 
@@ -360,7 +415,7 @@ export function FluffFinderPanel({
           )}
 
           <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={result.articles} margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
+            <LineChart data={displayArticles} margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
               <CartesianGrid stroke="var(--rule)" strokeDasharray="3 3" />
               <XAxis
                 dataKey="rank"
@@ -425,7 +480,7 @@ export function FluffFinderPanel({
                 </tr>
               </thead>
               <tbody>
-                {result.articles.map((a) => (
+                {displayArticles.map((a) => (
                   <tr
                     key={a.rank}
                     className="border-t border-rule"
