@@ -89,8 +89,13 @@ export function SiteCallouts({
 
     const pvObs = obs.find((o) => o.key === "pvPerArticle");
     if (pvObs && stats.articlesPublished >= 3) {
-      if (pvObs.direction === "above") homeRunHitters.push({ id: writer.id, name: writer.name });
-      else needsImprovement.push({ id: writer.id, name: writer.name });
+      if (pvObs.direction === "above") {
+        homeRunHitters.push({ id: writer.id, name: writer.name });
+      } else if (pvObs.tier !== "mild") {
+        // Stricter bar than Home-Run Hitters — a 15% dip isn't unusual
+        // enough to call out, only 30%+ (moderate or strong).
+        needsImprovement.push({ id: writer.id, name: writer.name });
+      }
     }
 
     const scrollObs = obs.find((o) => o.key === "scroll");
@@ -158,7 +163,7 @@ export function SiteCallouts({
           </p>
           <div className="space-y-3">
             <CalloutRow
-              label="Not Driving Traffic"
+              label="Inefficient Traffic"
               color="var(--grade-low)"
               writers={needsImprovement}
               emptyText="None this period"
