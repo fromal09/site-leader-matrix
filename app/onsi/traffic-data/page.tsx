@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { parseOnsiTrafficCsv } from "@/lib/trafficCsv";
 import type { OnsiTrafficCsvGroup } from "@/lib/trafficCsv";
+import { NewAuthorsReview } from "@/components/NewAuthorsReview";
+import { dedupeNamesCaseInsensitive } from "@/lib/nameNormalize";
+import type { DepthChartRole } from "@/lib/depthCharts";
 
 type Site = {
   id: number;
@@ -58,15 +61,18 @@ export default function OnsiTrafficPage() {
   const [monthKey, setMonthKey] = useState<string>("");
   const [uploading, setUploading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [roles, setRoles] = useState<DepthChartRole[]>([]);
 
   async function loadAll() {
     setLoadingList(true);
-    const [sitesRes, importsRes] = await Promise.all([
+    const [sitesRes, importsRes, rolesRes] = await Promise.all([
       fetch("/api/onsi/sites").then((r) => r.json()),
       fetch("/api/onsi/traffic").then((r) => r.json()),
+      fetch("/api/onsi/depth-chart-roles").then((r) => r.json()),
     ]);
     setSites(sitesRes.sites ?? []);
     setImports(importsRes.imports ?? []);
+    setRoles(rolesRes.roles ?? []);
     setLoadingList(false);
   }
 
@@ -365,6 +371,33 @@ export default function OnsiTrafficPage() {
           </div>
         )}
       </div>
+
+      {!uploading && groupStates.some((g) => g.status === "done") && (
+        <div className="mb-8 space-y-4">
+          {groupStates
+            .filter((g) => g.status === "done")
+            .map((g, i) => {
+              const site = sites.find((s) => String(s.id) === g.siteId);
+              if (!site) return null;
+              const csvAuthors = dedupeNamesCaseInsensitive(
+                g.group.rows
+                  .filter((r) => r.firstPublishedDate?.slice(0, 7) === monthKey)
+                  .map((r) => r.author)
+                  .filter((a): a is string => Boolean(a && a.trim()))
+              );
+              return (
+                <NewAuthorsReview
+                  key={`${g.siteId}-${i}`}
+                  siteId={site.id}
+                  siteName={site.site_name}
+                  csvAuthors={csvAuthors}
+                  roles={roles}
+                  apiPrefix="/onsi"
+                />
+              );
+            })}
+        </div>
+      )}
 
       <h2 className="mb-3 font-display text-lg font-semibold text-navy">Past Imports</h2>
       {loadingList ? (

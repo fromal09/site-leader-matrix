@@ -17,11 +17,13 @@ export function NewAuthorsReview({
   siteName,
   csvAuthors,
   roles,
+  apiPrefix = "",
 }: {
   siteId: number;
   siteName: string;
   csvAuthors: string[];
   roles: DepthChartRole[];
+  apiPrefix?: string;
 }) {
   const { requireAuth } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -31,8 +33,8 @@ export function NewAuthorsReview({
     async function load() {
       setLoading(true);
       const [writersRes, ignoredRes] = await Promise.all([
-        fetch(`/api/depth-chart-writers/${siteId}`).then((r) => r.json()),
-        fetch(`/api/depth-chart-writers/site/${siteId}/ignored-authors`).then((r) => r.json()),
+        fetch(`${apiPrefix}/api/depth-chart-writers/${siteId}`).then((r) => r.json()),
+        fetch(`${apiPrefix}/api/depth-chart-writers/site/${siteId}/ignored-authors`).then((r) => r.json()),
       ]);
       const existingNames = new Set(
         (writersRes.writers ?? []).flatMap((w: any) =>
@@ -78,7 +80,7 @@ export function NewAuthorsReview({
     const author = pending.find((p) => p.name === name);
     if (!author || !author.role) return;
     setPending((prev) => prev.map((p) => (p.name === name ? { ...p, busy: true, error: null } : p)));
-    const res = await fetch(`/api/depth-chart-writers/${siteId}`, {
+    const res = await fetch(`${apiPrefix}/api/depth-chart-writers/${siteId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, role: author.role, trafficDashboardName: name }),
@@ -98,7 +100,7 @@ export function NewAuthorsReview({
   async function declineAuthor(name: string) {
     if (!requireAuth()) return;
     setPending((prev) => prev.map((p) => (p.name === name ? { ...p, busy: true } : p)));
-    await fetch(`/api/depth-chart-writers/site/${siteId}/ignored-authors`, {
+    await fetch(`${apiPrefix}/api/depth-chart-writers/site/${siteId}/ignored-authors`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ authorName: name }),

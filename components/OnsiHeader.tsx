@@ -23,6 +23,18 @@ export function OnsiHeader() {
               </span>
               <MentionBadge name={session.name} />
               <Link
+                href="/onsi/network-writers"
+                className="text-xs font-medium text-ink-soft hover:text-navy"
+              >
+                Network Writers
+              </Link>
+              <Link
+                href="/onsi/fte"
+                className="text-xs font-medium text-ink-soft hover:text-navy"
+              >
+                FTE Report
+              </Link>
+              <Link
                 href="/onsi/traffic-data"
                 className="text-xs font-medium text-ink-soft hover:text-navy"
               >

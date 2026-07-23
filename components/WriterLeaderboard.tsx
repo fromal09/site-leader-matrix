@@ -45,7 +45,7 @@ const METRICS: { key: MetricKey; label: string; format: (w: DisplayWriter) => st
   { key: "articlesPublished", label: "Articles Published", format: (w) => String(w.articlesPublished) },
 ];
 
-export function WriterLeaderboard({ division, period }: { division: string; period?: string | null }) {
+export function WriterLeaderboard({ division, period, apiPrefix = "" }: { division: string; period?: string | null; apiPrefix?: string }) {
   const [writers, setWriters] = useState<LeaderboardWriter[]>([]);
   const [cardsChecked, setCardsChecked] = useState(0);
   const [cardsMatched, setCardsMatched] = useState(0);
@@ -58,7 +58,7 @@ export function WriterLeaderboard({ division, period }: { division: string; peri
     setLoading(true);
     const params = new URLSearchParams({ division });
     if (period) params.set("period", period);
-    fetch(`/api/depth-chart-writers/leaderboard?${params.toString()}`)
+    fetch(`${apiPrefix}/api/depth-chart-writers/leaderboard?${params.toString()}`)
       .then((r) => r.json())
       .then((d) => {
         setWriters(d.writers ?? []);

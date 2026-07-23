@@ -4,14 +4,14 @@ import { useEffect, useState } from "react";
 
 type Alias = { id: number; alias: string };
 
-export function WriterAliasesEditor({ writerId }: { writerId: number }) {
+export function WriterAliasesEditor({ writerId, apiPrefix = "" }: { writerId: number; apiPrefix?: string }) {
   const [aliases, setAliases] = useState<Alias[] | null>(null);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/depth-chart-writers/card/${writerId}/aliases`)
+    fetch(`${apiPrefix}/api/depth-chart-writers/card/${writerId}/aliases`)
       .then((r) => r.json())
       .then((d) => setAliases(d.aliases ?? []));
   }, [writerId]);
@@ -20,7 +20,7 @@ export function WriterAliasesEditor({ writerId }: { writerId: number }) {
     if (!draft.trim()) return;
     setBusy(true);
     setError(null);
-    const res = await fetch(`/api/depth-chart-writers/card/${writerId}/aliases`, {
+    const res = await fetch(`${apiPrefix}/api/depth-chart-writers/card/${writerId}/aliases`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ alias: draft.trim() }),
@@ -42,7 +42,7 @@ export function WriterAliasesEditor({ writerId }: { writerId: number }) {
 
   async function removeAlias(aliasId: number) {
     setBusy(true);
-    await fetch(`/api/depth-chart-writers/card/${writerId}/aliases/${aliasId}`, {
+    await fetch(`${apiPrefix}/api/depth-chart-writers/card/${writerId}/aliases/${aliasId}`, {
       method: "DELETE",
     });
     setBusy(false);

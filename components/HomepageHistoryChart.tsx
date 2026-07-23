@@ -18,7 +18,7 @@ const YEAR_COLORS = ["var(--grade-mid)", "var(--navy)", "var(--grade-good)", "va
 
 type HistoryPoint = ChronoPoint & { homepagePageviews: number };
 
-export function HomepageHistoryChart({ siteId }: { siteId: number }) {
+export function HomepageHistoryChart({ siteId, apiPrefix = "" }: { siteId: number; apiPrefix?: string }) {
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [startKey, setStartKey] = useState("");
@@ -27,7 +27,7 @@ export function HomepageHistoryChart({ siteId }: { siteId: number }) {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/depth-chart-writers/site/${siteId}/history`)
+    fetch(`${apiPrefix}/api/depth-chart-writers/site/${siteId}/history`)
       .then((r) => r.json())
       .then((d) => setHistory(d.history ?? []))
       .finally(() => setLoading(false));

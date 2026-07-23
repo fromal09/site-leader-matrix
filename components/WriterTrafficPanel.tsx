@@ -71,9 +71,11 @@ function RankedArticleRow({
 export function WriterTrafficPanel({
   writerId,
   siteTotals,
+  apiPrefix = "",
 }: {
   writerId: number;
   siteTotals: SiteTrafficTotals | null;
+  apiPrefix?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -83,7 +85,7 @@ export function WriterTrafficPanel({
   async function toggle() {
     if (!open && !data) {
       setLoading(true);
-      const res = await fetch(`/api/depth-chart-writers/card/${writerId}/traffic`);
+      const res = await fetch(`${apiPrefix}/api/depth-chart-writers/card/${writerId}/traffic`);
       const d = await res.json();
       setData(d);
       setLoading(false);
@@ -94,7 +96,7 @@ export function WriterTrafficPanel({
   async function changePeriod(periodKey: string) {
     setSwitchingPeriod(true);
     const res = await fetch(
-      `/api/depth-chart-writers/card/${writerId}/traffic?period=${encodeURIComponent(periodKey)}`
+      `${apiPrefix}/api/depth-chart-writers/card/${writerId}/traffic?period=${encodeURIComponent(periodKey)}`
     );
     const d = await res.json();
     setData(d);

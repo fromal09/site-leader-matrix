@@ -513,4 +513,33 @@ CREATE TABLE IF NOT EXISTS onsi_writer_traffic_snapshots (
 CREATE INDEX IF NOT EXISTS idx_onsi_writer_traffic_snapshots_lookup
   ON onsi_writer_traffic_snapshots(writer_id, period_key, snapshot_at DESC);
 ALTER TABLE onsi_writer_traffic_snapshots ADD COLUMN IF NOT EXISTS published_pageviews BIGINT NOT NULL DEFAULT 0;
+
+-- True day-over-day deltas for OnSI, mirroring site_daily_deltas /
+-- writer_daily_deltas — computed once at upload time by matching every
+-- individual article between the outgoing and incoming data, across ALL
+-- authored content (not just newly-published pieces).
+CREATE TABLE IF NOT EXISTS onsi_site_daily_deltas (
+  id SERIAL PRIMARY KEY,
+  site_id INT NOT NULL REFERENCES onsi_sites(id) ON DELETE CASCADE,
+  period_key TEXT NOT NULL,
+  captured_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  pv_delta BIGINT NOT NULL DEFAULT 0,
+  scroll_weighted_sum_delta NUMERIC NOT NULL DEFAULT 0,
+  time_weighted_sum_delta NUMERIC NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_onsi_site_daily_deltas_lookup
+  ON onsi_site_daily_deltas(site_id, period_key, captured_at DESC);
+
+CREATE TABLE IF NOT EXISTS onsi_writer_daily_deltas (
+  id SERIAL PRIMARY KEY,
+  writer_id INT NOT NULL REFERENCES onsi_depth_chart_writers(id) ON DELETE CASCADE,
+  site_id INT NOT NULL REFERENCES onsi_sites(id) ON DELETE CASCADE,
+  period_key TEXT NOT NULL,
+  captured_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  pv_delta BIGINT NOT NULL DEFAULT 0,
+  scroll_weighted_sum_delta NUMERIC NOT NULL DEFAULT 0,
+  time_weighted_sum_delta NUMERIC NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_onsi_writer_daily_deltas_lookup
+  ON onsi_writer_daily_deltas(writer_id, period_key, captured_at DESC);
 `;

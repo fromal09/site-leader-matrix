@@ -37,7 +37,7 @@ function RankDot(props: any) {
   );
 }
 
-export function SiteHistoryChart({ siteId }: { siteId: number }) {
+export function SiteHistoryChart({ siteId, apiPrefix = "" }: { siteId: number; apiPrefix?: string }) {
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [metric, setMetric] = useState<HistoryMetricKey>("totalPageviews");
@@ -47,7 +47,7 @@ export function SiteHistoryChart({ siteId }: { siteId: number }) {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/depth-chart-writers/site/${siteId}/history`)
+    fetch(`${apiPrefix}/api/depth-chart-writers/site/${siteId}/history`)
       .then((r) => r.json())
       .then((d) =>
         setHistory(

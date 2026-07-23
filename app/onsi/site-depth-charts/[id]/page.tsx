@@ -1,292 +1,428 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { WriterCard } from "@/components/WriterCard";
+import { useStickyNotes } from "@/lib/stickyNotes";
+import { SiteCallouts } from "@/components/SiteCallouts";
+import { CondensedRoster } from "@/components/CondensedRoster";
+import { SiteHistoryChart } from "@/components/SiteHistoryChart";
+import { HomepageHistoryChart } from "@/components/HomepageHistoryChart";
+import { WriterHistoryChart } from "@/components/WriterHistoryChart";
 import { useAuth } from "@/components/AuthProvider";
+import { ONSI_DC_BASE as DC_BASE, onsiDcSiteHref as dcSiteHref } from "@/lib/onsiRoutes";
+import { SECTIONS } from "@/lib/depthCharts";
+import type { DepthChartRole, DepthChartWriter } from "@/lib/depthCharts";
+import type { Site } from "@/lib/types";
+import type { SiteTrafficTotals, WriterQuickStats, HomepageTraffic } from "@/lib/traffic";
+import { formatCompactNumber, formatDuration, formatPercent } from "@/lib/trafficFormat";
+import { StatTile } from "@/components/StatTile";
+import { teamColor } from "@/lib/nflTeamColors";
+import { rankTier, rankTierColors, rankAmong } from "@/lib/rankColor";
 
-type Site = {
-  id: number;
-  site_name: string;
-  site_topic: string;
-  leader_name: string;
-  division: string;
-};
-
-type Writer = {
-  id: number;
-  site_id: number;
-  name: string;
-  role: string;
-  traffic_dashboard_name: string;
-};
-
-type Role = { id: number; label: string; section: string };
-
-type WriterStats = {
+type AllSiteSummary = {
   articlesPublished: number;
+  authorsPublished: number;
   totalPageviews: number;
-  pvPerPublishedArticle: number | null;
+  evergreenPageviews: number;
   weightedAvgScrollDepth: number | null;
   weightedAvgTimeOnPage: number | null;
+  pvPerPublishedArticle: number | null;
 };
 
-type TrafficSummary = {
-  periodLabel: string | null;
-  writers: Record<number, WriterStats>;
-  siteTotals: {
-    articlesPublished: number;
-    totalPageviews: number;
-    evergreenPageviews: number;
-    weightedAvgScrollDepth: number | null;
-    weightedAvgTimeOnPage: number | null;
-  } | null;
-};
-
-function formatCompact(n: number) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString();
-}
-function formatPercent(v: number | null) {
-  return v === null ? "—" : `${(v * 100).toFixed(1)}%`;
-}
-function formatDuration(v: number | null) {
-  if (v === null) return "—";
-  const m = Math.floor(v / 60);
-  const s = Math.round(v % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
+function rankLabel(r: { rank: number; total: number } | null): string | undefined {
+  if (!r || r.total <= 1) return undefined;
+  return `#${r.rank} of ${r.total}`;
 }
 
-export default function OnsiRosterPage() {
+function rankTint(r: { rank: number; total: number } | null) {
+  if (!r) return null;
+  return rankTierColors(rankTier(r.rank, r.total));
+}
+
+type ViewMode = "full" | "condensed" | "historical";
+
+export default function DepthChartSitePage() {
   const params = useParams();
-  const siteId = Number(params.id);
-  const { requireAuth, session } = useAuth();
+  const id = Number(params.id);
+  const { requireAuth } = useAuth();
 
   const [site, setSite] = useState<Site | null>(null);
-  const [writers, setWriters] = useState<Writer[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [traffic, setTraffic] = useState<TrafficSummary | null>(null);
+  const [writers, setWriters] = useState<DepthChartWriter[]>([]);
+  const [roles, setRoles] = useState<DepthChartRole[]>([]);
+  const [quickStats, setQuickStats] = useState<Record<number, WriterQuickStats>>({});
+  const [siteTotals, setSiteTotals] = useState<SiteTrafficTotals | null>(null);
+  const [homepageTraffic, setHomepageTraffic] = useState<HomepageTraffic | null>(null);
+  const [allSummaries, setAllSummaries] = useState<Record<number, AllSiteSummary>>({});
+  const [statsPeriodLabel, setStatsPeriodLabel] = useState<string | null>(null);
+  const [statsPeriodKey, setStatsPeriodKey] = useState<string | null>(null);
+  const [sitePeriods, setSitePeriods] = useState<{ key: string; label: string }[]>([]);
+  // Prefixed so OnSI writer IDs (an independent sequence from FanSided's)
+  // can never collide with a FanSided writer sharing the same numeric id.
+  const onsiNoteId = (writerId: number) => `onsi-${writerId}`;
+  const {
+    allNotesFor: writerNotesFor,
+    addNote: addWriterNote,
+    removeNote: removeWriterNote,
+  } = useStickyNotes(
+    "writer",
+    writers.map((w) => onsiNoteId(w.id))
+  );
   const [loading, setLoading] = useState(true);
   const [addingNew, setAddingNew] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newRole, setNewRole] = useState("");
-  const [newDashboardName, setNewDashboardName] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("condensed");
+  const [homepageExpanded, setHomepageExpanded] = useState(false);
 
-  function load() {
+  const load = useCallback(async (periodKey?: string) => {
     setLoading(true);
-    Promise.all([
-      fetch(`/api/onsi/sites/${siteId}`).then((r) => r.json()),
-      fetch(`/api/onsi/depth-chart-writers/${siteId}`).then((r) => r.json()),
+    const statsUrl = periodKey
+      ? `/api/onsi/depth-chart-writers/site/${id}/traffic-summary?period=${encodeURIComponent(periodKey)}`
+      : `/api/onsi/depth-chart-writers/site/${id}/traffic-summary`;
+    const [siteRes, writersRes, rolesRes, statsRes] = await Promise.all([
+      fetch(`/api/onsi/sites/${id}`).then((r) => r.json()),
+      fetch(`/api/onsi/depth-chart-writers/${id}`).then((r) => r.json()),
       fetch("/api/onsi/depth-chart-roles").then((r) => r.json()),
-      fetch(`/api/onsi/depth-chart-writers/site/${siteId}/traffic-summary`).then((r) => r.json()),
-    ])
-      .then(([siteRes, writersRes, rolesRes, trafficRes]) => {
-        setSite(siteRes.site ?? null);
-        setWriters(writersRes.writers ?? []);
-        setRoles(rolesRes.roles ?? []);
-        setTraffic(trafficRes);
-        if (!newRole && rolesRes.roles?.[0]) setNewRole(rolesRes.roles[0].label);
-      })
-      .finally(() => setLoading(false));
+      fetch(statsUrl).then((r) => r.json()),
+    ]);
+    const resolvedPeriodKey = statsRes.periodKey ?? null;
+    const siteDivision = siteRes.site?.division ?? "NFL";
+    const allSitesParams = new URLSearchParams({ division: siteDivision });
+    if (resolvedPeriodKey) allSitesParams.set("period", resolvedPeriodKey);
+    const allSitesUrl = `/api/onsi/depth-chart-writers/all-sites-summary?${allSitesParams.toString()}`;
+    const allSitesRes = await fetch(allSitesUrl).then((r) => r.json());
+
+    setSite(siteRes.site ?? null);
+    setWriters(writersRes.writers ?? []);
+    setRoles(rolesRes.roles ?? []);
+    setQuickStats(statsRes.writers ?? {});
+    setSiteTotals(statsRes.siteTotals ?? null);
+    setHomepageTraffic(statsRes.homepageTraffic ?? null);
+    setStatsPeriodLabel(statsRes.periodLabel ?? null);
+    setStatsPeriodKey(resolvedPeriodKey);
+    setSitePeriods(statsRes.availablePeriods ?? []);
+    setAllSummaries(allSitesRes.sites ?? {});
+    setLoading(false);
+  }, [id]);
+
+  function handlePeriodChange(key: string) {
+    load(key);
   }
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [siteId]);
+  }, [load]);
 
-  async function addWriter() {
+  function handleAddClick() {
     if (!requireAuth()) return;
-    if (!newName.trim() || !newRole) return;
-    setBusy(true);
-    await fetch(`/api/onsi/depth-chart-writers/${siteId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName, role: newRole, trafficDashboardName: newDashboardName }),
-    });
-    setBusy(false);
-    setNewName("");
-    setNewDashboardName("");
-    setAddingNew(false);
-    load();
-  }
-
-  async function removeWriter(id: number) {
-    if (!requireAuth()) return;
-    if (!window.confirm("Remove this writer from the roster?")) return;
-    await fetch(`/api/onsi/depth-chart-writers/card/${id}`, { method: "DELETE" });
-    load();
+    setAddingNew(true);
   }
 
   if (loading) {
     return (
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
-        <p className="text-sm text-ink-soft">Loading…</p>
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+        <p className="text-sm text-ink-soft">Loading roster…</p>
       </main>
     );
   }
 
   if (!site) {
     return (
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         <p className="text-sm text-grade-low">Site not found.</p>
-        <Link href="/onsi/site-depth-charts" className="text-sm text-navy hover:underline">
+        <Link href={DC_BASE} className="text-sm text-navy hover:underline">
           Back to all sites
         </Link>
       </main>
     );
   }
 
+  const hasTrafficData = Object.keys(quickStats).length > 0;
+  const roleToSection = new Map(roles.map((r) => [r.label, r.section]));
+  const sectioned = SECTIONS.map((s) => {
+    const allInSection = writers.filter(
+      (w) => (roleToSection.get(w.role) ?? "contributors") === s.key
+    );
+    const activeInSection = hasTrafficData
+      ? allInSection.filter((w) => (quickStats[w.id]?.articlesPublished ?? 0) > 0)
+      : allInSection;
+    return {
+      section: s,
+      writers: activeInSection.sort(
+        (a, b) => (quickStats[b.id]?.totalPageviews ?? 0) - (quickStats[a.id]?.totalPageviews ?? 0)
+      ),
+      hiddenCount: allInSection.length - activeInSection.length,
+    };
+  }).filter((s) => s.writers.length > 0);
+
   return (
-    <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <Link
-        href={`/onsi/site-depth-charts?division=${site.division}`}
+        href={`${DC_BASE}?division=${site.division}`}
         className="text-xs font-medium text-ink-soft hover:text-navy"
       >
         ← All sites
       </Link>
 
-      <div className="mt-2 mb-6">
-        <p className="font-data text-xs uppercase tracking-widest text-ink-soft">
-          {site.site_topic}
-        </p>
-        <h1 className="font-display text-3xl font-bold text-navy">{site.site_name}</h1>
-        <p className="text-sm text-ink-soft">Site leader: {site.leader_name}</p>
-      </div>
-
-      {traffic?.siteTotals && (
-        <div className="card mb-6 rounded-md p-4">
-          <div className="mb-2 flex items-baseline justify-between">
-            <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-navy">
-              Site Snapshot — {traffic.periodLabel}
-            </h2>
-          </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-            <div>
-              <div className="font-data text-[10px] uppercase text-ink-soft">Published</div>
-              <div className="font-data text-lg font-semibold text-ink">
-                {traffic.siteTotals.articlesPublished}
-              </div>
-            </div>
-            <div>
-              <div className="font-data text-[10px] uppercase text-ink-soft">Total PVs</div>
-              <div className="font-data text-lg font-semibold text-ink">
-                {formatCompact(traffic.siteTotals.totalPageviews)}
-              </div>
-            </div>
-            <div>
-              <div className="font-data text-[10px] uppercase text-ink-soft">Evergreen PVs</div>
-              <div className="font-data text-lg font-semibold text-ink">
-                {formatCompact(traffic.siteTotals.evergreenPageviews)}
-              </div>
-            </div>
-            <div>
-              <div className="font-data text-[10px] uppercase text-ink-soft">Scroll Depth</div>
-              <div className="font-data text-lg font-semibold text-ink">
-                {formatPercent(traffic.siteTotals.weightedAvgScrollDepth)}
-              </div>
-            </div>
-            <div>
-              <div className="font-data text-[10px] uppercase text-ink-soft">Time on Page</div>
-              <div className="font-data text-lg font-semibold text-ink">
-                {formatDuration(traffic.siteTotals.weightedAvgTimeOnPage)}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="font-display text-lg font-semibold text-navy">Roster</h2>
-        <button
-          onClick={() => (requireAuth() ? setAddingNew(true) : null)}
-          className="rounded border border-navy px-3 py-1.5 text-xs font-medium text-navy hover:bg-navy hover:text-white"
-        >
-          + Add Writer
-        </button>
-      </div>
-
-      {addingNew && (
-        <div className="card mb-3 space-y-2 rounded-md p-4">
-          <input
-            autoFocus
-            placeholder="Writer name"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            className="w-full rounded border border-rule-strong px-3 py-2 text-sm outline-none focus:border-navy"
-          />
-          <input
-            placeholder="Traffic dashboard byline (if different)"
-            value={newDashboardName}
-            onChange={(e) => setNewDashboardName(e.target.value)}
-            className="w-full rounded border border-rule-strong px-3 py-2 text-sm outline-none focus:border-navy"
-          />
-          <select
-            value={newRole}
-            onChange={(e) => setNewRole(e.target.value)}
-            className="w-full rounded border border-rule-strong px-3 py-2 text-sm outline-none focus:border-navy"
+      <div className="mt-2 mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="flex items-center gap-1.5 font-data text-xs uppercase tracking-widest text-ink-soft">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: teamColor(site.site_topic).primary }}
+            />
+            {site.site_topic}
+          </p>
+          <h1 className="font-display text-3xl font-bold text-navy">{site.site_name}</h1>
+          <p className="text-sm text-ink-soft">Site leader: {site.leader_name}</p>
+          {statsPeriodLabel && (
+            <p className="mt-0.5 font-data text-xs text-ink-soft">
+              Ranked by {statsPeriodLabel} pageviews
+            </p>
+          )}
+          <Link
+            href={`${dcSiteHref(site.id)}/delta`}
+            className="mt-1.5 inline-block rounded border border-navy px-2.5 py-1 text-[11px] font-medium text-navy hover:bg-navy hover:text-white"
           >
-            {roles.map((r) => (
-              <option key={r.id} value={r.label}>
-                {r.label}
-              </option>
-            ))}
-          </select>
-          <div className="flex justify-end gap-2">
+            Since Last Upload →
+          </Link>
+        </div>
+        {!addingNew && (
+          <div className="flex flex-wrap items-center gap-2">
+            {sitePeriods.length > 0 && (
+              <label className="flex items-center gap-1.5 text-xs">
+                <span className="text-ink-soft uppercase tracking-wide">Month</span>
+                <select
+                  value={statsPeriodKey ?? ""}
+                  onChange={(e) => handlePeriodChange(e.target.value)}
+                  className="rounded border border-rule-strong bg-white px-2 py-1 font-data text-xs"
+                >
+                  {sitePeriods.map((p) => (
+                    <option key={p.key} value={p.key}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <div className="flex overflow-hidden rounded border border-navy">
+              {(["condensed", "full", "historical"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className="px-3 py-1.5 text-xs font-medium capitalize"
+                  style={
+                    viewMode === mode
+                      ? { backgroundColor: "var(--navy)", color: "white" }
+                      : { color: "var(--navy)" }
+                  }
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
             <button
-              onClick={() => setAddingNew(false)}
-              className="px-3 py-1.5 text-sm text-ink-soft hover:text-ink"
+              onClick={handleAddClick}
+              className="rounded bg-navy px-3 py-1.5 text-xs font-medium text-white hover:bg-navy-soft"
             >
-              Cancel
-            </button>
-            <button
-              onClick={addWriter}
-              disabled={busy}
-              className="rounded bg-navy px-4 py-1.5 text-sm font-medium text-white hover:bg-navy-soft disabled:opacity-60"
-            >
-              {busy ? "Saving…" : "Save"}
+              + Add Writer
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {writers.length === 0 ? (
-        <p className="text-sm italic text-ink-soft">No writers on this roster yet.</p>
+      {viewMode === "historical" ? (
+        <div className="space-y-6">
+          <SiteHistoryChart siteId={site.id} apiPrefix="/onsi" />
+          <HomepageHistoryChart siteId={site.id} apiPrefix="/onsi" />
+          <WriterHistoryChart writers={writers} apiPrefix="/onsi" />
+        </div>
       ) : (
-        <div className="space-y-2">
-          {writers.map((w) => {
-            const stats = traffic?.writers[w.id];
-            return (
-              <div key={w.id} className="card flex flex-wrap items-center justify-between gap-3 rounded-md p-4">
-                <div>
-                  <div className="font-display text-base font-semibold uppercase text-navy">
-                    {w.name}
-                  </div>
-                  <div className="font-data text-[11px] text-ink-soft">{w.role}</div>
-                </div>
-                <div className="flex flex-wrap gap-4 font-data text-xs text-ink-soft">
-                  <span>
-                    <strong className="text-ink">{stats?.articlesPublished ?? 0}</strong> published
-                  </span>
-                  <span>
-                    <strong className="text-ink">{formatCompact(stats?.totalPageviews ?? 0)}</strong> PVs
-                  </span>
-                  <span>
-                    <strong className="text-ink">{formatPercent(stats?.weightedAvgScrollDepth ?? null)}</strong> scroll
-                  </span>
-                </div>
+        <>
+          {siteTotals && (
+            <div className="card relative mb-6 rounded-md p-4">
+              <div className="mb-2 flex items-baseline justify-between">
+                <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-navy">
+                  Site Snapshot — {statsPeriodLabel}
+                </h2>
+                <span className="font-data text-[11px] text-ink-soft">all authors</span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-6">
+                <StatTile
+                  label="Published"
+                  value={siteTotals.articlesPublished.toLocaleString()}
+                  sub={rankLabel(rankAmong(site.id, (s: AllSiteSummary) => s.articlesPublished, allSummaries))}
+                  tint={rankTint(rankAmong(site.id, (s: AllSiteSummary) => s.articlesPublished, allSummaries))}
+                />
+                <StatTile
+                  label="Total PVs"
+                  value={formatCompactNumber(siteTotals.totalPageviews)}
+                  sub={rankLabel(rankAmong(site.id, (s: AllSiteSummary) => s.totalPageviews, allSummaries))}
+                  tint={rankTint(rankAmong(site.id, (s: AllSiteSummary) => s.totalPageviews, allSummaries))}
+                />
+                <StatTile
+                  label="Evergreen PVs"
+                  value={formatCompactNumber(siteTotals.evergreenPageviews)}
+                  sub={rankLabel(rankAmong(site.id, (s: AllSiteSummary) => s.evergreenPageviews, allSummaries))}
+                  tint={rankTint(rankAmong(site.id, (s: AllSiteSummary) => s.evergreenPageviews, allSummaries))}
+                />
+                <StatTile
+                  label="Scroll Depth"
+                  value={formatPercent(siteTotals.weightedAvgScrollDepth)}
+                  sub={rankLabel(rankAmong(site.id, (s: AllSiteSummary) => s.weightedAvgScrollDepth, allSummaries))}
+                  tint={rankTint(rankAmong(site.id, (s: AllSiteSummary) => s.weightedAvgScrollDepth, allSummaries))}
+                />
+                <StatTile
+                  label="Time on Page"
+                  value={formatDuration(siteTotals.weightedAvgTimeOnPage)}
+                  sub={rankLabel(rankAmong(site.id, (s: AllSiteSummary) => s.weightedAvgTimeOnPage, allSummaries))}
+                  tint={rankTint(rankAmong(site.id, (s: AllSiteSummary) => s.weightedAvgTimeOnPage, allSummaries))}
+                />
+                <StatTile
+                  label="PVs / New Article"
+                  value={
+                    siteTotals.pvPerPublishedArticle !== null
+                      ? formatCompactNumber(siteTotals.pvPerPublishedArticle)
+                      : "—"
+                  }
+                  sub={rankLabel(rankAmong(site.id, (s: AllSiteSummary) => s.pvPerPublishedArticle, allSummaries))}
+                  tint={rankTint(rankAmong(site.id, (s: AllSiteSummary) => s.pvPerPublishedArticle, allSummaries))}
+                />
+              </div>
+            </div>
+          )}
+
+          <SiteCallouts
+            writers={writers}
+            quickStats={quickStats}
+            siteTotals={siteTotals}
+            periodLabel={statsPeriodLabel}
+          />
+
+          {homepageTraffic && homepageTraffic.pageCount > 0 && (
+            <div className="card mb-6 rounded-md p-4">
+              <div className="mb-2 flex items-baseline justify-between">
+                <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-navy">
+                  Homepage &amp; Site Pages
+                </h2>
                 <button
-                  onClick={() => removeWriter(w.id)}
-                  className="text-xs font-medium text-ink-soft hover:text-grease-red"
+                  onClick={() => setHomepageExpanded((v) => !v)}
+                  className="font-data text-[11px] font-medium text-navy hover:underline"
                 >
-                  Remove
+                  {homepageExpanded ? "Hide pages ▲" : "View pages ▾"}
                 </button>
               </div>
-            );
-          })}
-        </div>
+              <p className="mb-2 text-xs text-ink-soft">
+                Pages with no author byline — homepage, tag/category pages, schedules, and similar.
+              </p>
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-6">
+                <StatTile label="Total PVs" value={formatCompactNumber(homepageTraffic.totalPageviews)} />
+                <StatTile label="Pages" value={homepageTraffic.pageCount.toLocaleString()} />
+              </div>
+              {homepageExpanded && (
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-rule-strong font-data text-[10px] uppercase tracking-wide text-ink-soft">
+                        <th className="py-1 pr-4">Page</th>
+                        <th className="py-1 pr-4 text-right">Pageviews</th>
+                        <th className="py-1 pr-4 text-right">Scroll</th>
+                        <th className="py-1 text-right">Avg Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {homepageTraffic.pages.map((p, i) => (
+                        <tr key={i} className="border-t border-rule">
+                          <td className="max-w-md py-1.5 pr-4 text-ink">{p.article_title}</td>
+                          <td className="py-1.5 pr-4 text-right font-data">
+                            {p.pageviews.toLocaleString()}
+                          </td>
+                          <td className="py-1.5 pr-4 text-right font-data">
+                            {formatPercent(p.scroll_depth)}
+                          </td>
+                          <td className="py-1.5 text-right font-data">
+                            {formatDuration(p.avg_time_on_page)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {addingNew && (
+            <div className="mb-6">
+              <WriterCard
+                siteId={site.id}
+                writer={null}
+                roles={roles}
+                onRoleCreated={(r) => setRoles((prev) => [...prev, r])}
+                onSaved={() => {
+                  setAddingNew(false);
+                  load(statsPeriodKey ?? undefined);
+                }}
+                onDiscardNew={() => setAddingNew(false)}
+                apiPrefix="/onsi"
+              />
+            </div>
+          )}
+
+          <div className="space-y-8">
+            {sectioned.map(({ section, writers: sectionWriters, hiddenCount }) => (
+              <div key={section.key}>
+                <div className="mb-3 flex items-center gap-2">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: section.color }}
+                  />
+                  <h2 className="font-display text-lg font-semibold text-navy">
+                    {section.label}
+                  </h2>
+                  <span className="font-data text-xs text-ink-soft">
+                    {sectionWriters.length}
+                  </span>
+                  {hiddenCount > 0 && (
+                    <span className="font-data text-[11px] text-ink-soft">
+                      ({hiddenCount} inactive this month hidden)
+                    </span>
+                  )}
+                </div>
+                {viewMode === "condensed" ? (
+                  <CondensedRoster
+                    writers={sectionWriters}
+                    quickStats={quickStats}
+                    sectionColor={section.color}
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {sectionWriters.map((w) => (
+                      <WriterCard
+                        key={w.id}
+                        siteId={site.id}
+                        writer={w}
+                        roles={roles}
+                        quickStats={quickStats[w.id]}
+                        allQuickStats={quickStats}
+                        siteTotals={siteTotals}
+                        onRoleCreated={(r) => setRoles((prev) => [...prev, r])}
+                        onSaved={() => load(statsPeriodKey ?? undefined)}
+                        onDiscardNew={() => {}}
+                        writerNotes={writerNotesFor(onsiNoteId(w.id))}
+                        onAddNote={(fieldLabel, body, color) =>
+                          addWriterNote(onsiNoteId(w.id), body, color, fieldLabel)
+                        }
+                        onRemoveNote={removeWriterNote}
+                        apiPrefix="/onsi"
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </main>
   );

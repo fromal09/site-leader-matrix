@@ -25,7 +25,7 @@ type WriterHistory = {
   history: ChronoPoint[];
 };
 
-export function WriterHistoryChart({ writers }: { writers: DepthChartWriter[] }) {
+export function WriterHistoryChart({ writers, apiPrefix = "" }: { writers: DepthChartWriter[]; apiPrefix?: string }) {
   const [selected, setSelected] = useState<(number | "")[]>([writers[0]?.id ?? "", "", ""]);
   const [metric, setMetric] = useState<HistoryMetricKey>("totalPageviews");
   const [data, setData] = useState<WriterHistory[]>([]);
@@ -43,7 +43,7 @@ export function WriterHistoryChart({ writers }: { writers: DepthChartWriter[] })
       return;
     }
     setLoading(true);
-    fetch(`/api/depth-chart-writers/history-compare?writerIds=${idsKey}`)
+    fetch(`${apiPrefix}/api/depth-chart-writers/history-compare?writerIds=${idsKey}`)
       .then((r) => r.json())
       .then((d) =>
         setData(

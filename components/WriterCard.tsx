@@ -26,11 +26,13 @@ function RoleSelect({
   value,
   onChange,
   onRoleCreated,
+  apiPrefix = "",
 }: {
   roles: DepthChartRole[];
   value: string;
   onChange: (label: string) => void;
   onRoleCreated: (role: DepthChartRole) => void;
+  apiPrefix?: string;
 }) {
   const [addingNew, setAddingNew] = useState(false);
   const [newLabel, setNewLabel] = useState("");
@@ -40,7 +42,7 @@ function RoleSelect({
   async function submitNewRole() {
     if (!newLabel.trim()) return;
     setBusy(true);
-    const res = await fetch("/api/depth-chart-roles", {
+    const res = await fetch(`${apiPrefix}/api/depth-chart-roles`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ label: newLabel.trim(), section: newSection }),
@@ -176,6 +178,7 @@ export function WriterCard({
   writerNotes = [],
   onAddNote,
   onRemoveNote,
+  apiPrefix = "",
 }: {
   siteId: number;
   writer: DepthChartWriter | null; // null = new, unsaved card
@@ -189,6 +192,9 @@ export function WriterCard({
   writerNotes?: StickyNoteRecord[];
   onAddNote?: (fieldLabel: string | null, body: string, color: StickyColor) => Promise<boolean>;
   onRemoveNote?: (id: number) => void;
+  // "" for FanSided's own routes, "/onsi" to hit the OnSI mirror instead —
+  // lets this same component serve both networks without duplication.
+  apiPrefix?: string;
 }) {
   const onAdd = onAddNote ?? (async () => false);
   const onRemove = onRemoveNote ?? (() => {});
@@ -249,12 +255,12 @@ export function WriterCard({
     setError(null);
     const body = JSON.stringify({ name, role, trafficDashboardName: trafficName });
     const res = writer
-      ? await fetch(`/api/depth-chart-writers/card/${writer.id}`, {
+      ? await fetch(`${apiPrefix}/api/depth-chart-writers/card/${writer.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body,
         })
-      : await fetch(`/api/depth-chart-writers/${siteId}`, {
+      : await fetch(`${apiPrefix}/api/depth-chart-writers/${siteId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body,
@@ -273,7 +279,7 @@ export function WriterCard({
     if (!writer) return;
     if (!window.confirm(`Remove ${writer.name} from this site's roster?`)) return;
     setBusy(true);
-    await fetch(`/api/depth-chart-writers/card/${writer.id}`, { method: "DELETE" });
+    await fetch(`${apiPrefix}/api/depth-chart-writers/card/${writer.id}`, { method: "DELETE" });
     setBusy(false);
     onSaved();
   }
@@ -390,8 +396,8 @@ export function WriterCard({
             ))}
           </div>
         )}
-        <WriterTrafficPanel writerId={writer.id} siteTotals={siteTotals ?? null} />
-        <WriterNotesPanel writerId={writer.id} />
+        <WriterTrafficPanel writerId={writer.id} siteTotals={siteTotals ?? null} apiPrefix={apiPrefix} />
+        <WriterNotesPanel writerId={writer.id} apiPrefix={apiPrefix} />
       </div>
     );
   }
@@ -421,6 +427,7 @@ export function WriterCard({
               value={role}
               onChange={setRole}
               onRoleCreated={onRoleCreated}
+              apiPrefix={apiPrefix}
             />
           </div>
         </div>
@@ -451,7 +458,7 @@ export function WriterCard({
             </button>
           )}
         </div>
-        {writer && <WriterAliasesEditor writerId={writer.id} />}
+        {writer && <WriterAliasesEditor writerId={writer.id} apiPrefix={apiPrefix} />}
         {error && <p className="text-sm text-grade-low">{error}</p>}
         <div className="flex items-center justify-between pt-1">
           {writer ? (
