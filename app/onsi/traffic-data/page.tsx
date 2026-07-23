@@ -16,6 +16,7 @@ type Site = {
   site_name: string;
   site_topic: string;
   division: string;
+  leader_name: string;
   url_path: string | null;
 };
 
@@ -396,6 +397,7 @@ export default function OnsiTrafficPage() {
                   key={`${g.siteId}-${i}`}
                   siteId={site.id}
                   siteName={site.site_name}
+                  siteLeaderName={site.leader_name}
                   csvAuthors={csvAuthors}
                   roles={roles}
                   apiPrefix="/onsi"

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "./AuthProvider";
+import { defaultRoleForNewAuthor } from "@/lib/depthCharts";
 import type { DepthChartRole } from "@/lib/depthCharts";
 
 type PendingAuthor = {
@@ -15,6 +16,7 @@ type PendingAuthor = {
 export function NewAuthorsReview({
   siteId,
   siteName,
+  siteLeaderName,
   csvAuthors,
   roles,
   apiPrefix = "",
@@ -22,6 +24,7 @@ export function NewAuthorsReview({
 }: {
   siteId: number;
   siteName: string;
+  siteLeaderName?: string | null;
   csvAuthors: string[];
   roles: DepthChartRole[];
   apiPrefix?: string;
@@ -60,7 +63,7 @@ export function NewAuthorsReview({
         newOnes.push({
           name,
           status: "pending",
-          role: roles[0]?.label ?? "",
+          role: defaultRoleForNewAuthor(name, siteLeaderName, roles),
           busy: false,
           error: null,
         });
@@ -111,6 +114,18 @@ export function NewAuthorsReview({
     setPending((prev) => prev.map((p) => (p.name === name ? { ...p, busy: false, status: "declined" } : p)));
   }
 
+  const [confirmingAll, setConfirmingAll] = useState(false);
+
+  async function confirmAll() {
+    if (!requireAuth()) return;
+    setConfirmingAll(true);
+    const names = pending.filter((p) => p.status === "pending" && p.role).map((p) => p.name);
+    for (const name of names) {
+      await addAuthor(name);
+    }
+    setConfirmingAll(false);
+  }
+
   if (loading) return null;
 
   const stillPending = pending.filter((p) => p.status === "pending");
@@ -120,13 +135,26 @@ export function NewAuthorsReview({
 
   return (
     <div className="card rounded-md p-4">
-      <h3 className="font-display text-sm font-semibold text-navy">
-        New Authors in {siteName}
-      </h3>
-      <p className="mt-0.5 text-xs text-ink-soft">
-        These bylines published a new article this month but don&apos;t have a roster card
-        yet. Add them with a role, or decline to stop seeing them here.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h3 className="font-display text-sm font-semibold text-navy">
+            New Authors in {siteName}
+          </h3>
+          <p className="mt-0.5 text-xs text-ink-soft">
+            These bylines published a new article this month but don&apos;t have a roster card
+            yet. Add them with a role, or decline to stop seeing them here.
+          </p>
+        </div>
+        {stillPending.length > 1 && (
+          <button
+            onClick={confirmAll}
+            disabled={confirmingAll}
+            className="shrink-0 rounded bg-navy px-3 py-1.5 text-xs font-medium text-white hover:bg-navy-soft disabled:opacity-60"
+          >
+            {confirmingAll ? "Confirming…" : `Confirm All (${stillPending.length})`}
+          </button>
+        )}
+      </div>
 
       {stillPending.length > 0 && (
         <ul className="mt-3 space-y-2">

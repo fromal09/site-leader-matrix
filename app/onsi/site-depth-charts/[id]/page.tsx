@@ -258,6 +258,7 @@ export default function DepthChartSitePage() {
           <NewAuthorsReview
             siteId={site.id}
             siteName={site.site_name}
+            siteLeaderName={site.leader_name}
             csvAuthors={uncreditedAuthors}
             roles={roles}
             apiPrefix="/onsi"

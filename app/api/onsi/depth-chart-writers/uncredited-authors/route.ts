@@ -23,14 +23,14 @@ export async function GET(req: NextRequest) {
           FROM onsi_traffic_imports
           ORDER BY site_id, period_key DESC
         )
-        SELECT at.site_id, s.site_name, s.division, at.article_author AS author,
+        SELECT at.site_id, s.site_name, s.division, s.leader_name, at.article_author AS author,
           COUNT(*)::int AS articles, SUM(at.pageviews)::bigint AS pageviews
         FROM onsi_article_traffic at
         JOIN onsi_traffic_imports ti ON ti.id = at.import_id
         JOIN latest_periods lp ON lp.site_id = at.site_id AND lp.period_key = ti.period_key
         JOIN onsi_sites s ON s.id = at.site_id
         WHERE at.article_author IS NOT NULL
-        GROUP BY at.site_id, s.site_name, s.division, at.article_author
+        GROUP BY at.site_id, s.site_name, s.division, s.leader_name, at.article_author
         ORDER BY s.site_name ASC, pageviews DESC
       `,
       sql`
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
 
     const bySite = new Map<
       number,
-      { siteId: number; siteName: string; division: string; authors: { name: string; articles: number; pageviews: number }[] }
+      { siteId: number; siteName: string; division: string; leaderName: string; authors: { name: string; articles: number; pageviews: number }[] }
     >();
     for (const r of candidateRows as any[]) {
       if (divisionFilter && r.division !== divisionFilter) continue;
@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
       if (known.has(key) || ignored.has(key)) continue;
 
       if (!bySite.has(r.site_id)) {
-        bySite.set(r.site_id, { siteId: r.site_id, siteName: r.site_name, division: r.division, authors: [] });
+        bySite.set(r.site_id, { siteId: r.site_id, siteName: r.site_name, division: r.division, leaderName: r.leader_name, authors: [] });
       }
       bySite.get(r.site_id)!.authors.push({
         name: r.author,

@@ -3,10 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "./AuthProvider";
+import { defaultRoleForNewAuthor } from "@/lib/depthCharts";
 import type { DepthChartRole } from "@/lib/depthCharts";
 
 type CandidateAuthor = { name: string; articles: number; pageviews: number };
-type SiteGroup = { siteId: number; siteName: string; division: string; authors: CandidateAuthor[] };
+type SiteGroup = { siteId: number; siteName: string; division: string; leaderName: string; authors: CandidateAuthor[] };
 
 type RowStatus = "pending" | "added" | "declined";
 type RowState = { role: string; status: RowStatus; busy: boolean; error: string | null };
@@ -47,7 +48,7 @@ export function NetworkNewAuthorsReview({
     for (const s of fetchedSites) {
       for (const a of s.authors) {
         initial[rowKey(s.siteId, a.name)] = {
-          role: roles[0]?.label ?? "",
+          role: defaultRoleForNewAuthor(a.name, s.leaderName, roles),
           status: "pending",
           busy: false,
           error: null,
@@ -97,6 +98,26 @@ export function NetworkNewAuthorsReview({
     setRowStates((prev) => ({ ...prev, [key]: { ...prev[key], busy: false, status: "declined" } }));
   }
 
+  const [confirmingAll, setConfirmingAll] = useState(false);
+
+  async function confirmAll() {
+    if (!requireAuth()) return;
+    setConfirmingAll(true);
+    const pendingPairs: { siteId: number; name: string }[] = [];
+    for (const s of sites) {
+      for (const a of s.authors) {
+        const key = rowKey(s.siteId, a.name);
+        if (rowStates[key]?.status === "pending" && rowStates[key]?.role) {
+          pendingPairs.push({ siteId: s.siteId, name: a.name });
+        }
+      }
+    }
+    for (const { siteId, name } of pendingPairs) {
+      await addAuthor(siteId, name);
+    }
+    setConfirmingAll(false);
+  }
+
   const totalPending = Object.values(rowStates).filter((r) => r.status === "pending").length;
 
   return (
@@ -111,13 +132,24 @@ export function NetworkNewAuthorsReview({
             roster card yet — one pass instead of visiting each site individually.
           </p>
         </div>
-        <button
-          onClick={runCheck}
-          disabled={loading}
-          className="rounded border border-navy px-3 py-1.5 text-xs font-medium text-navy hover:bg-navy hover:text-white disabled:opacity-60"
-        >
-          {loading ? "Checking…" : checked ? "Re-check Network" : "Check Whole Network"}
-        </button>
+        <div className="flex items-center gap-2">
+          {checked && !loading && totalPending > 1 && (
+            <button
+              onClick={confirmAll}
+              disabled={confirmingAll}
+              className="rounded bg-navy px-3 py-1.5 text-xs font-medium text-white hover:bg-navy-soft disabled:opacity-60"
+            >
+              {confirmingAll ? "Confirming…" : `Confirm All (${totalPending})`}
+            </button>
+          )}
+          <button
+            onClick={runCheck}
+            disabled={loading}
+            className="rounded border border-navy px-3 py-1.5 text-xs font-medium text-navy hover:bg-navy hover:text-white disabled:opacity-60"
+          >
+            {loading ? "Checking…" : checked ? "Re-check Network" : "Check Whole Network"}
+          </button>
+        </div>
       </div>
 
       {checked && !loading && (

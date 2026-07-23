@@ -47,3 +47,26 @@ export type WriterNote = {
   created_by: string | null;
   created_at: string;
 };
+
+// Used when a byline is detected without a roster card yet: defaults to
+// Contributor, except when the name matches the site's listed leader, in
+// which case it defaults to that site's primary leader role (whichever
+// site_leaders-section role sorts first — normally "Site Editor").
+export function defaultRoleForNewAuthor(
+  candidateName: string,
+  siteLeaderName: string | null | undefined,
+  roles: DepthChartRole[]
+): string {
+  const isLeaderMatch =
+    !!siteLeaderName &&
+    siteLeaderName.trim().toLowerCase() === candidateName.trim().toLowerCase();
+  if (isLeaderMatch) {
+    const leaderRole = roles
+      .filter((r) => r.section === "site_leaders")
+      .sort((a, b) => a.sort_order - b.sort_order)[0];
+    if (leaderRole) return leaderRole.label;
+  }
+  const contributorRole = roles.find((r) => r.label.toLowerCase() === "contributor");
+  if (contributorRole) return contributorRole.label;
+  return roles[0]?.label ?? "";
+}

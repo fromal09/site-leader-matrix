@@ -406,6 +406,7 @@ export default function TrafficPage() {
                   key={`${g.siteId}-${i}`}
                   siteId={site.id}
                   siteName={site.site_name}
+                  siteLeaderName={site.leader_name}
                   csvAuthors={csvAuthors}
                   roles={roles}
                 />
