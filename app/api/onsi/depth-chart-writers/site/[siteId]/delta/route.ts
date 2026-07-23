@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { pageviewWeightedAverage } from "@/lib/trafficStats";
+import { pageviewWeightedAverage, dedupeArticles } from "@/lib/trafficStats";
 import { buildMatchNames } from "@/lib/nameNormalize";
 
 export async function GET(
@@ -37,7 +37,8 @@ export async function GET(
       GROUP BY dcw.id
     `;
     const articleRows = await sql`
-      SELECT at.article_author, at.pageviews::float8 AS pageviews,
+      SELECT at.article_author, at.article_url, at.article_title,
+        at.pageviews::float8 AS pageviews,
         at.scroll_depth::float8 AS scroll_depth, at.avg_time_on_page::float8 AS avg_time_on_page,
         TO_CHAR(at.first_published_date, 'YYYY-MM') AS published_month
       FROM onsi_article_traffic at
@@ -45,7 +46,7 @@ export async function GET(
       WHERE at.site_id = ${siteIdNum} AND ti.period_key = ${periodKey}
     `;
     const rowsArr = articleRows as any[];
-    const authored = rowsArr.filter((r) => r.article_author !== null);
+    const authored = dedupeArticles(rowsArr.filter((r) => r.article_author !== null));
     const published = authored.filter((r) => r.published_month === periodKey);
 
     const currentSite = {

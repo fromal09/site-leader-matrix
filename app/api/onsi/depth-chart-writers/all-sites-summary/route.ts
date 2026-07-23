@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
       SELECT
         mi.site_id,
         s.division,
-        COUNT(*) FILTER (
+        COUNT(DISTINCT normalize_article_key(at.article_url, at.article_title, at.id)) FILTER (
           WHERE TO_CHAR(at.first_published_date, 'YYYY-MM') = ${selectedPeriodKey}
         ) AS articles_published,
         COALESCE(SUM(at.pageviews), 0) AS total_pageviews,
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
         ) AS authors_published,
         COALESCE(SUM(at.pageviews) FILTER (
           WHERE TO_CHAR(at.first_published_date, 'YYYY-MM') = ${selectedPeriodKey}
-        ), 0)::float8 / NULLIF(COUNT(*) FILTER (
+        ), 0)::float8 / NULLIF(COUNT(DISTINCT normalize_article_key(at.article_url, at.article_title, at.id)) FILTER (
           WHERE TO_CHAR(at.first_published_date, 'YYYY-MM') = ${selectedPeriodKey}
         ), 0) AS pv_per_published_article
       FROM onsi_article_traffic at

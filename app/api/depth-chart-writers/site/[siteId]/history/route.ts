@@ -31,7 +31,7 @@ export async function GET(
 
     const rows = await sql`
       SELECT at.site_id, ti.period_key, ti.period_label,
-        COUNT(*) FILTER (
+        COUNT(DISTINCT normalize_article_key(at.article_url, at.article_title, at.id)) FILTER (
           WHERE TO_CHAR(at.first_published_date, 'YYYY-MM') = ti.period_key AND at.article_author IS NOT NULL
         ) AS articles_published,
         COALESCE(SUM(at.pageviews) FILTER (WHERE at.article_author IS NOT NULL), 0) AS total_pageviews,

@@ -34,7 +34,7 @@ export async function GET(
     }
 
     const rows = await sql`
-      SELECT at.article_author AS name, COUNT(*)::int AS articles,
+      SELECT at.article_author AS name, COUNT(DISTINCT normalize_article_key(at.article_url, at.article_title, at.id))::int AS articles,
         SUM(at.pageviews)::bigint AS pageviews
       FROM onsi_article_traffic at
       JOIN onsi_traffic_imports ti ON ti.id = at.import_id

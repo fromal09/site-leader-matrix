@@ -7,6 +7,38 @@
 export const SCHEMA_SQL = `
 -- Site Leader Matrix schema (Neon / Postgres)
 
+-- Mirrors lib/trafficStats.ts's normalizeArticleUrl()/articleKey() exactly —
+-- used by routes that count/aggregate articles directly in SQL (COUNT(*)
+-- style) rather than fetching rows and deduping in JS via dedupeArticles().
+-- Falls back to article_title, then the row's own id (guaranteed unique),
+-- so two different untitled/unURLed rows never get merged together.
+CREATE OR REPLACE FUNCTION normalize_article_key(url TEXT, title TEXT, row_id INT)
+RETURNS TEXT AS $$
+DECLARE
+  u TEXT;
+BEGIN
+  IF url IS NULL OR TRIM(url) = '' THEN
+    RETURN COALESCE(title, 'row-' || row_id::text);
+  END IF;
+  u := TRIM(url);
+  u := REGEXP_REPLACE(u, '^https?://', '', 'i');
+  u := SPLIT_PART(u, '?', 1);
+  u := SPLIT_PART(u, '#', 1);
+  u := REGEXP_REPLACE(u, '/+$', '');
+  LOOP
+    IF u ~* '/(app|partner|amp|mobile|m)$' THEN
+      u := REGEXP_REPLACE(u, '/(app|partner|amp|mobile|m)$', '', 'i');
+    ELSE
+      EXIT;
+    END IF;
+  END LOOP;
+  IF u = '' THEN
+    RETURN COALESCE(title, 'row-' || row_id::text);
+  END IF;
+  RETURN LOWER(u);
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
 CREATE TABLE IF NOT EXISTS sites (
   id SERIAL PRIMARY KEY,
   site_name TEXT NOT NULL UNIQUE,

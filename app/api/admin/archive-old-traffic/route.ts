@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { pageviewWeightedAverage } from "@/lib/trafficStats";
+import { pageviewWeightedAverage, dedupeArticles } from "@/lib/trafficStats";
 import { buildMatchNames } from "@/lib/nameNormalize";
 
 export const maxDuration = 60;
@@ -32,7 +32,7 @@ export async function POST() {
 
     for (const imp of imports) {
       const rows = await sql`
-        SELECT article_author, pageviews::float8 AS pageviews,
+        SELECT article_author, article_url, article_title, pageviews::float8 AS pageviews,
           scroll_depth::float8 AS scroll_depth, avg_time_on_page::float8 AS avg_time_on_page,
           TO_CHAR(first_published_date, 'YYYY-MM') AS published_month
         FROM article_traffic
@@ -40,8 +40,9 @@ export async function POST() {
       `;
       const articleRows = rows as any[];
 
-      const authoredRows = articleRows.filter((r) => r.article_author !== null);
+      const authoredRowsRaw = articleRows.filter((r) => r.article_author !== null);
       const homepageRows = articleRows.filter((r) => r.article_author === null);
+      const authoredRows = dedupeArticles(authoredRowsRaw);
 
       const publishedRows = authoredRows.filter((r) => r.published_month === imp.period_key);
       const publishedPageviews = publishedRows.reduce((s, r) => s + r.pageviews, 0);

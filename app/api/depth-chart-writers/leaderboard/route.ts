@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { pageviewWeightedAverage } from "@/lib/trafficStats";
+import { pageviewWeightedAverage, dedupeArticles } from "@/lib/trafficStats";
 import { normalizeNameKey, buildMatchNames } from "@/lib/nameNormalize";
 
 export async function GET(req: NextRequest) {
@@ -46,7 +46,8 @@ export async function GET(req: NextRequest) {
     // (site, author) — same approach as the per-site route, just wider.
     const articleRows = requestedPeriod
       ? await sql`
-          SELECT at.site_id, at.article_author, at.pageviews::float8 AS pageviews,
+          SELECT at.site_id, at.article_author, at.article_url, at.article_title,
+            at.pageviews::float8 AS pageviews,
             at.scroll_depth::float8 AS scroll_depth, at.avg_time_on_page::float8 AS avg_time_on_page,
             TO_CHAR(at.first_published_date, 'YYYY-MM') AS published_month,
             ti.period_key, ti.period_label
@@ -55,7 +56,8 @@ export async function GET(req: NextRequest) {
           WHERE at.article_author IS NOT NULL AND ti.period_key = ${requestedPeriod}
         `
       : await sql`
-          SELECT at.site_id, at.article_author, at.pageviews::float8 AS pageviews,
+          SELECT at.site_id, at.article_author, at.article_url, at.article_title,
+            at.pageviews::float8 AS pageviews,
             at.scroll_depth::float8 AS scroll_depth, at.avg_time_on_page::float8 AS avg_time_on_page,
             TO_CHAR(at.first_published_date, 'YYYY-MM') AS published_month,
             ti.period_key, ti.period_label
@@ -129,9 +131,10 @@ export async function GET(req: NextRequest) {
       }
       seenSitePerson.add(dedupeKey);
 
-      const publishedRows = rows.filter((r) => r.published_month === latestPeriodKey);
+      const dedupedRows = dedupeArticles(rows);
+      const publishedRows = dedupedRows.filter((r) => r.published_month === latestPeriodKey);
       const publishedPageviews = publishedRows.reduce((sum, r) => sum + r.pageviews, 0);
-      const totalPageviews = rows.reduce((sum, r) => sum + r.pageviews, 0);
+      const totalPageviews = dedupedRows.reduce((sum, r) => sum + r.pageviews, 0);
 
       result.push({
         writerId: w.id,
@@ -144,10 +147,10 @@ export async function GET(req: NextRequest) {
         totalPageviews,
         pvPerPublishedArticle: publishedRows.length > 0 ? publishedPageviews / publishedRows.length : null,
         weightedAvgScrollDepth: pageviewWeightedAverage(
-          rows.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews }))
+          dedupedRows.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews }))
         ),
         weightedAvgTimeOnPage: pageviewWeightedAverage(
-          rows.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews }))
+          dedupedRows.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews }))
         ),
       });
     }

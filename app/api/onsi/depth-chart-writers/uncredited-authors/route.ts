@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
           ORDER BY site_id, period_key DESC
         )
         SELECT at.site_id, s.site_name, s.division, s.leader_name, at.article_author AS author,
-          COUNT(*)::int AS articles, SUM(at.pageviews)::bigint AS pageviews
+          COUNT(DISTINCT normalize_article_key(at.article_url, at.article_title, at.id))::int AS articles, SUM(at.pageviews)::bigint AS pageviews
         FROM onsi_article_traffic at
         JOIN onsi_traffic_imports ti ON ti.id = at.import_id
         JOIN latest_periods lp ON lp.site_id = at.site_id AND lp.period_key = ti.period_key

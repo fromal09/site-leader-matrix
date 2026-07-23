@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { pageviewWeightedAverage } from "@/lib/trafficStats";
+import { pageviewWeightedAverage, dedupeArticles } from "@/lib/trafficStats";
 import { normalizeNameKey, pickBestCasing, buildMatchNames } from "@/lib/nameNormalize";
 
 export async function GET(req: NextRequest) {
@@ -80,7 +80,8 @@ export async function GET(req: NextRequest) {
 
     const siteIds = Array.from(new Set(cards.map((c) => c.site_id)));
     const articleRows = await sql`
-      SELECT at.site_id, at.article_author, at.pageviews::float8 AS pageviews,
+      SELECT at.site_id, at.article_author, at.article_url, at.article_title,
+        at.pageviews::float8 AS pageviews,
         at.scroll_depth::float8 AS scroll_depth, at.avg_time_on_page::float8 AS avg_time_on_page,
         TO_CHAR(at.first_published_date, 'YYYY-MM') AS published_month
       FROM onsi_article_traffic at
@@ -115,10 +116,11 @@ export async function GET(req: NextRequest) {
       if (matchNames.length === 0) continue;
       const rows = matchNames.flatMap((mn) => bySiteAuthor.get(`${card.site_id}::${mn}`) ?? []);
       if (rows.length === 0) continue;
+      const dedupedRows = dedupeArticles(rows);
 
-      const publishedRows = rows.filter((r) => r.published_month === selectedPeriodKey);
+      const publishedRows = dedupedRows.filter((r) => r.published_month === selectedPeriodKey);
       const publishedPageviews = publishedRows.reduce((sum, r) => sum + r.pageviews, 0);
-      const totalPageviews = rows.reduce((sum, r) => sum + r.pageviews, 0);
+      const totalPageviews = dedupedRows.reduce((sum, r) => sum + r.pageviews, 0);
 
       const breakdown: SiteBreakdown = {
         siteId: card.site_id,
@@ -130,10 +132,10 @@ export async function GET(req: NextRequest) {
         pvPerPublishedArticle:
           publishedRows.length > 0 ? publishedPageviews / publishedRows.length : null,
         weightedAvgScrollDepth: pageviewWeightedAverage(
-          rows.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews }))
+          dedupedRows.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews }))
         ),
         weightedAvgTimeOnPage: pageviewWeightedAverage(
-          rows.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews }))
+          dedupedRows.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews }))
         ),
       };
 

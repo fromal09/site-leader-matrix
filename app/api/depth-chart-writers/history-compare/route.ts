@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { pageviewWeightedAverage } from "@/lib/trafficStats";
+import { pageviewWeightedAverage, dedupeArticles } from "@/lib/trafficStats";
 import { buildMatchNames } from "@/lib/nameNormalize";
 
 export async function GET(req: NextRequest) {
@@ -40,7 +40,8 @@ export async function GET(req: NextRequest) {
 
     const siteIds = Array.from(new Set(writers.map((w) => w.site_id)));
     const articleRows = await sql`
-      SELECT at.site_id, at.article_author, at.pageviews::float8 AS pageviews,
+      SELECT at.site_id, at.article_author, at.article_url, at.article_title,
+        at.pageviews::float8 AS pageviews,
         at.scroll_depth::float8 AS scroll_depth, at.avg_time_on_page::float8 AS avg_time_on_page,
         TO_CHAR(at.first_published_date, 'YYYY-MM') AS published_month,
         ti.period_key, ti.period_label
@@ -69,10 +70,11 @@ export async function GET(req: NextRequest) {
           (mn) => bySiteAuthorPeriod.get(`${w.site_id}::${mn}::${periodKey}`) ?? []
         );
         if (wrows.length === 0) continue;
+        const dedupedWrows = dedupeArticles(wrows);
 
-        const publishedRows = wrows.filter((r) => r.published_month === periodKey);
+        const publishedRows = dedupedWrows.filter((r) => r.published_month === periodKey);
         const publishedPageviews = publishedRows.reduce((s, r) => s + r.pageviews, 0);
-        const totalPageviews = wrows.reduce((s, r) => s + r.pageviews, 0);
+        const totalPageviews = dedupedWrows.reduce((s, r) => s + r.pageviews, 0);
 
         history.push({
           periodKey,
@@ -83,10 +85,10 @@ export async function GET(req: NextRequest) {
           pvPerPublishedArticle:
             publishedRows.length > 0 ? publishedPageviews / publishedRows.length : null,
           weightedAvgScrollDepth: pageviewWeightedAverage(
-            wrows.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews }))
+            dedupedWrows.map((r) => ({ value: r.scroll_depth, pageviews: r.pageviews }))
           ),
           weightedAvgTimeOnPage: pageviewWeightedAverage(
-            wrows.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews }))
+            dedupedWrows.map((r) => ({ value: r.avg_time_on_page, pageviews: r.pageviews }))
           ),
         });
       }
