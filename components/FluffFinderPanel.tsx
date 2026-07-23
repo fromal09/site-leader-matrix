@@ -219,6 +219,15 @@ export function FluffFinderPanel({
       .sort((a, b) => b.articlesPublished - a.articlesPublished);
   }, [populationScores, sortedOptions]);
 
+  const [minArticles, setMinArticles] = useState(0);
+  // Colors stay anchored to the full population regardless of the filter —
+  // otherwise the green-to-red scale would keep shifting as writers are
+  // filtered in and out, making colors incomparable between views.
+  const filteredSidebarEntries = useMemo(
+    () => sidebarEntries.filter((e) => e.articlesPublished >= minArticles),
+    [sidebarEntries, minArticles]
+  );
+
   if (sortedOptions.length === 0) {
     return (
       <div className="card rounded-md p-4">
@@ -439,34 +448,59 @@ export function FluffFinderPanel({
           Article volume and Concentration Score for this period. Click anyone to see their
           graph.
         </p>
+        <label className="mb-2 flex items-center gap-2 text-[11px]">
+          <span className="text-ink-soft uppercase tracking-wide">Min. articles</span>
+          <input
+            type="number"
+            min={0}
+            value={minArticles}
+            onChange={(e) => setMinArticles(Math.max(0, Number(e.target.value) || 0))}
+            className="w-16 rounded border border-rule-strong bg-white px-2 py-1 font-data text-xs outline-none focus:border-navy"
+          />
+        </label>
         {sidebarEntries.length === 0 ? (
           <p className="text-sm italic text-ink-soft">No data for this period yet.</p>
+        ) : filteredSidebarEntries.length === 0 ? (
+          <p className="text-sm italic text-ink-soft">No writers meet that minimum.</p>
         ) : (
-          <div className="max-h-[600px] space-y-1 overflow-y-auto pr-1">
-            {sidebarEntries.map((entry) => (
-              <button
-                key={entry.key}
-                onClick={() => setSelectedKey(entry.key)}
-                className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-paper"
-                style={
-                  entry.key === selectedKey
-                    ? { backgroundColor: "var(--navy)", color: "white" }
-                    : undefined
-                }
-              >
-                <span className="truncate">{entry.label}</span>
-                <span className="flex shrink-0 items-center gap-1.5 font-data">
-                  <span className={entry.key === selectedKey ? "" : "text-ink-soft"}>
-                    {entry.articlesPublished}
+          <>
+            <div className="flex items-center justify-between px-2 font-data text-[10px] uppercase tracking-wide text-ink-soft">
+              <span>Writer</span>
+              <span className="flex shrink-0 gap-3">
+                <span>Arts.</span>
+                <span>Score</span>
+              </span>
+            </div>
+            <div className="max-h-[600px] space-y-1 overflow-y-auto pr-1">
+              {filteredSidebarEntries.map((entry) => (
+                <button
+                  key={entry.key}
+                  onClick={() => setSelectedKey(entry.key)}
+                  className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-paper"
+                  style={
+                    entry.key === selectedKey
+                      ? { backgroundColor: "var(--navy)", color: "white" }
+                      : undefined
+                  }
+                >
+                  <span className="truncate">{entry.label}</span>
+                  <span className="flex shrink-0 items-center gap-3 font-data">
+                    <span
+                      className={`w-6 text-right ${entry.key === selectedKey ? "" : "text-ink-soft"}`}
+                    >
+                      {entry.articlesPublished}
+                    </span>
+                    <span
+                      className="w-10 text-right font-semibold"
+                      style={{ color: entry.key === selectedKey ? "white" : entry.color }}
+                    >
+                      {formatPercent(entry.concentrationScore)}
+                    </span>
                   </span>
-                  <span
-                    className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: entry.color }}
-                  />
-                </span>
-              </button>
-            ))}
-          </div>
+                </button>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>
