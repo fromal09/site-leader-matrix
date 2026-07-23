@@ -40,17 +40,46 @@ type FluffResult = {
   articles: FluffArticle[];
 };
 
-// Bright green (most efficient in the population) to dark red (least
-// efficient), interpolated by where this writer's score falls within the
-// population's min-max range — not a fixed absolute scale, since what
-// counts as "concentrated" varies a lot by beat and content type.
-const BEST_COLOR: [number, number, number] = [34, 197, 94]; // bright green
-const WORST_COLOR: [number, number, number] = [127, 29, 29]; // dark red
+// Green-yellow-red, not a direct green-to-red blend — interpolating RGB
+// straight from green to red passes through muddy olive/brown in the
+// middle, which is hard to read as "medium." Going through a bright
+// yellow midpoint keeps every stop visually distinct. Anchored to the
+// 15th/85th percentiles of the population rather than raw min/max, so a
+// single outlier writer doesn't stretch the whole scale and wash
+// everyone else out into a narrow, hard-to-distinguish band.
+const GOOD_COLOR: [number, number, number] = [22, 163, 74]; // vivid green
+const MID_COLOR: [number, number, number] = [234, 179, 8]; // amber
+const BAD_COLOR: [number, number, number] = [153, 27, 27]; // deep red
+const GOOD_PERCENTILE = 0.15;
+const BAD_PERCENTILE = 0.85;
 
-function scoreColor(score: number, min: number, max: number): string {
-  if (max === min) return "rgb(100, 116, 139)"; // single-writer population — neutral gray, no meaningful comparison
-  const t = Math.max(0, Math.min(1, (score - min) / (max - min)));
-  const rgb = BEST_COLOR.map((c, i) => Math.round(c + (WORST_COLOR[i] - c) * t));
+function percentile(sortedAsc: number[], p: number): number {
+  if (sortedAsc.length === 0) return 0;
+  if (sortedAsc.length === 1) return sortedAsc[0];
+  const idx = p * (sortedAsc.length - 1);
+  const lower = Math.floor(idx);
+  const upper = Math.ceil(idx);
+  if (lower === upper) return sortedAsc[lower];
+  const frac = idx - lower;
+  return sortedAsc[lower] + (sortedAsc[upper] - sortedAsc[lower]) * frac;
+}
+
+function lerpRgb(a: [number, number, number], b: [number, number, number], t: number): [number, number, number] {
+  return [
+    Math.round(a[0] + (b[0] - a[0]) * t),
+    Math.round(a[1] + (b[1] - a[1]) * t),
+    Math.round(a[2] + (b[2] - a[2]) * t),
+  ];
+}
+
+function scoreColor(score: number, populationScoresAsc: number[]): string {
+  if (populationScoresAsc.length < 2) return "rgb(100, 116, 139)"; // single-writer population — no meaningful comparison
+  const good = percentile(populationScoresAsc, GOOD_PERCENTILE);
+  const bad = percentile(populationScoresAsc, BAD_PERCENTILE);
+  if (bad === good) return "rgb(100, 116, 139)"; // everyone tied — nothing to distinguish
+  const t = Math.max(0, Math.min(1, (score - good) / (bad - good)));
+  const rgb =
+    t <= 0.5 ? lerpRgb(GOOD_COLOR, MID_COLOR, t * 2) : lerpRgb(MID_COLOR, BAD_COLOR, (t - 0.5) * 2);
   return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
 }
 
@@ -188,21 +217,18 @@ export function FluffFinderPanel({
 
   const boxColor = useMemo(() => {
     if (!stats || !populationScores || populationScores.length < 2) return null;
-    const scores = populationScores.map((s) => s.concentrationScore);
-    const min = Math.min(...scores);
-    const max = Math.max(...scores);
-    return scoreColor(stats.concentrationScore, min, max);
+    const scores = populationScores.map((s) => s.concentrationScore).sort((a, b) => a - b);
+    return scoreColor(stats.concentrationScore, scores);
   }, [stats, populationScores]);
 
   // Sidebar list: population scores matched back to their writer's display
   // info (name, site, click-target key), colored the same way as the main
-  // score box, sorted by article volume to match the dropdown's ordering.
+  // score box, sorted by concentration score (least efficient first) so
+  // the writers most worth reviewing surface at the top by default.
   const sidebarEntries = useMemo(() => {
     if (!populationScores) return [];
     const optionByWriterId = new Map(sortedOptions.map((o) => [o.writerId, o]));
-    const scores = populationScores.map((s) => s.concentrationScore);
-    const min = scores.length > 0 ? Math.min(...scores) : 0;
-    const max = scores.length > 0 ? Math.max(...scores) : 0;
+    const scoresAsc = populationScores.map((s) => s.concentrationScore).sort((a, b) => a - b);
     return populationScores
       .map((s) => {
         const option = optionByWriterId.get(s.writerId);
@@ -212,11 +238,11 @@ export function FluffFinderPanel({
           label: option.label,
           articlesPublished: s.articlesPublished,
           concentrationScore: s.concentrationScore,
-          color: scoreColor(s.concentrationScore, min, max),
+          color: scoreColor(s.concentrationScore, scoresAsc),
         };
       })
       .filter((e): e is NonNullable<typeof e> => e !== null)
-      .sort((a, b) => b.articlesPublished - a.articlesPublished);
+      .sort((a, b) => b.concentrationScore - a.concentrationScore);
   }, [populationScores, sortedOptions]);
 
   const [minArticles, setMinArticles] = useState(0);
@@ -410,7 +436,7 @@ export function FluffFinderPanel({
                     }
                   >
                     <td className="py-1.5 pr-4 font-data">{a.rank}</td>
-                    <td className="max-w-md truncate py-1.5 pr-4">
+                    <td className="max-w-[180px] truncate py-1.5 pr-4" title={a.title}>
                       {a.url ? (
                         <a
                           href={ensureUrlProtocol(a.url)}
