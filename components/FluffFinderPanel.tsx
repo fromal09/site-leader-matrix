@@ -43,14 +43,22 @@ type FluffResult = {
 // Green-yellow-red, not a direct green-to-red blend — interpolating RGB
 // straight from green to red passes through muddy olive/brown in the
 // middle, which is hard to read as "medium." Going through a bright
-// yellow midpoint keeps every stop visually distinct. Anchored to the
-// 15th/85th percentiles of the population rather than raw min/max, so a
-// single outlier writer doesn't stretch the whole scale and wash
-// everyone else out into a narrow, hard-to-distinguish band.
+// yellow midpoint keeps every stop visually distinct.
 const GOOD_COLOR: [number, number, number] = [22, 163, 74]; // vivid green
 const MID_COLOR: [number, number, number] = [234, 179, 8]; // amber
 const BAD_COLOR: [number, number, number] = [153, 27, 27]; // deep red
-const GOOD_PERCENTILE = 0.15;
+
+// Green anchor is a fixed absolute threshold, not a population percentile
+// — writers with only 1-2 articles produce a near-zero concentration
+// score almost no matter what (there's barely a distribution to be
+// concentrated), so letting the population's own low end set "greenest
+// green" just chases that small-sample noise and drags the whole scale
+// down, making genuinely good, higher-volume writers look less green
+// than they should. 25% is treated as "genuinely efficient" outright.
+const GOOD_ANCHOR = 0.25;
+// Red anchor stays population-relative (85th percentile) — a single
+// outlier writer shouldn't stretch the whole scale and wash everyone
+// else into a narrow, hard-to-distinguish band.
 const BAD_PERCENTILE = 0.85;
 
 function percentile(sortedAsc: number[], p: number): number {
@@ -74,9 +82,11 @@ function lerpRgb(a: [number, number, number], b: [number, number, number], t: nu
 
 function scoreColor(score: number, populationScoresAsc: number[]): string {
   if (populationScoresAsc.length < 2) return "rgb(100, 116, 139)"; // single-writer population — no meaningful comparison
-  const good = percentile(populationScoresAsc, GOOD_PERCENTILE);
-  const bad = percentile(populationScoresAsc, BAD_PERCENTILE);
-  if (bad === good) return "rgb(100, 116, 139)"; // everyone tied — nothing to distinguish
+  const good = GOOD_ANCHOR;
+  // Guard against a degenerate population where even the 85th percentile
+  // sits below the fixed green anchor (e.g. almost everyone is very
+  // efficient) — keep a minimum spread so the scale never inverts.
+  const bad = Math.max(percentile(populationScoresAsc, BAD_PERCENTILE), good + 0.05);
   const t = Math.max(0, Math.min(1, (score - good) / (bad - good)));
   const rgb =
     t <= 0.5 ? lerpRgb(GOOD_COLOR, MID_COLOR, t * 2) : lerpRgb(MID_COLOR, BAD_COLOR, (t - 0.5) * 2);
