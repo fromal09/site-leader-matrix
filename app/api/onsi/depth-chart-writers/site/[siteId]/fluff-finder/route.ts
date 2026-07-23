@@ -81,6 +81,7 @@ export async function GET(
 
     const published = dedupeArticles(rows as any[]).sort((a, b) => b.pageviews - a.pageviews);
     const totalPageviews = published.reduce((s, r) => s + r.pageviews, 0);
+    const totalArticles = published.length;
     let running = 0;
     const articles = published.map((r, i) => {
       running += r.pageviews;
@@ -91,6 +92,11 @@ export async function GET(
         pageviews: r.pageviews,
         cumulativePageviews: running,
         cumulativePct: totalPageviews > 0 ? running / totalPageviews : 0,
+        // "At article 45 of 100, that's 45% of this writer's article
+        // volume" — compared against cumulativePct ("...but 82% of their
+        // traffic"), this is the efficiency read: how much traffic is
+        // concentrated in how little of the output.
+        cumulativeArticlePct: totalArticles > 0 ? (i + 1) / totalArticles : 0,
       };
     });
 
