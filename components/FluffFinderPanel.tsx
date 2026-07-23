@@ -48,29 +48,18 @@ const GOOD_COLOR: [number, number, number] = [22, 163, 74]; // vivid green
 const MID_COLOR: [number, number, number] = [234, 179, 8]; // amber
 const BAD_COLOR: [number, number, number] = [153, 27, 27]; // deep red
 
-// Green anchor is a fixed absolute threshold, not a population percentile
-// — writers with only 1-2 articles produce a near-zero concentration
-// score almost no matter what (there's barely a distribution to be
-// concentrated), so letting the population's own low end set "greenest
-// green" just chases that small-sample noise and drags the whole scale
-// down, making genuinely good, higher-volume writers look less green
-// than they should. 25% is treated as "genuinely efficient" outright.
+// Both ends are fixed absolute thresholds rather than population
+// percentiles. Writers with only 1-2 articles produce a near-zero
+// concentration score almost no matter what (there's barely a
+// distribution to be concentrated), so a population-relative green
+// anchor just chases that small-sample noise. And in practice most
+// writers with real volume land somewhere in the 25-60% range — using a
+// population percentile for "full red" pushed that threshold too high,
+// compressing exactly the range that hosts the most writers into a
+// narrow, hard-to-differentiate band. Fixed thresholds put the full
+// gradient's resolution where it's actually needed.
 const GOOD_ANCHOR = 0.25;
-// Red anchor stays population-relative (85th percentile) — a single
-// outlier writer shouldn't stretch the whole scale and wash everyone
-// else into a narrow, hard-to-distinguish band.
-const BAD_PERCENTILE = 0.85;
-
-function percentile(sortedAsc: number[], p: number): number {
-  if (sortedAsc.length === 0) return 0;
-  if (sortedAsc.length === 1) return sortedAsc[0];
-  const idx = p * (sortedAsc.length - 1);
-  const lower = Math.floor(idx);
-  const upper = Math.ceil(idx);
-  if (lower === upper) return sortedAsc[lower];
-  const frac = idx - lower;
-  return sortedAsc[lower] + (sortedAsc[upper] - sortedAsc[lower]) * frac;
-}
+const BAD_ANCHOR = 0.5;
 
 function lerpRgb(a: [number, number, number], b: [number, number, number], t: number): [number, number, number] {
   return [
@@ -80,14 +69,8 @@ function lerpRgb(a: [number, number, number], b: [number, number, number], t: nu
   ];
 }
 
-function scoreColor(score: number, populationScoresAsc: number[]): string {
-  if (populationScoresAsc.length < 2) return "rgb(100, 116, 139)"; // single-writer population — no meaningful comparison
-  const good = GOOD_ANCHOR;
-  // Guard against a degenerate population where even the 85th percentile
-  // sits below the fixed green anchor (e.g. almost everyone is very
-  // efficient) — keep a minimum spread so the scale never inverts.
-  const bad = Math.max(percentile(populationScoresAsc, BAD_PERCENTILE), good + 0.05);
-  const t = Math.max(0, Math.min(1, (score - good) / (bad - good)));
+function scoreColor(score: number): string {
+  const t = Math.max(0, Math.min(1, (score - GOOD_ANCHOR) / (BAD_ANCHOR - GOOD_ANCHOR)));
   const rgb =
     t <= 0.5 ? lerpRgb(GOOD_COLOR, MID_COLOR, t * 2) : lerpRgb(MID_COLOR, BAD_COLOR, (t - 0.5) * 2);
   return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
@@ -254,19 +237,17 @@ export function FluffFinderPanel({
   }, [displayArticles]);
 
   const boxColor = useMemo(() => {
-    if (!stats || !populationScores || populationScores.length < 2) return null;
-    const scores = populationScores.map((s) => s.concentrationScore).sort((a, b) => a - b);
-    return scoreColor(stats.concentrationScore, scores);
-  }, [stats, populationScores]);
+    if (!stats) return null;
+    return scoreColor(stats.concentrationScore);
+  }, [stats]);
 
   // Sidebar list: population scores matched back to their writer's display
-  // info (name, site, click-target key), colored the same way as the main
-  // score box, sorted by concentration score (least efficient first) so
-  // the writers most worth reviewing surface at the top by default.
+  // info (name, site, click-target key), colored on the same fixed scale
+  // as the main score box, sorted by concentration score (least efficient
+  // first) so the writers most worth reviewing surface at the top.
   const sidebarEntries = useMemo(() => {
     if (!populationScores) return [];
     const optionByWriterId = new Map(sortedOptions.map((o) => [o.writerId, o]));
-    const scoresAsc = populationScores.map((s) => s.concentrationScore).sort((a, b) => a - b);
     return populationScores
       .map((s) => {
         const option = optionByWriterId.get(s.writerId);
@@ -276,7 +257,7 @@ export function FluffFinderPanel({
           label: option.label,
           articlesPublished: s.articlesPublished,
           concentrationScore: s.concentrationScore,
-          color: scoreColor(s.concentrationScore, scoresAsc),
+          color: scoreColor(s.concentrationScore),
         };
       })
       .filter((e): e is NonNullable<typeof e> => e !== null)
@@ -284,9 +265,8 @@ export function FluffFinderPanel({
   }, [populationScores, sortedOptions]);
 
   const [minArticles, setMinArticles] = useState(0);
-  // Colors stay anchored to the full population regardless of the filter —
-  // otherwise the green-to-red scale would keep shifting as writers are
-  // filtered in and out, making colors incomparable between views.
+  // Colors are on a fixed scale now, so filtering the list never changes
+  // what a given color means — this just changes who's shown.
   const filteredSidebarEntries = useMemo(
     () => sidebarEntries.filter((e) => e.articlesPublished >= minArticles),
     [sidebarEntries, minArticles]
@@ -403,9 +383,8 @@ export function FluffFinderPanel({
                   {formatPercent(stats.concentrationScore)}
                 </p>
                 <p className="text-[11px] text-ink-soft">
-                  {boxColor
-                    ? "Color reflects this writer's rank among their peers this period — green is most efficient, red is least."
-                    : "0% = every article contributes its proportional share of traffic. Higher means traffic is more concentrated in fewer articles."}
+                  0-25% is green (proportional output), 50%+ is red (traffic concentrated in
+                  few articles) — a fixed scale, not relative to other writers.
                 </p>
               </div>
               <div className="rounded border border-rule-strong bg-white p-3">
