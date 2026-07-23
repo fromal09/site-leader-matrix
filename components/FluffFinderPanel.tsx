@@ -9,7 +9,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
 } from "recharts";
 import { formatCompactNumber, formatPercent, ensureUrlProtocol } from "@/lib/trafficFormat";
 
@@ -145,7 +144,6 @@ export function FluffFinderPanel({
                 stroke="var(--rule-strong)"
               />
               <Tooltip content={<CustomTooltip />} />
-              <ReferenceLine y={0.8} stroke="var(--grade-mid)" strokeDasharray="4 4" />
               <Line
                 type="monotone"
                 dataKey="cumulativePct"
