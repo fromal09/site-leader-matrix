@@ -141,7 +141,9 @@ export function FluffFinderPanel({
   // traffic share and article share is largest — the point where this
   // writer's output has captured the most traffic relative to what a
   // proportional share would predict.
-  const [populationScores, setPopulationScores] = useState<number[] | null>(null);
+  const [populationScores, setPopulationScores] = useState<
+    { writerId: number; concentrationScore: number; articlesPublished: number }[] | null
+  >(null);
 
   useEffect(() => {
     if (!periodKey) return;
@@ -156,7 +158,7 @@ export function FluffFinderPanel({
     if (!url) return;
     fetch(url)
       .then((r) => r.json())
-      .then((d) => setPopulationScores((d.scores ?? []).map((s: any) => s.concentrationScore)))
+      .then((d) => setPopulationScores(d.scores ?? []))
       .catch(() => setPopulationScores(null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [periodKey, divisionKey, apiPrefix]);
@@ -186,10 +188,36 @@ export function FluffFinderPanel({
 
   const boxColor = useMemo(() => {
     if (!stats || !populationScores || populationScores.length < 2) return null;
-    const min = Math.min(...populationScores);
-    const max = Math.max(...populationScores);
+    const scores = populationScores.map((s) => s.concentrationScore);
+    const min = Math.min(...scores);
+    const max = Math.max(...scores);
     return scoreColor(stats.concentrationScore, min, max);
   }, [stats, populationScores]);
+
+  // Sidebar list: population scores matched back to their writer's display
+  // info (name, site, click-target key), colored the same way as the main
+  // score box, sorted by article volume to match the dropdown's ordering.
+  const sidebarEntries = useMemo(() => {
+    if (!populationScores) return [];
+    const optionByWriterId = new Map(sortedOptions.map((o) => [o.writerId, o]));
+    const scores = populationScores.map((s) => s.concentrationScore);
+    const min = scores.length > 0 ? Math.min(...scores) : 0;
+    const max = scores.length > 0 ? Math.max(...scores) : 0;
+    return populationScores
+      .map((s) => {
+        const option = optionByWriterId.get(s.writerId);
+        if (!option) return null;
+        return {
+          key: `${option.siteId}::${option.writerId}`,
+          label: option.label,
+          articlesPublished: s.articlesPublished,
+          concentrationScore: s.concentrationScore,
+          color: scoreColor(s.concentrationScore, min, max),
+        };
+      })
+      .filter((e): e is NonNullable<typeof e> => e !== null)
+      .sort((a, b) => b.articlesPublished - a.articlesPublished);
+  }, [populationScores, sortedOptions]);
 
   if (sortedOptions.length === 0) {
     return (
@@ -202,7 +230,8 @@ export function FluffFinderPanel({
   }
 
   return (
-    <div className="card rounded-md p-4">
+    <div className="flex flex-col gap-4 lg:flex-row">
+      <div className="card min-w-0 flex-1 rounded-md p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="font-display text-lg font-semibold text-navy">Fluff Finder</h2>
@@ -400,6 +429,46 @@ export function FluffFinderPanel({
           </div>
         </>
       )}
+      </div>
+
+      <div className="card w-full shrink-0 rounded-md p-4 lg:w-72">
+        <h3 className="mb-0.5 font-display text-sm font-semibold uppercase tracking-wide text-navy">
+          All Writers
+        </h3>
+        <p className="mb-2 text-[11px] text-ink-soft">
+          Article volume and Concentration Score for this period. Click anyone to see their
+          graph.
+        </p>
+        {sidebarEntries.length === 0 ? (
+          <p className="text-sm italic text-ink-soft">No data for this period yet.</p>
+        ) : (
+          <div className="max-h-[600px] space-y-1 overflow-y-auto pr-1">
+            {sidebarEntries.map((entry) => (
+              <button
+                key={entry.key}
+                onClick={() => setSelectedKey(entry.key)}
+                className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-paper"
+                style={
+                  entry.key === selectedKey
+                    ? { backgroundColor: "var(--navy)", color: "white" }
+                    : undefined
+                }
+              >
+                <span className="truncate">{entry.label}</span>
+                <span className="flex shrink-0 items-center gap-1.5 font-data">
+                  <span className={entry.key === selectedKey ? "" : "text-ink-soft"}>
+                    {entry.articlesPublished}
+                  </span>
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: entry.color }}
+                  />
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
