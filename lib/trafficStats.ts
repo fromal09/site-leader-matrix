@@ -7,18 +7,6 @@ export function pageviewWeightedAverage(
   return valid.reduce((s, r) => s + (r.value as number) * r.pageviews, 0) / denom;
 }
 
-// Collapses rows that share the same article (matched by URL, falling back
-// to title when URL is missing) into one, summing pageviews and
-// pageview-weighting scroll/time. Protects "articles published" counts
-// against overcounting if a CSV ever has more than one row per article for
-// the period (e.g. a day-by-day export) rather than one row per article.
-// Trailing path segments that mark a duplicate/mirror version of the same
-// article rather than a different article — stripped before comparing
-// URLs so e.g. ".../mason-graham-story" and ".../mason-graham-story/app"
-// collapse into one, instead of silently double-counting the article and
-// inflating both the published count and total pageviews.
-const JUNK_URL_SUFFIXES = ["app", "partner", "amp", "mobile", "m"];
-
 export function normalizeArticleUrl(url: string | null | undefined): string | null {
   if (!url) return null;
   let u = url.trim();
@@ -26,26 +14,51 @@ export function normalizeArticleUrl(url: string | null | undefined): string | nu
   u = u.replace(/^https?:\/\//i, "");
   u = u.split("?")[0].split("#")[0]; // drop query string / fragment
   u = u.replace(/\/+$/, ""); // drop trailing slash(es)
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const suffix of JUNK_URL_SUFFIXES) {
-      const re = new RegExp(`/${suffix}$`, "i");
-      if (re.test(u)) {
-        u = u.replace(re, "");
-        changed = true;
-      }
+  if (!u) return null;
+
+  const firstSlash = u.indexOf("/");
+  if (firstSlash === -1) return u.toLowerCase(); // bare hostname, nothing to trim
+
+  const hostname = u.slice(0, firstSlash);
+  const pathSegments = u
+    .slice(firstSlash + 1)
+    .split("/")
+    .filter(Boolean);
+  if (pathSegments.length === 0) return hostname.toLowerCase();
+
+  // Rather than maintaining a growing list of known junk suffixes (/app,
+  // /partner(s), /amp, a slideshow page number, a tracking id, or
+  // whatever shows up next), find the segment that's actually the real
+  // SEO article slug and discard everything after it. A true slug reads
+  // like a full sentence ("nolan-teasley-biggest-impact-minnesota-...")
+  // and reliably has far more hyphens than a category prefix, page
+  // number, or tracking segment — so "most hyphens" is a strong, general
+  // signal for "this is the real article identity" regardless of what
+  // junk a given CMS happens to tack on after it.
+  let bestIndex = -1;
+  let bestHyphens = 0;
+  pathSegments.forEach((seg, i) => {
+    const hyphens = (seg.match(/-/g) ?? []).length;
+    if (hyphens > bestHyphens) {
+      bestHyphens = hyphens;
+      bestIndex = i;
     }
-  }
-  return u.toLowerCase() || null;
+  });
+
+  // No segment had any hyphens at all (e.g. a bare numeric-id URL) — can't
+  // confidently identify a slug, so don't guess; keep the full path rather
+  // than risk merging two genuinely different articles.
+  const kept = bestIndex === -1 ? pathSegments : pathSegments.slice(0, bestIndex + 1);
+  return `${hostname}/${kept.join("/")}`.toLowerCase();
 }
 
 // Collapses rows that share the same article (matched by normalized URL,
 // falling back to title when URL is missing) into one, summing pageviews
 // and pageview-weighting scroll/time. Protects "articles published" counts
 // against overcounting if a CSV ever has more than one row per article for
-// the period (e.g. a day-by-day export, or duplicate URL variants like
-// /app or /partner) rather than one row per article.
+// the period (e.g. a day-by-day export, or a duplicate URL variant like a
+// slideshow page or a tracking segment tacked on after the real slug)
+// rather than one row per article.
 export function articleKey(
   url: string | null | undefined,
   title: string | null | undefined,

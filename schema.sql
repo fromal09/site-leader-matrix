@@ -5,10 +5,25 @@
 -- style) rather than fetching rows and deduping in JS via dedupeArticles().
 -- Falls back to article_title, then the row's own id (guaranteed unique),
 -- so two different untitled/unURLed rows never get merged together.
+-- Finds the path segment that's the real SEO article slug (the one with
+-- the most hyphens — a true slug reads like a full sentence) and discards
+-- everything after it, regardless of what junk a given CMS tacks on
+-- there (a slideshow page number, a tracking segment like "partners/id",
+-- /app, /amp, or anything else) — a general strategy rather than a list
+-- of specific known suffixes to maintain.
 CREATE OR REPLACE FUNCTION normalize_article_key(url TEXT, title TEXT, row_id INT)
 RETURNS TEXT AS $$
 DECLARE
   u TEXT;
+  hostname TEXT;
+  path_part TEXT;
+  segments TEXT[];
+  seg TEXT;
+  best_index INT := -1;
+  best_hyphens INT := 0;
+  hyphens INT;
+  i INT;
+  kept TEXT;
 BEGIN
   IF url IS NULL OR TRIM(url) = '' THEN
     RETURN COALESCE(title, 'row-' || row_id::text);
@@ -18,17 +33,38 @@ BEGIN
   u := SPLIT_PART(u, '?', 1);
   u := SPLIT_PART(u, '#', 1);
   u := REGEXP_REPLACE(u, '/+$', '');
-  LOOP
-    IF u ~* '/(app|partner|amp|mobile|m)$' THEN
-      u := REGEXP_REPLACE(u, '/(app|partner|amp|mobile|m)$', '', 'i');
-    ELSE
-      EXIT;
-    END IF;
-  END LOOP;
   IF u = '' THEN
     RETURN COALESCE(title, 'row-' || row_id::text);
   END IF;
-  RETURN LOWER(u);
+
+  IF POSITION('/' IN u) = 0 THEN
+    RETURN LOWER(u);
+  END IF;
+
+  hostname := SPLIT_PART(u, '/', 1);
+  path_part := SUBSTRING(u FROM POSITION('/' IN u) + 1);
+  segments := ARRAY(SELECT s FROM UNNEST(STRING_TO_ARRAY(path_part, '/')) AS s WHERE s <> '');
+
+  IF segments IS NULL OR array_length(segments, 1) IS NULL THEN
+    RETURN LOWER(hostname);
+  END IF;
+
+  FOR i IN 1 .. array_length(segments, 1) LOOP
+    seg := segments[i];
+    hyphens := LENGTH(seg) - LENGTH(REPLACE(seg, '-', ''));
+    IF hyphens > best_hyphens THEN
+      best_hyphens := hyphens;
+      best_index := i;
+    END IF;
+  END LOOP;
+
+  IF best_index = -1 THEN
+    kept := ARRAY_TO_STRING(segments, '/');
+  ELSE
+    kept := ARRAY_TO_STRING(segments[1:best_index], '/');
+  END IF;
+
+  RETURN LOWER(hostname || '/' || kept);
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
