@@ -20,6 +20,7 @@ import { formatCompactNumber, formatDuration, formatPercent } from "@/lib/traffi
 import { StatTile } from "@/components/StatTile";
 import { teamColor } from "@/lib/nflTeamColors";
 import { rankTier, rankTierColors, rankAmong } from "@/lib/rankColor";
+import { NewAuthorsReview } from "@/components/NewAuthorsReview";
 
 type AllSiteSummary = {
   articlesPublished: number;
@@ -73,6 +74,9 @@ export default function DepthChartSitePage() {
   const [addingNew, setAddingNew] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("condensed");
   const [homepageExpanded, setHomepageExpanded] = useState(false);
+  const [checkingAuthors, setCheckingAuthors] = useState(false);
+  const [uncreditedAuthors, setUncreditedAuthors] = useState<string[] | null>(null);
+  const [newAuthorsFound, setNewAuthorsFound] = useState<number | null>(null);
 
   const load = useCallback(async (periodKey?: string) => {
     setLoading(true);
@@ -116,6 +120,17 @@ export default function DepthChartSitePage() {
   function handleAddClick() {
     if (!requireAuth()) return;
     setAddingNew(true);
+  }
+
+  async function handleCheckAuthors() {
+    if (!requireAuth()) return;
+    setCheckingAuthors(true);
+    setNewAuthorsFound(null);
+    const qs = statsPeriodKey ? `?period=${encodeURIComponent(statsPeriodKey)}` : "";
+    const res = await fetch(`/api/onsi/depth-chart-writers/site/${id}/all-authors${qs}`);
+    const d = await res.json();
+    setUncreditedAuthors(d.authors ?? []);
+    setCheckingAuthors(false);
   }
 
   if (loading) {
@@ -222,6 +237,13 @@ export default function DepthChartSitePage() {
               ))}
             </div>
             <button
+              onClick={handleCheckAuthors}
+              disabled={checkingAuthors}
+              className="rounded border border-navy px-3 py-1.5 text-xs font-medium text-navy hover:bg-navy hover:text-white disabled:opacity-60"
+            >
+              {checkingAuthors ? "Checking…" : "Check for New Authors"}
+            </button>
+            <button
               onClick={handleAddClick}
               className="rounded bg-navy px-3 py-1.5 text-xs font-medium text-white hover:bg-navy-soft"
             >
@@ -230,6 +252,24 @@ export default function DepthChartSitePage() {
           </div>
         )}
       </div>
+
+      {uncreditedAuthors !== null && (
+        <div className="mb-6">
+          <NewAuthorsReview
+            siteId={site.id}
+            siteName={site.site_name}
+            csvAuthors={uncreditedAuthors}
+            roles={roles}
+            apiPrefix="/onsi"
+            onResult={setNewAuthorsFound}
+          />
+          {newAuthorsFound === 0 && (
+            <p className="text-sm italic text-ink-soft">
+              Checked — every byline with traffic data this period already has a roster card.
+            </p>
+          )}
+        </div>
+      )}
 
       {viewMode === "historical" ? (
         <div className="space-y-6">

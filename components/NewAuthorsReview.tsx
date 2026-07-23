@@ -18,12 +18,14 @@ export function NewAuthorsReview({
   csvAuthors,
   roles,
   apiPrefix = "",
+  onResult,
 }: {
   siteId: number;
   siteName: string;
   csvAuthors: string[];
   roles: DepthChartRole[];
   apiPrefix?: string;
+  onResult?: (foundCount: number) => void;
 }) {
   const { requireAuth } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -66,6 +68,7 @@ export function NewAuthorsReview({
       newOnes.sort((a, b) => a.name.localeCompare(b.name));
       setPending(newOnes);
       setLoading(false);
+      onResult?.(newOnes.length);
     }
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps

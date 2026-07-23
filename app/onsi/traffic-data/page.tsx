@@ -6,8 +6,10 @@ import { useAuth } from "@/components/AuthProvider";
 import { parseOnsiTrafficCsv } from "@/lib/trafficCsv";
 import type { OnsiTrafficCsvGroup } from "@/lib/trafficCsv";
 import { NewAuthorsReview } from "@/components/NewAuthorsReview";
+import { NetworkNewAuthorsReview } from "@/components/NetworkNewAuthorsReview";
 import { dedupeNamesCaseInsensitive } from "@/lib/nameNormalize";
 import type { DepthChartRole } from "@/lib/depthCharts";
+import { onsiDcSiteHref } from "@/lib/onsiRoutes";
 
 type Site = {
   id: number;
@@ -184,6 +186,10 @@ export default function OnsiTrafficPage() {
           column for this to work. Re-uploading the same site and month replaces what's
           there, so a partial-month upload followed by a fuller one later just works.
         </p>
+      </div>
+
+      <div className="mb-8">
+        <NetworkNewAuthorsReview roles={roles} apiPrefix="/onsi" dcSiteHref={onsiDcSiteHref} />
       </div>
 
       <div className="card mb-8 rounded-md p-5">
