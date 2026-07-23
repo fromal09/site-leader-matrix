@@ -98,3 +98,27 @@ export function dedupeArticles<
     };
   });
 }
+
+// Fluff Finder's "Concentration Score" — area between the actual traffic
+// curve and the "perfect efficiency" diagonal (where article share always
+// equals traffic share), normalized the same way a Gini coefficient is.
+// Takes rows already sorted by pageviews descending. 0 = every article
+// contributes its proportional share of traffic; toward 1 = traffic is
+// extremely concentrated in a small fraction of articles.
+export function computeConcentrationScore(sortedByPvDesc: { pageviews: number }[]): number {
+  const n = sortedByPvDesc.length;
+  if (n === 0) return 0;
+  const total = sortedByPvDesc.reduce((s, r) => s + r.pageviews, 0);
+  if (total === 0) return 0;
+  let running = 0;
+  const points = [{ x: 0, y: 0 }];
+  sortedByPvDesc.forEach((r, i) => {
+    running += r.pageviews;
+    points.push({ x: (i + 1) / n, y: running / total });
+  });
+  let area = 0;
+  for (let i = 1; i < points.length; i++) {
+    area += ((points[i].x - points[i - 1].x) * (points[i].y + points[i - 1].y)) / 2;
+  }
+  return Math.max(0, Math.min(1, 2 * area - 1));
+}

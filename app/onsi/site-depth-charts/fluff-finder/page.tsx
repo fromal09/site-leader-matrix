@@ -87,7 +87,7 @@ function DivisionFluffFinderInner() {
       {loading ? (
         <p className="text-sm text-ink-soft">Loading…</p>
       ) : (
-        <FluffFinderPanel writerOptions={options} apiPrefix="/onsi" />
+        <FluffFinderPanel writerOptions={options} apiPrefix="/onsi" divisionKey={division} />
       )}
     </main>
   );

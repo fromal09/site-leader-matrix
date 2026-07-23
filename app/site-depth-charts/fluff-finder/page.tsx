@@ -80,7 +80,7 @@ function DivisionFluffFinderInner() {
       {loading ? (
         <p className="text-sm text-ink-soft">Loading…</p>
       ) : (
-        <FluffFinderPanel writerOptions={options} />
+        <FluffFinderPanel writerOptions={options} divisionKey={division} />
       )}
     </main>
   );

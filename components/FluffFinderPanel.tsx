@@ -40,6 +40,20 @@ type FluffResult = {
   articles: FluffArticle[];
 };
 
+// Bright green (most efficient in the population) to dark red (least
+// efficient), interpolated by where this writer's score falls within the
+// population's min-max range — not a fixed absolute scale, since what
+// counts as "concentrated" varies a lot by beat and content type.
+const BEST_COLOR: [number, number, number] = [34, 197, 94]; // bright green
+const WORST_COLOR: [number, number, number] = [127, 29, 29]; // dark red
+
+function scoreColor(score: number, min: number, max: number): string {
+  if (max === min) return "rgb(100, 116, 139)"; // single-writer population — neutral gray, no meaningful comparison
+  const t = Math.max(0, Math.min(1, (score - min) / (max - min)));
+  const rgb = BEST_COLOR.map((c, i) => Math.round(c + (WORST_COLOR[i] - c) * t));
+  return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+}
+
 function CustomTooltip({ active, payload }: { active?: boolean; payload?: any[] }) {
   if (!active || !payload || payload.length === 0) return null;
   const point = payload[0].payload as FluffArticle;
@@ -66,9 +80,16 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: any[] 
 export function FluffFinderPanel({
   writerOptions,
   apiPrefix = "",
+  divisionKey,
 }: {
   writerOptions: FluffFinderWriterOption[];
   apiPrefix?: string;
+  // When set, this instance is the division-wide entry point and the
+  // population comparison spans every writer in the division. When
+  // omitted, this is the team-wide entry point and the population is
+  // just this one site's roster (inferred from writerOptions, which all
+  // share the same siteId in that context).
+  divisionKey?: string;
 }) {
   const sortedOptions = useMemo(
     () => [...writerOptions].sort((a, b) => b.articlesPublished - a.articlesPublished),
@@ -116,10 +137,30 @@ export function FluffFinderPanel({
   // cumulative traffic %) points starting from the origin. 0 means every
   // article contributes proportionally to its share of output; toward 1
   // means traffic is extremely concentrated in a small fraction of
-  // articles. The suggested cutoff is the article where the gap between
+  // articles. The Max Delta is the article where the gap between
   // traffic share and article share is largest — the point where this
   // writer's output has captured the most traffic relative to what a
   // proportional share would predict.
+  const [populationScores, setPopulationScores] = useState<number[] | null>(null);
+
+  useEffect(() => {
+    if (!periodKey) return;
+    const url = divisionKey
+      ? `/api${apiPrefix}/depth-chart-writers/division-fluff-finder-scores?division=${encodeURIComponent(divisionKey)}&period=${encodeURIComponent(periodKey)}`
+      : (() => {
+          const siteId = sortedOptions[0]?.siteId;
+          return siteId
+            ? `/api${apiPrefix}/depth-chart-writers/site/${siteId}/fluff-finder-scores?period=${encodeURIComponent(periodKey)}`
+            : null;
+        })();
+    if (!url) return;
+    fetch(url)
+      .then((r) => r.json())
+      .then((d) => setPopulationScores((d.scores ?? []).map((s: any) => s.concentrationScore)))
+      .catch(() => setPopulationScores(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodKey, divisionKey, apiPrefix]);
+
   const stats = useMemo(() => {
     if (!result || result.articles.length === 0) return null;
     const points = [{ x: 0, y: 0 }, ...result.articles.map((a) => ({ x: a.cumulativeArticlePct, y: a.cumulativePct }))];
@@ -142,6 +183,13 @@ export function FluffFinderPanel({
     }
     return { concentrationScore, peak, peakGap };
   }, [result]);
+
+  const boxColor = useMemo(() => {
+    if (!stats || !populationScores || populationScores.length < 2) return null;
+    const min = Math.min(...populationScores);
+    const max = Math.max(...populationScores);
+    return scoreColor(stats.concentrationScore, min, max);
+  }, [stats, populationScores]);
 
   if (sortedOptions.length === 0) {
     return (
@@ -208,21 +256,32 @@ export function FluffFinderPanel({
 
           {stats && (
             <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <div className="rounded border border-rule-strong bg-white p-3">
+              <div
+                className="rounded border p-3"
+                style={
+                  boxColor
+                    ? { borderColor: boxColor, borderWidth: 2, backgroundColor: `${boxColor}1a` }
+                    : { borderColor: "var(--rule-strong)", backgroundColor: "white" }
+                }
+              >
                 <p className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
                   Concentration Score
                 </p>
-                <p className="font-display text-xl font-bold text-navy">
+                <p
+                  className="font-display text-xl font-bold"
+                  style={{ color: boxColor ?? "var(--navy)" }}
+                >
                   {formatPercent(stats.concentrationScore)}
                 </p>
                 <p className="text-[11px] text-ink-soft">
-                  0% = every article contributes its proportional share of traffic. Higher
-                  means traffic is more concentrated in fewer articles.
+                  {boxColor
+                    ? "Color reflects this writer's rank among their peers this period — green is most efficient, red is least."
+                    : "0% = every article contributes its proportional share of traffic. Higher means traffic is more concentrated in fewer articles."}
                 </p>
               </div>
               <div className="rounded border border-rule-strong bg-white p-3">
                 <p className="font-data text-[10px] uppercase tracking-wide text-ink-soft">
-                  Suggested Cutoff
+                  Max Delta
                 </p>
                 <p className="font-display text-xl font-bold text-navy">
                   Article #{stats.peak.rank}
