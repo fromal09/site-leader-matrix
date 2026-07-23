@@ -178,7 +178,7 @@ export default function HomePage() {
             FanSided Network
           </p>
           <h1 className="font-display text-3xl font-bold text-navy sm:text-4xl">
-            Sports Directors Reference Guide
+            Directors Reference Guide
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-ink-soft">
             A field guide and toolset for evaluating and developing the people who run our

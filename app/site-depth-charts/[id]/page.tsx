@@ -1,5 +1,8 @@
 "use client";
 
+import { SiteLeaderEditor } from "@/components/SiteLeaderEditor";
+import { FluffFinderPanel, type FluffFinderWriterOption } from "@/components/FluffFinderPanel";
+
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -41,7 +44,7 @@ function rankTint(r: { rank: number; total: number } | null) {
   return rankTierColors(rankTier(r.rank, r.total));
 }
 
-type ViewMode = "full" | "condensed" | "historical";
+type ViewMode = "full" | "condensed" | "historical" | "fluff-finder";
 
 export default function DepthChartSitePage() {
   const params = useParams();
@@ -171,7 +174,12 @@ export default function DepthChartSitePage() {
             {site.site_topic}
           </p>
           <h1 className="font-display text-3xl font-bold text-navy">{site.site_name}</h1>
-          <p className="text-sm text-ink-soft">Site leader: {site.leader_name}</p>
+          <SiteLeaderEditor
+            siteId={site.id}
+            leaderName={site.leader_name}
+            onChanged={(newName) => setSite((prev) => (prev ? { ...prev, leader_name: newName } : prev))}
+            apiPrefix=""
+          />
           {statsPeriodLabel && (
             <p className="mt-0.5 font-data text-xs text-ink-soft">
               Ranked by {statsPeriodLabel} pageviews
@@ -203,7 +211,7 @@ export default function DepthChartSitePage() {
               </label>
             )}
             <div className="flex overflow-hidden rounded border border-navy">
-              {(["condensed", "full", "historical"] as const).map((mode) => (
+              {(["condensed", "full", "historical", "fluff-finder"] as const).map((mode) => (
                 <button
                   key={mode}
                   onClick={() => setViewMode(mode)}
@@ -214,7 +222,7 @@ export default function DepthChartSitePage() {
                       : { color: "var(--navy)" }
                   }
                 >
-                  {mode}
+                  {mode === "fluff-finder" ? "Fluff Finder" : mode}
                 </button>
               ))}
             </div>
@@ -234,6 +242,19 @@ export default function DepthChartSitePage() {
           <HomepageHistoryChart siteId={site.id} />
           <WriterHistoryChart writers={writers} />
         </div>
+      ) : viewMode === "fluff-finder" ? (
+        <FluffFinderPanel
+          writerOptions={writers
+            .filter((w) => (quickStats[w.id]?.articlesPublished ?? 0) > 0)
+            .map(
+              (w): FluffFinderWriterOption => ({
+                writerId: w.id,
+                siteId: site.id,
+                label: w.name,
+                articlesPublished: quickStats[w.id]?.articlesPublished ?? 0,
+              })
+            )}
+        />
       ) : (
         <>
           {siteTotals && (

@@ -201,6 +201,12 @@ function DepthChartsHomeInner() {
                 >
                   {division} Since Last Upload →
                 </Link>
+                <Link
+                  href={`${DC_BASE}/fluff-finder?division=${division}`}
+                  className="inline-block rounded border border-navy px-3 py-1.5 text-xs font-medium text-navy hover:bg-navy hover:text-white"
+                >
+                  {division} Fluff Finder →
+                </Link>
               </>
             )}
           </div>

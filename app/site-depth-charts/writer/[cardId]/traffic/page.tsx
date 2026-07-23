@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { DC_BASE } from "@/lib/routes";
-import { formatDuration, formatPercent } from "@/lib/trafficFormat";
+import { formatDuration, formatPercent, ensureUrlProtocol} from "@/lib/trafficFormat";
 import type { TrafficArticleRow } from "@/lib/traffic";
 
 type Writer = {
@@ -24,7 +24,7 @@ function ArticleTitle({ a }: { a: TrafficArticleRow }) {
   if (a.article_url) {
     return (
       <a
-        href={a.article_url}
+        href={ensureUrlProtocol(a.article_url)}
         target="_blank"
         rel="noopener noreferrer"
         className="text-navy hover:underline"

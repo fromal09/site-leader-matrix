@@ -13,7 +13,7 @@ export function Header() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
         <Link href="/" className="flex items-baseline gap-2">
           <span className="font-display text-base font-bold tracking-tight text-navy sm:text-xl">
-            SPORTS DIRECTORS REFERENCE GUIDE
+            DIRECTORS REFERENCE GUIDE
           </span>
         </Link>
         <div className="flex items-center gap-3">

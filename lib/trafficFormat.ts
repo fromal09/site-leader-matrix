@@ -24,3 +24,12 @@ export function scrollDepthColor(fraction: number | null): string {
   if (fraction >= 0.25) return "var(--grade-mid)";
   return "var(--grade-low)";
 }
+
+// Traffic CSV exports store bare URLs (e.g. "www.site.com/article-slug",
+// no protocol) — used directly as an <a href>, a browser treats that as a
+// relative path off the current page rather than an absolute external
+// link, so the click silently goes nowhere useful. This adds https:// only
+// when a protocol isn't already present.
+export function ensureUrlProtocol(url: string): string {
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}

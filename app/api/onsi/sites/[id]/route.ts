@@ -23,3 +23,24 @@ export async function GET(
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getSession();
+  if (!session || session.network !== "onsi") {
+    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+  }
+  const { id } = await params;
+  const { leaderName } = await req.json();
+  if (typeof leaderName !== "string" || !leaderName.trim()) {
+    return NextResponse.json({ error: "Enter a leader name." }, { status: 400 });
+  }
+  try {
+    await sql`UPDATE onsi_sites SET leader_name = ${leaderName.trim()} WHERE id = ${Number(id)}`;
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
