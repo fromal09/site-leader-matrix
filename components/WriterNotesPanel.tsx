@@ -15,7 +15,7 @@ export function WriterNotesPanel({ writerId, apiPrefix = "" }: { writerId: numbe
 
   async function load() {
     setLoading(true);
-    const res = await fetch(`${apiPrefix}/api/depth-chart-writers/card/${writerId}/notes`);
+    const res = await fetch(`/api${apiPrefix}/depth-chart-writers/card/${writerId}/notes`);
     const d = await res.json();
     setNotes(d.notes ?? []);
     setLoading(false);
@@ -31,7 +31,7 @@ export function WriterNotesPanel({ writerId, apiPrefix = "" }: { writerId: numbe
     if (!draft.trim()) return;
     setBusy(true);
     setError(null);
-    const res = await fetch(`${apiPrefix}/api/depth-chart-writers/card/${writerId}/notes`, {
+    const res = await fetch(`/api${apiPrefix}/depth-chart-writers/card/${writerId}/notes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content: draft }),
@@ -49,7 +49,7 @@ export function WriterNotesPanel({ writerId, apiPrefix = "" }: { writerId: numbe
   async function remove(noteId: number) {
     if (!requireAuth()) return;
     if (!window.confirm("Delete this note? This can't be undone.")) return;
-    await fetch(`${apiPrefix}/api/depth-chart-writers/card/${writerId}/notes/${noteId}`, {
+    await fetch(`/api${apiPrefix}/depth-chart-writers/card/${writerId}/notes/${noteId}`, {
       method: "DELETE",
     });
     load();

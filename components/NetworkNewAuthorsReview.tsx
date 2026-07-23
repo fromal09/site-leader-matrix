@@ -39,7 +39,7 @@ export function NetworkNewAuthorsReview({
   async function runCheck() {
     if (!requireAuth()) return;
     setLoading(true);
-    const res = await fetch(`${apiPrefix}/api/depth-chart-writers/uncredited-authors`);
+    const res = await fetch(`/api${apiPrefix}/depth-chart-writers/uncredited-authors`);
     const d = await res.json();
     const fetchedSites: SiteGroup[] = d.sites ?? [];
     setSites(fetchedSites);
@@ -69,7 +69,7 @@ export function NetworkNewAuthorsReview({
     const row = rowStates[key];
     if (!row || !row.role) return;
     setRowStates((prev) => ({ ...prev, [key]: { ...prev[key], busy: true, error: null } }));
-    const res = await fetch(`${apiPrefix}/api/depth-chart-writers/${siteId}`, {
+    const res = await fetch(`/api${apiPrefix}/depth-chart-writers/${siteId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, role: row.role, trafficDashboardName: name }),
@@ -89,7 +89,7 @@ export function NetworkNewAuthorsReview({
     if (!requireAuth()) return;
     const key = rowKey(siteId, name);
     setRowStates((prev) => ({ ...prev, [key]: { ...prev[key], busy: true } }));
-    await fetch(`${apiPrefix}/api/depth-chart-writers/site/${siteId}/ignored-authors`, {
+    await fetch(`/api${apiPrefix}/depth-chart-writers/site/${siteId}/ignored-authors`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ authorName: name }),

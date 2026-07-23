@@ -11,7 +11,7 @@ export function WriterAliasesEditor({ writerId, apiPrefix = "" }: { writerId: nu
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${apiPrefix}/api/depth-chart-writers/card/${writerId}/aliases`)
+    fetch(`/api${apiPrefix}/depth-chart-writers/card/${writerId}/aliases`)
       .then((r) => r.json())
       .then((d) => setAliases(d.aliases ?? []));
   }, [writerId]);
@@ -20,7 +20,7 @@ export function WriterAliasesEditor({ writerId, apiPrefix = "" }: { writerId: nu
     if (!draft.trim()) return;
     setBusy(true);
     setError(null);
-    const res = await fetch(`${apiPrefix}/api/depth-chart-writers/card/${writerId}/aliases`, {
+    const res = await fetch(`/api${apiPrefix}/depth-chart-writers/card/${writerId}/aliases`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ alias: draft.trim() }),
@@ -42,7 +42,7 @@ export function WriterAliasesEditor({ writerId, apiPrefix = "" }: { writerId: nu
 
   async function removeAlias(aliasId: number) {
     setBusy(true);
-    await fetch(`${apiPrefix}/api/depth-chart-writers/card/${writerId}/aliases/${aliasId}`, {
+    await fetch(`/api${apiPrefix}/depth-chart-writers/card/${writerId}/aliases/${aliasId}`, {
       method: "DELETE",
     });
     setBusy(false);

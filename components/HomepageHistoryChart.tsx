@@ -27,7 +27,7 @@ export function HomepageHistoryChart({ siteId, apiPrefix = "" }: { siteId: numbe
 
   useEffect(() => {
     setLoading(true);
-    fetch(`${apiPrefix}/api/depth-chart-writers/site/${siteId}/history`)
+    fetch(`/api${apiPrefix}/depth-chart-writers/site/${siteId}/history`)
       .then((r) => r.json())
       .then((d) => setHistory(d.history ?? []))
       .finally(() => setLoading(false));

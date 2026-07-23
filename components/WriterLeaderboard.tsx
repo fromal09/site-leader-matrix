@@ -58,7 +58,7 @@ export function WriterLeaderboard({ division, period, apiPrefix = "" }: { divisi
     setLoading(true);
     const params = new URLSearchParams({ division });
     if (period) params.set("period", period);
-    fetch(`${apiPrefix}/api/depth-chart-writers/leaderboard?${params.toString()}`)
+    fetch(`/api${apiPrefix}/depth-chart-writers/leaderboard?${params.toString()}`)
       .then((r) => r.json())
       .then((d) => {
         setWriters(d.writers ?? []);

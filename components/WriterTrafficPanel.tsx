@@ -85,7 +85,7 @@ export function WriterTrafficPanel({
   async function toggle() {
     if (!open && !data) {
       setLoading(true);
-      const res = await fetch(`${apiPrefix}/api/depth-chart-writers/card/${writerId}/traffic`);
+      const res = await fetch(`/api${apiPrefix}/depth-chart-writers/card/${writerId}/traffic`);
       const d = await res.json();
       setData(d);
       setLoading(false);
@@ -96,7 +96,7 @@ export function WriterTrafficPanel({
   async function changePeriod(periodKey: string) {
     setSwitchingPeriod(true);
     const res = await fetch(
-      `${apiPrefix}/api/depth-chart-writers/card/${writerId}/traffic?period=${encodeURIComponent(periodKey)}`
+      `/api${apiPrefix}/depth-chart-writers/card/${writerId}/traffic?period=${encodeURIComponent(periodKey)}`
     );
     const d = await res.json();
     setData(d);

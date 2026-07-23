@@ -43,7 +43,7 @@ export function WriterHistoryChart({ writers, apiPrefix = "" }: { writers: Depth
       return;
     }
     setLoading(true);
-    fetch(`${apiPrefix}/api/depth-chart-writers/history-compare?writerIds=${idsKey}`)
+    fetch(`/api${apiPrefix}/depth-chart-writers/history-compare?writerIds=${idsKey}`)
       .then((r) => r.json())
       .then((d) =>
         setData(

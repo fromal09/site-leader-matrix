@@ -42,7 +42,7 @@ function RoleSelect({
   async function submitNewRole() {
     if (!newLabel.trim()) return;
     setBusy(true);
-    const res = await fetch(`${apiPrefix}/api/depth-chart-roles`, {
+    const res = await fetch(`/api${apiPrefix}/depth-chart-roles`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ label: newLabel.trim(), section: newSection }),
@@ -255,12 +255,12 @@ export function WriterCard({
     setError(null);
     const body = JSON.stringify({ name, role, trafficDashboardName: trafficName });
     const res = writer
-      ? await fetch(`${apiPrefix}/api/depth-chart-writers/card/${writer.id}`, {
+      ? await fetch(`/api${apiPrefix}/depth-chart-writers/card/${writer.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body,
         })
-      : await fetch(`${apiPrefix}/api/depth-chart-writers/${siteId}`, {
+      : await fetch(`/api${apiPrefix}/depth-chart-writers/${siteId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body,
@@ -279,7 +279,7 @@ export function WriterCard({
     if (!writer) return;
     if (!window.confirm(`Remove ${writer.name} from this site's roster?`)) return;
     setBusy(true);
-    await fetch(`${apiPrefix}/api/depth-chart-writers/card/${writer.id}`, { method: "DELETE" });
+    await fetch(`/api${apiPrefix}/depth-chart-writers/card/${writer.id}`, { method: "DELETE" });
     setBusy(false);
     onSaved();
   }

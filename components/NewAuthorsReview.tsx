@@ -35,8 +35,8 @@ export function NewAuthorsReview({
     async function load() {
       setLoading(true);
       const [writersRes, ignoredRes] = await Promise.all([
-        fetch(`${apiPrefix}/api/depth-chart-writers/${siteId}`).then((r) => r.json()),
-        fetch(`${apiPrefix}/api/depth-chart-writers/site/${siteId}/ignored-authors`).then((r) => r.json()),
+        fetch(`/api${apiPrefix}/depth-chart-writers/${siteId}`).then((r) => r.json()),
+        fetch(`/api${apiPrefix}/depth-chart-writers/site/${siteId}/ignored-authors`).then((r) => r.json()),
       ]);
       const existingNames = new Set(
         (writersRes.writers ?? []).flatMap((w: any) =>
@@ -83,7 +83,7 @@ export function NewAuthorsReview({
     const author = pending.find((p) => p.name === name);
     if (!author || !author.role) return;
     setPending((prev) => prev.map((p) => (p.name === name ? { ...p, busy: true, error: null } : p)));
-    const res = await fetch(`${apiPrefix}/api/depth-chart-writers/${siteId}`, {
+    const res = await fetch(`/api${apiPrefix}/depth-chart-writers/${siteId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, role: author.role, trafficDashboardName: name }),
@@ -103,7 +103,7 @@ export function NewAuthorsReview({
   async function declineAuthor(name: string) {
     if (!requireAuth()) return;
     setPending((prev) => prev.map((p) => (p.name === name ? { ...p, busy: true } : p)));
-    await fetch(`${apiPrefix}/api/depth-chart-writers/site/${siteId}/ignored-authors`, {
+    await fetch(`/api${apiPrefix}/depth-chart-writers/site/${siteId}/ignored-authors`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ authorName: name }),
